@@ -85,17 +85,32 @@ final class NativeQuranPageController: UIPageViewController {
     private weak var previousDelegate: UIGestureRecognizerDelegate?
     private var previousEnabled = true
     private var installed = false
+    private weak var installedEdge: UIGestureRecognizer?
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        guard !installed, let navigation = navigationController,
+        DispatchQueue.main.async { [weak self] in self?.enableNativeBack() }
+    }
+    private func enableNativeBack() {
+        guard !installed, let navigation = navigationController ?? findNavigation(view.window?.rootViewController),
               let edge = navigation.interactivePopGestureRecognizer else { return }
         previousDelegate = edge.delegate; previousEnabled = edge.isEnabled; installed = true
+        installedEdge = edge
         edge.delegate = nil; edge.isEnabled = navigation.viewControllers.count > 1
         for scroll in view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.panGestureRecognizer.require(toFail: edge) }
+        print("[ReaderNavigation] native stack \(navigation.viewControllers.count), edge enabled \(edge.isEnabled)")
+    }
+    private func findNavigation(_ value: UIViewController?) -> UINavigationController? {
+        guard let value else { return nil }
+        if let navigation = value as? UINavigationController { return navigation }
+        if let tabs = value as? UITabBarController { return findNavigation(tabs.selectedViewController) }
+        for child in value.children.reversed() where child.viewIfLoaded?.window != nil {
+            if let result = findNavigation(child) { return result }
+        }
+        return nil
     }
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        if installed, let edge = navigationController?.interactivePopGestureRecognizer {
+        if installed, let edge = installedEdge {
             edge.delegate = previousDelegate; edge.isEnabled = previousEnabled; installed = false
         }
     }
