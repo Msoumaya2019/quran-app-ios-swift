@@ -91,6 +91,25 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
     private weak var contentGesture: UIGestureRecognizer?
     private weak var previousContentDelegate: UIGestureRecognizerDelegate?
     private var previousContentEnabled = true
+    private let navigationEdgeLane = UIView()
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // A narrow native back-gesture lane is a sibling of the paging scroll
+        // view. Touches starting here reach UINavigationController rather than
+        // its descendant page pan. This changes hit-testing only, never layout.
+        navigationEdgeLane.backgroundColor = .clear
+        navigationEdgeLane.isAccessibilityElement = false
+        navigationEdgeLane.translatesAutoresizingMaskIntoConstraints = false
+        navigationEdgeLane.isHidden = true
+        view.addSubview(navigationEdgeLane)
+        NSLayoutConstraint.activate([
+            navigationEdgeLane.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            navigationEdgeLane.topAnchor.constraint(equalTo: view.topAnchor),
+            navigationEdgeLane.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            navigationEdgeLane.widthAnchor.constraint(equalToConstant: 24)
+        ])
+    }
+    override func viewDidLayoutSubviews() { super.viewDidLayoutSubviews(); view.bringSubviewToFront(navigationEdgeLane) }
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         refreshNativeBack()
@@ -109,6 +128,7 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         if !installed { previousDelegate = edge.delegate; previousEnabled = edge.isEnabled; installed = true }
         installedEdge = edge
         navigationOwner = navigation
+        navigationEdgeLane.isHidden = navigation.viewControllers.count <= 1
         edge.delegate = self; edge.isEnabled = navigation.viewControllers.count > 1
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
