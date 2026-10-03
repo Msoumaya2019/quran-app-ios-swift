@@ -286,6 +286,7 @@
         "SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
         "SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
         "ENABLE_TESTABILITY" = "YES";
+        "ONLY_ACTIVE_ARCH" = "YES";
         "INFOPLIST_FILE" = "Config/Info.plist";
         "MARKETING_VERSION" = "0.1.0";
         "CURRENT_PROJECT_VERSION" = "1";
@@ -307,6 +308,7 @@
         "SWIFT_OPTIMIZATION_LEVEL" = "-O";
         "SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "";
         "ENABLE_TESTABILITY" = "NO";
+        "ONLY_ACTIVE_ARCH" = "NO";
         "INFOPLIST_FILE" = "Config/Info.plist";
         "MARKETING_VERSION" = "0.1.0";
         "CURRENT_PROJECT_VERSION" = "1";
@@ -393,6 +395,7 @@
         "SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
         "SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
         "ENABLE_TESTABILITY" = "YES";
+        "ONLY_ACTIVE_ARCH" = "YES";
         "TEST_HOST" = "$(BUILT_PRODUCTS_DIR)/CoranNative.app/CoranNative";
         "BUNDLE_LOADER" = "$(TEST_HOST)";
       };
@@ -411,6 +414,7 @@
         "SWIFT_OPTIMIZATION_LEVEL" = "-O";
         "SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "";
         "ENABLE_TESTABILITY" = "NO";
+        "ONLY_ACTIVE_ARCH" = "NO";
         "TEST_HOST" = "$(BUILT_PRODUCTS_DIR)/CoranNative.app/CoranNative";
         "BUNDLE_LOADER" = "$(TEST_HOST)";
       };
@@ -494,6 +498,7 @@
         "SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
         "SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
         "ENABLE_TESTABILITY" = "YES";
+        "ONLY_ACTIVE_ARCH" = "YES";
         "TEST_TARGET_NAME" = "CoranNative";
       };
     };
@@ -511,6 +516,7 @@
         "SWIFT_OPTIMIZATION_LEVEL" = "-O";
         "SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "";
         "ENABLE_TESTABILITY" = "NO";
+        "ONLY_ACTIVE_ARCH" = "NO";
         "TEST_TARGET_NAME" = "CoranNative";
       };
     };

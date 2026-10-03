@@ -1,0 +1,17 @@
+[
+  {
+    "endpoint": "/auth/v1/settings",
+    "status": 200,
+    "email_enabled": true
+  },
+  {
+    "endpoint": "/rest/v1/user_state?select=user_id&limit=0",
+    "status": 401,
+    "code": "42501"
+  },
+  {
+    "endpoint": "/rest/v1/friend_profiles?select=id&limit=0",
+    "status": 401,
+    "code": "42501"
+  }
+]
