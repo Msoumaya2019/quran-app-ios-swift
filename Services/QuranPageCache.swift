@@ -9,6 +9,11 @@ actor QuranPageCache {
     private var retained: Set<Key> = []
     private(set) var hits = 0
     private(set) var renders = 0
+    private(set) var renderMilliseconds: [Double] = []
+    func setWindow(source: QuranSource, page: Int) {
+        retained = Set((max(1, page - 1)...min(source.pageCount, page + 1)).map { Key(source: source.id, page: $0) })
+        images = images.filter { retained.contains($0.key) }
+    }
     func prepare(source: QuranSource, page: Int) async {
         retained = Set((max(1, page - 1)...min(source.pageCount, page + 1)).map { Key(source: source.id, page: $0) })
         images = images.filter { retained.contains($0.key) }
@@ -20,11 +25,14 @@ actor QuranPageCache {
         let key = Key(source: source.id, page: page)
         if let image = images[key] { hits += 1; return image }
         if let task = pending[key] { return try await task.value }
+        let started = Date()
         let task = Task.detached(priority: .userInitiated) { try Self.render(source: source, page: page) }
         pending[key] = task
         defer { pending[key] = nil }
         let image = try await task.value
         renders += 1
+        renderMilliseconds.append(Date().timeIntervalSince(started) * 1000)
+        if renderMilliseconds.count > 64 { renderMilliseconds.removeFirst() }
         if retained.contains(key) { images[key] = image }
         return image
     }

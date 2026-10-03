@@ -31,6 +31,8 @@ final class ReaderTests: XCTestCase {
         for page in stride(from: 20, through: 15, by: -1) { await cache.prepare(source: .medina, page: page) }
         let hits = await cache.hits
         XCTAssertGreaterThan(hits, 20)
+        let times = await cache.renderMilliseconds
+        print("[ReaderMetrics] Medina render ms: \(times); cache hits: \(hits); decoded page count: \(await cache.cachedPageCount)")
     }
     func testSourcePageBounds() {
         for source in QuranSource.available { XCTAssertEqual(source.validPage(0), 1); XCTAssertEqual(source.validPage(605), 604) }

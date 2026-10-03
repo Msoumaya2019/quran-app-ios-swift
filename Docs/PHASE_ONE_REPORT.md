@@ -30,7 +30,7 @@ Tests Xcode GitHub : contrat JSON/champs inconnus, calendrierParis/DST/dates ant
 
 Windows n’exécute pas Xcode localement ; tests réels sur Mac GitHub. Mesures120Hz, Instruments, mémoire/CPU et comportement sur appareil exigent un Mac/iPhone plus tard. Distribution signée et APNs attendent configuration Apple. Phase2 non commencée. Aucun rendu Mushaf ni audio intégré. La phase3 fera converger la carte révision avec l’intégralité du moteur existant. Les identifiants ZIP test mentionnés dans la nouvelle demande ne sont plus des sources actives RN ; à arbitrer avant phase2.
 
-Le résultat des tests GitHub et la vérification d’intégrité RN seront ajoutés après la compilation.
+Les tests Xcode de la phase 1 ont réussi dans l’exécution GitHub 37158636349. Les résultats, captures et l’IPA non signée ont été produits. Le contrôle d’intégrité confirme 3279 fichiers RN inchangés. L’utilisateur a ensuite autorisé le lecteur classique ; voir NATIVE_READER_REPORT.md pour la suite.
 
 ## Contrôle du backend public
 

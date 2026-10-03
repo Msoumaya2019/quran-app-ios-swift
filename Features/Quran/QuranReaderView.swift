@@ -19,8 +19,8 @@ struct QuranReaderView: View {
         if source == .edition1441,
            let url = Bundle.main.url(forResource: "coran_1441-bounds", withExtension: "json"),
            let data = try? Data(contentsOf: url),
-           let rows = try? JSONDecoder().decode([String: [[Int]]].self, from: data)[String(page)] {
-            return rows.compactMap { row -> Int? in guard row.count >= 2, let surah = store.catalog.surahs.first(where: { $0.number == row[0] }) else { return nil }; return surah.start + row[1] - 1 }.min() ?? 1
+           let rows = try? JSONDecoder().decode([String: [[Double]]].self, from: data)[String(page)] {
+            return rows.compactMap { row -> Int? in guard row.count >= 2, let surah = store.catalog.surahs.first(where: { $0.number == Int(row[0]) }) else { return nil }; return surah.start + Int(row[1]) - 1 }.min() ?? 1
         }
         return store.catalog.pageStarts.first { $0.0 == page }?.1 ?? 1
     }
@@ -59,6 +59,7 @@ struct QuranReaderView: View {
             NavigationStack {
                 Form {
                     Section("Affichage du Coran") {
+                        if loading { HStack { ProgressView(); Text("Téléchargement et préparation du Coran…").font(.caption) } }
                         ForEach(QuranSource.available) { value in
                             Button { Task { await changeSource(value) } } label: {
                                 HStack { Text(value.displayName); Spacer(); if value == source { Image(systemName: "checkmark") } }
