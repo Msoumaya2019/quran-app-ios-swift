@@ -24,7 +24,8 @@ extension HomeRemote {
             guard let row = rows.first, row.data["schema"].int == 1 else { throw URLError(.cannotParseResponse) }
             var merged = row.data
             for operation in operations { merged = operation.applying(to: merged, catalog: catalog) }
-            let now = ISO8601DateFormatter().string(from: .now)
+            let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            let now = formatter.string(from: .now)
             let acknowledged: [VersionedRow] = try await client.from("user_state")
                 .update(StatePatch(data: merged, updated_at: now))
                 .eq("user_id", value: userID.uuidString).eq("updated_at", value: row.updated_at)

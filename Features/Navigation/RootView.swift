@@ -33,7 +33,7 @@ struct RootView: View {
                         NavigationStack {
                             Group {
                                 if item == .home { HomeView(tab: $tab) }
-                                else if item == .quran { QuranReaderView(onHome: { tab = .home }) }
+                                else if item == .quran { QuranReaderView(initialPage: store.snapshot.state["lastRead"]["page"].int ?? 1, sourceID: store.snapshot.state["reader"]["mushaf"].string, onHome: { tab = .home }) }
                                 else { PhasePlaceholder(title: item.rawValue) }
                             }
                             .toolbar {

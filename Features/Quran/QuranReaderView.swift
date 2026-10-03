@@ -2,6 +2,17 @@ import SwiftUI
 
 struct QuranReaderView: View {
     var onHome: (() -> Void)? = nil
+    init(initialPage: Int = 1, sourceID: String? = nil, onHome: (() -> Void)? = nil) {
+        self.onHome = onHome
+        let preferred = QuranSource.available.first { $0.id == sourceID } ?? .medina
+        let ready = QuranResourceService.shared.isReady(preferred) ? preferred : .medina
+        _source = State(initialValue: ready)
+        var firstPage = ready.validPage(initialPage)
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-reader-fixtures") { firstPage = 1 }
+        #endif
+        _page = State(initialValue: firstPage)
+    }
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var theme: ThemeManager
@@ -47,11 +58,6 @@ struct QuranReaderView: View {
         .statusBarHidden(immersive)
         .onAppear {
             guard !initialized else { return }; initialized = true
-            if store.snapshot.state["reader"]["mushaf"].string == QuranSource.edition1441.id, QuranResourceService.shared.isReady(.edition1441) { source = .edition1441 }
-            page = source.validPage(store.snapshot.state["lastRead"]["page"].int ?? 1)
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--ui-test-reader-fixtures") { page = 1 }
-            #endif
         }
         .onChange(of: page) { _, _ in if initialized { record(.reading) } }
         .onDisappear { audio.pause(); record(.reading); Task { await store.refresh() } }

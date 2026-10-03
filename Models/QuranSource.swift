@@ -2,7 +2,7 @@ import Foundation
 
 enum ReadingMode: String, Codable { case classic, learning, revision, consolidation }
 struct QuranSource: Identifiable, Equatable, Sendable {
-    enum Rendering: Sendable { case pageImage, lineImages }
+    enum Rendering: Equatable, Sendable { case pageImage, lineImages }
     let id: String
     let displayName: String
     let pageCount: Int

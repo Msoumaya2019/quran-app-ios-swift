@@ -35,7 +35,7 @@ struct HomeView: View {
         .background(theme.background).foregroundStyle(theme.text)
         .refreshable { await store.refresh() }
         .navigationDestination(item: $route) { item in
-            if item == .reading { QuranReaderView() }
+            if item == .reading { QuranReaderView(initialPage: store.snapshot.state["lastRead"]["page"].int ?? 1, sourceID: store.snapshot.state["reader"]["mushaf"].string) }
             else { PhasePlaceholder(title: item.rawValue) }
         }
         .sheet(item: $content) { value in DailyContentView(content: value) }

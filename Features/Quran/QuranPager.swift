@@ -104,6 +104,13 @@ final class PageController: UIViewController {
         view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped)))
         spinner.startAnimating()
     }
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        if let edge = navigationController?.interactivePopGestureRecognizer,
+           let pager = parent as? UIPageViewController {
+            for scroll in pager.view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.panGestureRecognizer.require(toFail: edge) }
+        }
+    }
     @objc private func tapped() { onTap() }
     func set(image: UIImage) { loadViewIfNeeded(); imageView.image = image; spinner.stopAnimating(); errorLabel.text = nil }
     func show(error: String) { loadViewIfNeeded(); spinner.stopAnimating(); errorLabel.text = error }
