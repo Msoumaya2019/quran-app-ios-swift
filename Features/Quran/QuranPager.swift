@@ -7,7 +7,7 @@ struct QuranPager: UIViewControllerRepresentable {
     let onTap: () -> Void
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIViewController(context: Context) -> UIPageViewController {
-        let controller = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal)
+        let controller = NativeQuranPageController(transitionStyle: .scroll, navigationOrientation: .horizontal)
         controller.dataSource = context.coordinator; controller.delegate = context.coordinator
         context.coordinator.controller = controller
         context.coordinator.present(page: page, source: source)
@@ -74,6 +74,29 @@ struct QuranPager: UIViewControllerRepresentable {
             current = value.page; parent.page = value.page
             generation += 1
             prepareWindow(page: value.page, source: source)
+        }
+    }
+}
+
+// Hiding SwiftUI's navigation bar can disable UIKit's interactive pop gesture.
+// Restore its native recognizer only while this reader is visible, then restore
+// the previous delegate so other screens retain their navigation behaviour.
+final class NativeQuranPageController: UIPageViewController {
+    private weak var previousDelegate: UIGestureRecognizerDelegate?
+    private var previousEnabled = true
+    private var installed = false
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        guard !installed, let navigation = navigationController,
+              let edge = navigation.interactivePopGestureRecognizer else { return }
+        previousDelegate = edge.delegate; previousEnabled = edge.isEnabled; installed = true
+        edge.delegate = nil; edge.isEnabled = navigation.viewControllers.count > 1
+        for scroll in view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.panGestureRecognizer.require(toFail: edge) }
+    }
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if installed, let edge = navigationController?.interactivePopGestureRecognizer {
+            edge.delegate = previousDelegate; edge.isEnabled = previousEnabled; installed = false
         }
     }
 }
