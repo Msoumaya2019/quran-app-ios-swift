@@ -37,4 +37,12 @@ final class ReaderTests: XCTestCase {
     func testSourcePageBounds() {
         for source in QuranSource.available { XCTAssertEqual(source.validPage(0), 1); XCTAssertEqual(source.validPage(605), 604) }
     }
+    func test1441MappingUsesOriginalCoordinatesRatherThanCanonicalPagination() {
+        let catalog = QuranCatalog()
+        let id = QuranSourceMapping.firstVerse(source: .edition1441, page: 397, catalog: catalog)
+        XCTAssertEqual(catalog.surah(for: id)?.number, 29)
+        XCTAssertEqual(id - (catalog.surah(for: id)?.start ?? 1) + 1, 7)
+        let page = QuranSourceMapping.page(source: .edition1441, verseID: id, catalog: catalog)
+        XCTAssertTrue(QuranSourceMapping.verseIDs(page: page, catalog: catalog).contains(id))
+    }
 }

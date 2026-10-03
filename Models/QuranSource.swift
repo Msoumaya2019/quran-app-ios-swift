@@ -16,3 +16,24 @@ struct QuranSource: Identifiable, Equatable, Sendable {
     static let available = [medina, edition1441]
     func validPage(_ page: Int) -> Int { min(pageCount, max(1, page)) }
 }
+
+enum QuranSourceMapping {
+    static let rows1441: [String: [[Double]]] = {
+        guard let url = Bundle.main.url(forResource: "coran_1441-bounds", withExtension: "json"), let data = try? Data(contentsOf: url) else { return [:] }
+        return (try? JSONDecoder().decode([String: [[Double]]].self, from: data)) ?? [:]
+    }()
+    static func verseIDs(page: Int, catalog: QuranCatalog) -> [Int] {
+        (rows1441[String(page)] ?? []).compactMap { row in
+            guard row.count >= 2, let surah = catalog.surahs.first(where: { $0.number == Int(row[0]) }) else { return nil }
+            return surah.start + Int(row[1]) - 1
+        }
+    }
+    static func firstVerse(source: QuranSource, page: Int, catalog: QuranCatalog) -> Int {
+        if source == .edition1441 { return verseIDs(page: page, catalog: catalog).min() ?? 1 }
+        return catalog.pageStarts.first { $0.0 == page }?.1 ?? 1
+    }
+    static func page(source: QuranSource, verseID: Int, catalog: QuranCatalog) -> Int {
+        if source == .edition1441 { return (1...604).first { verseIDs(page: $0, catalog: catalog).contains(verseID) } ?? 1 }
+        return catalog.page(for: verseID)
+    }
+}

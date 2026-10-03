@@ -27,13 +27,7 @@ struct QuranReaderView: View {
     @StateObject private var audio = QuranAudioService()
     @State private var showAudio = false
     private var verseID: Int {
-        if source == .edition1441,
-           let url = Bundle.main.url(forResource: "coran_1441-bounds", withExtension: "json"),
-           let data = try? Data(contentsOf: url),
-           let rows = try? JSONDecoder().decode([String: [[Double]]].self, from: data)[String(page)] {
-            return rows.compactMap { row -> Int? in guard row.count >= 2, let surah = store.catalog.surahs.first(where: { $0.number == Int(row[0]) }) else { return nil }; return surah.start + Int(row[1]) - 1 }.min() ?? 1
-        }
-        return store.catalog.pageStarts.first { $0.0 == page }?.1 ?? 1
+        QuranSourceMapping.firstVerse(source: source, page: page, catalog: store.catalog)
     }
     private var bookmarked: Bool { let value = store.snapshot.state["bookmarks"][String(verseID)]; return value != .null && value["deletedAt"] == .null }
     private func record(_ kind: ReaderOperation.Kind) { store.readerChange(ReaderOperation(kind: kind, verseID: verseID, page: page, source: source.id)) }
@@ -87,7 +81,7 @@ struct QuranReaderView: View {
                             let bookmark = store.snapshot.state["bookmarks"][key]
                             if bookmark["deletedAt"] == .null, let id = bookmark["verseId"].int {
                                 Button("\(store.catalog.surah(for: id)?.name ?? "Le Coran") · verset \(bookmark["ayah"].int ?? 1)") {
-                                    page = source.validPage(bookmark["sourcePages"][source.id].int ?? bookmark["page"].int ?? 1); options = false
+                                    page = source.validPage(bookmark["sourcePages"][source.id].int ?? QuranSourceMapping.page(source: source, verseID: id, catalog: store.catalog)); options = false
                                 }
                             }
                         }
