@@ -55,7 +55,7 @@ actor QuranPageCache {
             return decoded
         case .lineImages:
             let width: CGFloat = 1440, height: CGFloat = 2320, lineHeight: CGFloat = 232
-            let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
+            let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true; format.preferredRange = .standard
             var lines: [UIImage] = []
             for line in 1...15 {
                 let url = lineRoot?.appendingPathComponent(String(format: "%03d-%02d.png", page, line)) ?? QuranResourceService.shared.lineURL(page: page, line: line)

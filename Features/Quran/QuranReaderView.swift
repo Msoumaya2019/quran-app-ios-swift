@@ -2,8 +2,10 @@ import SwiftUI
 
 struct QuranReaderView: View {
     var onHome: (() -> Void)? = nil
-    init(initialPage: Int = 1, sourceID: String? = nil, onHome: (() -> Void)? = nil) {
+    let mode: ReadingMode
+    init(initialPage: Int = 1, sourceID: String? = nil, mode: ReadingMode = .classic, onHome: (() -> Void)? = nil) {
         self.onHome = onHome
+        self.mode = mode
         let preferred = QuranSource.available.first { $0.id == sourceID } ?? .medina
         let ready = QuranResourceService.shared.isReady(preferred) ? preferred : .medina
         _source = State(initialValue: ready)
@@ -69,8 +71,9 @@ struct QuranReaderView: View {
                         Text("Coran 1441 se télécharge uniquement à la sélection (environ 98 Mo). Il reste ensuite disponible hors connexion.").font(.caption)
                     }
                     Section("Aller à une page") {
+                        TextField("Numéro de page", value: $jumpPage, format: .number).keyboardType(.numberPad).frame(minHeight: 44)
                         Stepper("Page \(jumpPage)", value: $jumpPage, in: 1...604)
-                        Button("Ouvrir la page") { page = jumpPage; options = false }
+                        Button("Ouvrir la page") { page = source.validPage(jumpPage); options = false }
                     }
                     Section("Réciteur") {
                         Picker("Réciteur", selection: Binding(get: { audio.reciterID }, set: { audio.changeReciter($0) })) {
@@ -99,14 +102,21 @@ struct QuranReaderView: View {
     private func changeSource(_ next: QuranSource) async {
         guard next != source, !loading else { return }
         loading = true
+        let owner = store.identity?.id
         defer { loading = false }
         do {
             try await QuranResourceService.shared.ensureReady(next)
-            let nextPage = next.validPage(page)
-            _ = try await QuranPageCache.shared.image(source: next, page: nextPage)
-            source = next; page = nextPage; options = false
-            record(.source)
-            record(.reading)
+            for _ in 0..<3 {
+                let nextPage = next.validPage(page)
+                await QuranPageCache.shared.setWindow(source: next, page: nextPage)
+                _ = try await QuranPageCache.shared.image(source: next, page: nextPage)
+                guard store.identity?.id == owner else { return }
+                guard next.validPage(page) == nextPage else { continue }
+                source = next; page = nextPage; options = false
+                record(.source); record(.reading)
+                return
+            }
+            self.error = "La page a changé pendant la préparation. Sélectionne de nouveau le Coran pour continuer sur la page actuelle."
         } catch { self.error = "Téléchargement indisponible. La source précédente reste affichée. Tu peux réessayer avec une connexion disponible." }
     }
 }
