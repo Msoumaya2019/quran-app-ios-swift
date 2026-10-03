@@ -91,13 +91,18 @@ final class NativeQuranPageController: UIPageViewController {
         DispatchQueue.main.async { [weak self] in self?.enableNativeBack() }
     }
     private func enableNativeBack() {
-        guard !installed, let navigation = navigationController ?? findNavigation(view.window?.rootViewController),
-              let edge = navigation.interactivePopGestureRecognizer else { return }
+        guard !installed else { return }
+        guard let navigation = navigationController ?? findNavigation(view.window?.rootViewController),
+              let edge = navigation.interactivePopGestureRecognizer else {
+            (viewControllers?.first as? PageController)?.debugNavigation("no native navigation controller")
+            return
+        }
         previousDelegate = edge.delegate; previousEnabled = edge.isEnabled; installed = true
         installedEdge = edge
         edge.delegate = nil; edge.isEnabled = navigation.viewControllers.count > 1
         for scroll in view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.panGestureRecognizer.require(toFail: edge) }
         print("[ReaderNavigation] native stack \(navigation.viewControllers.count), edge enabled \(edge.isEnabled)")
+        (viewControllers?.first as? PageController)?.debugNavigation("stack \(navigation.viewControllers.count), edge \(edge.isEnabled)")
     }
     private func findNavigation(_ value: UIViewController?) -> UINavigationController? {
         guard let value else { return nil }
@@ -151,6 +156,11 @@ final class PageController: UIViewController {
         }
     }
     @objc private func tapped() { onTap() }
+    func debugNavigation(_ status: String) {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { imageView.accessibilityLabel = "Page \(page) · \(status)" }
+        #endif
+    }
     func set(image: UIImage) { loadViewIfNeeded(); imageView.image = image; imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil }
     func show(error: String) { loadViewIfNeeded(); spinner.stopAnimating(); errorLabel.text = error }
 }

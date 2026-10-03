@@ -52,6 +52,7 @@ struct QuranReaderView: View {
         .statusBarHidden(immersive)
         .onAppear {
             guard !initialized else { return }; initialized = true
+            record(.reading)
         }
         .onChange(of: page) { _, _ in if initialized { record(.reading) } }
         .onDisappear { audio.pause(); record(.reading); Task { await store.refresh() } }

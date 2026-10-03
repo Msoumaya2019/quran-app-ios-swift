@@ -19,7 +19,8 @@ import SwiftUI
         next.state = operation.applying(to: next.state, catalog: catalog)
         var queue = next.readerOperations ?? []
         // Keep the latest resume/source operation; bookmark tombstones retain their order.
-        if operation.kind == .reading || operation.kind == .source { queue.removeAll { $0.kind == operation.kind } }
+        if operation.kind == .reading { queue.removeAll { $0.kind == .reading && $0.page == operation.page && $0.source == operation.source } }
+        if operation.kind == .source { queue.removeAll { $0.kind == .source } }
         queue.append(operation); next.readerOperations = queue
         do { try cache.save(next, userID: userID); snapshot = next }
         catch { message = "Impossible d’enregistrer cette modification sur l’appareil." }

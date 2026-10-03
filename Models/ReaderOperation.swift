@@ -19,6 +19,8 @@ struct ReaderOperation: Codable, Sendable, Identifiable {
         case .source:
             result = result.setting("reader", state["reader"].setting("mushaf", .string(source)))
         case .reading:
+            let readPages = Set(state["readPages"].array.compactMap(\.int) + [page]).sorted().map { JSONValue.number(Double($0)) }
+            result = result.setting("readPages", .array(readPages))
             if (state["lastRead"]["readAt"].string ?? "") <= at {
                 result = result.setting("lastRead", .object(["page": .number(Double(page)), "verseId": .number(Double(verseID)), "readAt": .string(at)]))
             }
