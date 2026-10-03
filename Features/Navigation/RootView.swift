@@ -33,6 +33,7 @@ struct RootView: View {
                         NavigationStack {
                             Group {
                                 if item == .home { HomeView(tab: $tab) }
+                                else if item == .quran { QuranReaderView(onHome: { tab = .home }) }
                                 else { PhasePlaceholder(title: item.rawValue) }
                             }
                             .toolbar {

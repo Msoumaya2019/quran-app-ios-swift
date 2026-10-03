@@ -13,13 +13,16 @@ final class PhaseOneUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["home.name"].label, "Mohamed")
         attach(app, name: "Accueil natif")
         let tabs = app.tabBars
-        for title in ["Coran", "Programme", "Progrès", "Amis", "Accueil"] { tabs.buttons[title].tap(); XCTAssertTrue(tabs.buttons[title].isSelected) }
+        tabs.buttons["Coran"].tap()
+        XCTAssertTrue(app.buttons["quran.action.Plus"].waitForExistence(timeout: 5))
+        app.buttons["quran.action.Accueil"].tap()
+        for title in ["Programme", "Progrès", "Amis", "Accueil"] { tabs.buttons[title].tap(); XCTAssertTrue(tabs.buttons[title].isSelected) }
         app.buttons["settings.open"].tap()
         XCTAssertTrue(app.navigationBars["Réglages"].waitForExistence(timeout: 5))
         attach(app, name: "Réglages natifs")
         app.buttons["Fermer"].tap()
         app.buttons["home.continue"].tap()
-        XCTAssertTrue(app.staticTexts["Lecture"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["quran.action.Plus"].waitForExistence(timeout: 5))
         let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5)), to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
         from.press(forDuration: 0.1, thenDragTo: to)
         XCTAssertTrue(app.buttons["home.continue"].waitForExistence(timeout: 5))

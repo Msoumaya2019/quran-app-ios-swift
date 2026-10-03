@@ -11,6 +11,8 @@ project=uid('project'); app=uid('target:CoranNative')
 products=[];refs=[];targets=[]
 package=add('Supabase','XCRemoteSwiftPackageReference',repositoryURL='https://github.com/supabase/supabase-swift.git',requirement={'kind':'exactVersion','version':'2.33.1'})
 packageProduct=add('SupabaseProduct','XCSwiftPackageProductDependency',package=package,productName='Supabase')
+zipPackage=add('ZIPFoundation','XCRemoteSwiftPackageReference',repositoryURL='https://github.com/weichsel/ZIPFoundation.git',requirement={'kind':'exactVersion','version':'0.9.19'})
+zipProduct=add('ZIPFoundationProduct','XCSwiftPackageProductDependency',package=zipPackage,productName='ZIPFoundation')
 for name,kind,folders in [('CoranNative','application',['App','Core','Models','Features','Components','Services','Repositories','Networking','Storage']),('CoranNativeTests','bundle.unit-test',['Tests']),('CoranNativeUITests','bundle.ui-testing',['UITests'])]:
  buildfiles=[]
  for folder in folders:
@@ -19,15 +21,15 @@ for name,kind,folders in [('CoranNative','application',['App','Core','Models','F
  source=add('sources:'+name,'PBXSourcesBuildPhase',buildActionMask='2147483647',files=buildfiles,runOnlyForDeploymentPostprocessing='0')
  frameworks=[];resourcefiles=[];dependencies=[];phases=[source]
  if name=='CoranNative':
-  frameworks=[add('SupabaseFramework','PBXBuildFile',productRef=packageProduct)]
-  for path,ft in [('Resources/Assets.xcassets','folder.assetcatalog'),('Resources/quran-meta.json','text.json'),('Resources/quran-pages.json','text.json'),('Resources/Backend.plist','text.plist.xml')]:
+  frameworks=[add('SupabaseFramework','PBXBuildFile',productRef=packageProduct),add('ZIPFoundationFramework','PBXBuildFile',productRef=zipProduct)]
+  for path,ft in [('Resources/Assets.xcassets','folder.assetcatalog'),('Resources/quran-meta.json','text.json'),('Resources/quran-pages.json','text.json'),('Resources/Backend.plist','text.plist.xml'),('Resources/Medina','folder'),('Resources/coran_1441-markers.json','text.json'),('Resources/coran_1441-bounds.json','text.json')]:
    ref=add('file:'+path,'PBXFileReference',lastKnownFileType=ft,path=path,sourceTree='<group>');refs.append(ref);resourcefiles.append(add('build:'+path,'PBXBuildFile',fileRef=ref))
  else:
   proxy=add('proxy:'+name,'PBXContainerItemProxy',containerPortal=project,proxyType='1',remoteGlobalIDString=app,remoteInfo='CoranNative');dependencies=[add('dep:'+name,'PBXTargetDependency',target=app,targetProxy=proxy)]
  phases.append(add('frameworks:'+name,'PBXFrameworksBuildPhase',buildActionMask='2147483647',files=frameworks,runOnlyForDeploymentPostprocessing='0'))
  phases.append(add('resources:'+name,'PBXResourcesBuildPhase',buildActionMask='2147483647',files=resourcefiles,runOnlyForDeploymentPostprocessing='0'))
  if name=='CoranNative':
-  phases.append(add('config-script','PBXShellScriptBuildPhase',buildActionMask='2147483647',files=[],inputPaths=[],outputPaths=[],runOnlyForDeploymentPostprocessing='0',shellPath='/bin/sh',shellScript='if [ -f "$SRCROOT/Resources/Backend.local.plist" ]; then\n  cp "$SRCROOT/Resources/Backend.local.plist" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Backend.local.plist"\nfi\n',name='Inject local backend configuration',alwaysOutOfDate='1'))
+  phases.append(add('config-script','PBXShellScriptBuildPhase',buildActionMask='2147483647',files=[],inputPaths=[],outputPaths=[],runOnlyForDeploymentPostprocessing='0',shellPath='/bin/sh',shellScript='if [ -f "$SRCROOT/Resources/Backend.local.plist" ]; then\n  cp "$SRCROOT/Resources/Backend.local.plist" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Backend.local.plist"\nfi\nif [ "$CONFIGURATION" = "Debug" ] && [ -d "$SRCROOT/Resources/ReaderTestFixtures" ]; then\n  cp -R "$SRCROOT/Resources/ReaderTestFixtures" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/ReaderTestFixtures"\nfi\n',name='Inject local backend configuration and Debug fixtures',alwaysOutOfDate='1'))
  configurations=[]
  for config in ['Debug','Release']:
   settings={'PRODUCT_NAME':name,'PRODUCT_BUNDLE_IDENTIFIER':'com.coranmemoire.native.'+('ios' if name=='CoranNative' else name),'SWIFT_VERSION':'5.0','IPHONEOS_DEPLOYMENT_TARGET':'17.0','TARGETED_DEVICE_FAMILY':'1','CODE_SIGN_STYLE':'Automatic','GENERATE_INFOPLIST_FILE':'YES','SWIFT_OPTIMIZATION_LEVEL':'-Onone' if config=='Debug' else '-O','SWIFT_ACTIVE_COMPILATION_CONDITIONS':'DEBUG' if config=='Debug' else '', 'ENABLE_TESTABILITY':'YES' if config=='Debug' else 'NO','ONLY_ACTIVE_ARCH':'YES' if config=='Debug' else 'NO'}
@@ -37,12 +39,12 @@ for name,kind,folders in [('CoranNative','application',['App','Core','Models','F
   configurations.append(add('config:'+name+config,'XCBuildConfiguration',name=config,buildSettings=settings))
  configlist=add('configs:'+name,'XCConfigurationList',buildConfigurations=configurations,defaultConfigurationIsVisible='0',defaultConfigurationName='Release')
  product=add('product:'+name,'PBXFileReference',explicitFileType='wrapper.application' if kind=='application' else 'wrapper.cfbundle',includeInIndex='0',path=name+('.app' if kind=='application' else '.xctest'),sourceTree='BUILT_PRODUCTS_DIR');products.append(product)
- targets.append(add('target:'+name,'PBXNativeTarget',buildConfigurationList=configlist,buildPhases=phases,buildRules=[],dependencies=dependencies,name=name,productName=name,productReference=product,productType='com.apple.product-type.'+kind,packageProductDependencies=[packageProduct] if name=='CoranNative' else []))
+ targets.append(add('target:'+name,'PBXNativeTarget',buildConfigurationList=configlist,buildPhases=phases,buildRules=[],dependencies=dependencies,name=name,productName=name,productReference=product,productType='com.apple.product-type.'+kind,packageProductDependencies=[packageProduct,zipProduct] if name=='CoranNative' else []))
 productGroup=add('Products','PBXGroup',children=products,name='Products',sourceTree='<group>')
 mainGroup=add('rootgroup','PBXGroup',children=refs+[productGroup],sourceTree='<group>')
 configs=[add('projectconfig:'+name,'XCBuildConfiguration',name=name,buildSettings={'SDKROOT':'iphoneos','CLANG_ENABLE_MODULES':'YES','CLANG_ENABLE_OBJC_ARC':'YES','SWIFT_VERSION':'5.0','IPHONEOS_DEPLOYMENT_TARGET':'17.0','DEBUG_INFORMATION_FORMAT':'dwarf' if name=='Debug' else 'dwarf-with-dsym'}) for name in ['Debug','Release']]
 projectConfig=add('projectconfigs','XCConfigurationList',buildConfigurations=configs,defaultConfigurationIsVisible='0',defaultConfigurationName='Release')
-add('project','PBXProject',attributes={'BuildIndependentTargetsInParallel':'YES','LastUpgradeCheck':'1600'},buildConfigurationList=projectConfig,compatibilityVersion='Xcode 14.0',developmentRegion='fr',hasScannedForEncodings='0',knownRegions=['fr','en','Base'],mainGroup=mainGroup,productRefGroup=productGroup,projectDirPath='',projectRoot='',targets=targets,packageReferences=[package])
+add('project','PBXProject',attributes={'BuildIndependentTargetsInParallel':'YES','LastUpgradeCheck':'1600'},buildConfigurationList=projectConfig,compatibilityVersion='Xcode 14.0',developmentRegion='fr',hasScannedForEncodings='0',knownRegions=['fr','en','Base'],mainGroup=mainGroup,productRefGroup=productGroup,projectDirPath='',projectRoot='',targets=targets,packageReferences=[package,zipPackage])
 def encode(v,indent=0):
  if isinstance(v,dict):return '{\n'+''.join('  '*(indent+1)+json.dumps(str(k))+ ' = '+encode(value,indent+1)+';\n' for k,value in v.items())+'  '*indent+'}'
  if isinstance(v,list):return '('+','.join(encode(x,indent) for x in v)+')'

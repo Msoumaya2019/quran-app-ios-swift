@@ -17,6 +17,7 @@ struct DailyContent: Codable, Identifiable, Sendable {
     let image_url: String?
 }
 struct HomeSnapshot: Codable, Sendable {
+    var readerOperations: [ReaderOperation]?
     var state: JSONValue = .object([:])
     var displayName: String?
     var contents: [DailyContent] = []

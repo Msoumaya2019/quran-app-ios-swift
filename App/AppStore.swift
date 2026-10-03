@@ -13,6 +13,17 @@ import SwiftUI
     private let cache: any HomeCache
     private var generation = 0
     private var refreshingGeneration: Int?
+    func readerChange(_ operation: ReaderOperation) {
+        guard let userID = identity?.id else { return }
+        var next = snapshot
+        next.state = operation.applying(to: next.state, catalog: catalog)
+        var queue = next.readerOperations ?? []
+        // Keep the latest resume/source operation; bookmark tombstones retain their order.
+        if operation.kind == .reading || operation.kind == .source { queue.removeAll { $0.kind == operation.kind } }
+        queue.append(operation); next.readerOperations = queue
+        do { try cache.save(next, userID: userID); snapshot = next }
+        catch { message = "Impossible d’enregistrer cette modification sur l’appareil." }
+    }
     init(auth: any AuthGateway, remote: any HomeRemote, cache: any HomeCache, catalog: QuranCatalog = QuranCatalog()) {
         self.auth = auth; self.remote = remote; self.cache = cache; self.catalog = catalog
         identity = auth.cachedIdentity
@@ -50,8 +61,18 @@ import SwiftUI
         do {
             let valid = try await auth.refresh()
             guard generation == token, valid.id == original.id else { return }
-            let next = try await remote.fetch(userID: original.id, cached: snapshot)
+            let operations = snapshot.readerOperations ?? []
+            if !operations.isEmpty {
+                try await remote.syncReader(userID: original.id, operations: operations, catalog: catalog)
+                guard generation == token else { return }
+                let confirmed = Set(operations.map(\.id))
+                snapshot.readerOperations?.removeAll { confirmed.contains($0.id) }
+                try cache.save(snapshot, userID: original.id)
+            }
+            var next = try await remote.fetch(userID: original.id, cached: snapshot)
             guard generation == token, identity?.id == original.id else { return }
+            next.readerOperations = snapshot.readerOperations
+            for operation in next.readerOperations ?? [] { next.state = operation.applying(to: next.state, catalog: catalog) }
             try cache.save(next, userID: original.id)
             snapshot = next; message = nil
         } catch {

@@ -11,6 +11,18 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare original Coran 1441 offline test pages
+        run: |
+          curl --fail --retry 3 --location 'https://files.quran.app/hafs/madani_1441/zips/images_1440.zip' -o "$RUNNER_TEMP/coran1441.zip"
+          python3 - <<'PY'
+          import zipfile, os
+          from pathlib import Path
+          output=Path('Resources/ReaderTestFixtures'); output.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile(os.environ['RUNNER_TEMP']+'/coran1441.zip') as archive:
+              for page in range(1,26):
+                  for line in range(1,16):
+                      (output/f'{page:03d}-{line:02d}.png').write_bytes(archive.read(f'width_1440/{page}/{line}.png'))
+          PY
       - name: Configure public Supabase client
         env:
           SUPABASE_PUBLIC_KEY: ${{ secrets.SUPABASE_PUBLIC_KEY }}

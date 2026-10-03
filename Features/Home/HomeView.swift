@@ -34,7 +34,10 @@ struct HomeView: View {
         }
         .background(theme.background).foregroundStyle(theme.text)
         .refreshable { await store.refresh() }
-        .navigationDestination(item: $route) { item in PhasePlaceholder(title: item.rawValue) }
+        .navigationDestination(item: $route) { item in
+            if item == .reading { QuranReaderView() }
+            else { PhasePlaceholder(title: item.rawValue) }
+        }
         .sheet(item: $content) { value in DailyContentView(content: value) }
         .accessibilityIdentifier("home.screen")
     }

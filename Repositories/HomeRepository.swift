@@ -3,6 +3,10 @@ import Supabase
 
 @MainActor protocol HomeRemote {
     func fetch(userID: UUID, cached: HomeSnapshot) async throws -> HomeSnapshot
+    func syncReader(userID: UUID, operations: [ReaderOperation], catalog: QuranCatalog) async throws
+}
+extension HomeRemote {
+    func syncReader(userID: UUID, operations: [ReaderOperation], catalog: QuranCatalog) async throws { throw URLError(.notConnectedToInternet) }
 }
 @MainActor final class HomeRepository: HomeRemote {
     let client: SupabaseClient?
@@ -11,6 +15,24 @@ import Supabase
     struct ProfileRow: Decodable { let display_name: String }
     struct DateArgs: Encodable { let p_date: String }
     struct QuizArgs: Encodable { let p_day: String }
+    struct VersionedRow: Decodable { let data: JSONValue; let updated_at: String }
+    struct StatePatch: Encodable { let data: JSONValue; let updated_at: String }
+    func syncReader(userID: UUID, operations: [ReaderOperation], catalog: QuranCatalog) async throws {
+        guard let client, !operations.isEmpty else { return }
+        for _ in 0..<4 {
+            let rows: [VersionedRow] = try await client.from("user_state").select("data,updated_at").eq("user_id", value: userID.uuidString).limit(1).execute().value
+            guard let row = rows.first, row.data["schema"].int == 1 else { throw URLError(.cannotParseResponse) }
+            var merged = row.data
+            for operation in operations { merged = operation.applying(to: merged, catalog: catalog) }
+            let now = ISO8601DateFormatter().string(from: .now)
+            let acknowledged: [VersionedRow] = try await client.from("user_state")
+                .update(StatePatch(data: merged, updated_at: now))
+                .eq("user_id", value: userID.uuidString).eq("updated_at", value: row.updated_at)
+                .select("data,updated_at").execute().value
+            if !acknowledged.isEmpty { return }
+        }
+        throw URLError(.cannotWriteToFile)
+    }
     func fetch(userID: UUID, cached: HomeSnapshot) async throws -> HomeSnapshot {
         guard let client else { throw ConfigurationError.missing }
         async let stateRequest: [StateRow] = client.from("user_state").select("user_id,data").eq("user_id", value: userID.uuidString).limit(1).execute().value

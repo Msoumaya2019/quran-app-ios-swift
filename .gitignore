@@ -9,3 +9,4 @@ Config/*.local.xcconfig
 *.p8
 .env*
 artifacts/
+Resources/ReaderTestFixtures/
