@@ -1,0 +1,63 @@
+name: Swift native — Xcode tests and unsigned IPA
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  xcode:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure public Supabase client
+        env:
+          SUPABASE_PUBLIC_KEY: ${{ secrets.SUPABASE_PUBLIC_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os, plistlib
+          key = os.environ.get('SUPABASE_PUBLIC_KEY', '')
+          if not key:
+              raise SystemExit('SUPABASE_PUBLIC_KEY repository secret is required')
+          with open('Resources/Backend.local.plist', 'wb') as f:
+              plistlib.dump({'SUPABASE_URL':'https://npbwnvrqmajwqtnncuyv.supabase.co','SUPABASE_PUBLIC_KEY':key}, f)
+          PY
+      - name: Generate Xcode project
+        run: |
+          python3 Scripts/generate_project.py --check
+          xcodebuild -version
+      - name: Choose available iPhone simulator
+        run: |
+          python3 - <<'PY'
+          import json, subprocess, os
+          devices=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json']))['devices']
+          choices=[d for runtime, ds in devices.items() if '.iOS-' in runtime for d in ds if 'iPhone' in d['name']]
+          phone=next((d for d in choices if 'Pro Max' in d['name']),choices[0])
+          with open(os.environ['GITHUB_ENV'],'a') as f: f.write('SIMULATOR_ID='+phone['udid']+'\n')
+          print(phone['name'])
+          PY
+      - name: Build and run XCTest / UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test -project CoranNative.xcodeproj -scheme CoranNative -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -derivedDataPath DerivedData -resultBundlePath artifacts/PhaseOne.xcresult CODE_SIGNING_ALLOWED=NO | tee xcode-tests.log
+      - name: Archive unsigned iPhone application
+        run: |
+          set -o pipefail
+          xcodebuild archive -project CoranNative.xcodeproj -scheme CoranNative -destination 'generic/platform=iOS' -archivePath artifacts/CoranNative.xcarchive -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO | tee xcode-archive.log
+          mkdir -p artifacts/Payload
+          cp -R artifacts/CoranNative.xcarchive/Products/Applications/CoranNative.app artifacts/Payload/
+          cd artifacts && zip -qr CoranNative-0.1.0-unsigned.ipa Payload
+      - name: Export UI screenshots
+        if: always()
+        run: xcrun xcresulttool export attachments --path artifacts/PhaseOne.xcresult --output-path artifacts/Screenshots || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PhaseOne-Xcode-tests-and-IPA
+          path: |
+            artifacts/PhaseOne.xcresult
+            artifacts/Screenshots
+            artifacts/*.ipa
+            xcode-*.log
+          retention-days: 14

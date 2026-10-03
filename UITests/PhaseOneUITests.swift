@@ -1,0 +1,30 @@
+import XCTest
+
+final class PhaseOneUITests: XCTestCase {
+    func testAuthenticationScreenAndDisabledEmptyLogin() {
+        let app = XCUIApplication(); app.launch()
+        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["auth.submit"].isEnabled)
+        attach(app, name: "Authentification native")
+    }
+    func testCachedHomeNavigationSettingsAndNativeBack() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
+        XCTAssertTrue(app.staticTexts["home.name"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["home.name"].label, "Mohamed")
+        attach(app, name: "Accueil natif")
+        let tabs = app.tabBars
+        for title in ["Coran", "Programme", "Progrès", "Amis", "Accueil"] { tabs.buttons[title].tap(); XCTAssertTrue(tabs.buttons[title].isSelected) }
+        app.buttons["settings.open"].tap()
+        XCTAssertTrue(app.navigationBars["Réglages"].waitForExistence(timeout: 5))
+        attach(app, name: "Réglages natifs")
+        app.buttons["Fermer"].tap()
+        app.buttons["home.continue"].tap()
+        XCTAssertTrue(app.staticTexts["Lecture"].firstMatch.waitForExistence(timeout: 5))
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5)), to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
+        from.press(forDuration: 0.1, thenDragTo: to)
+        XCTAssertTrue(app.buttons["home.continue"].waitForExistence(timeout: 5))
+    }
+    private func attach(_ app: XCUIApplication, name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
+}

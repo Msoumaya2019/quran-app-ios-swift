@@ -1,0 +1,931 @@
+{
+  "source": "Local checked-in SQL and RN calls; not a privileged production schema dump",
+  "objects": {
+    "function": [
+      {
+        "name": "public.open_admin_contact",
+        "migration": "admin-contact.sql"
+      },
+      {
+        "name": "private.sync_admin_contacts",
+        "migration": "admin-contact.sql"
+      },
+      {
+        "name": "public.admin_learning_accounts",
+        "migration": "admin-learning-accounts.sql"
+      },
+      {
+        "name": "public.admin_notification_recipients",
+        "migration": "admin-notifications.sql"
+      },
+      {
+        "name": "public.send_admin_notification",
+        "migration": "admin-notifications.sql"
+      },
+      {
+        "name": "public.daily_content_for_date",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "private.validate_invocation_recording",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "private.can_play_shared_recitation",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "public.save_daily_content",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "private.notify_private_message",
+        "migration": "fix-social-push.sql"
+      },
+      {
+        "name": "public.friend_inbox",
+        "migration": "friend-inbox.sql"
+      },
+      {
+        "name": "private.friend_room_access",
+        "migration": "friend-realtime.sql"
+      },
+      {
+        "name": "private.notify_recitation_corrected",
+        "migration": "notification-corrections.sql"
+      },
+      {
+        "name": "public.finalize_recitation_correction",
+        "migration": "notification-corrections.sql"
+      },
+      {
+        "name": "private.notify_private_message",
+        "migration": "notifications.sql"
+      },
+      {
+        "name": "private.send_expo_push",
+        "migration": "push-delivery-monitor.sql"
+      },
+      {
+        "name": "private.collect_push_receipts",
+        "migration": "push-delivery-monitor.sql"
+      },
+      {
+        "name": "public.my_push_delivery_status",
+        "migration": "push-delivery-monitor.sql"
+      },
+      {
+        "name": "public.register_push_device",
+        "migration": "push-device-registration.sql"
+      },
+      {
+        "name": "private.quiz_push",
+        "migration": "quiz-notifications.sql"
+      },
+      {
+        "name": "private.quiz_challenge_notification",
+        "migration": "quiz-notifications.sql"
+      },
+      {
+        "name": "public.quiz_set_notifications",
+        "migration": "quiz-notifications.sql"
+      },
+      {
+        "name": "private.quiz_notify_daily",
+        "migration": "quiz-notifications.sql"
+      },
+      {
+        "name": "private.quiz_question_json",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "private.quiz_public_question",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_answer_daily",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_create_challenge",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_answer_challenge",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_snapshot",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_admin_list",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_admin_save",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_admin_delete",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_admin_sets",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_admin_save_set",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_admin_delete_set",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "private.validate_recitation_message",
+        "migration": "recitation-sharing.sql"
+      },
+      {
+        "name": "private.can_play_shared_recitation",
+        "migration": "recitation-sharing.sql"
+      },
+      {
+        "name": "public.friend_overview",
+        "migration": "social-v2.sql"
+      },
+      {
+        "name": "public.my_unread_messages",
+        "migration": "social-v2.sql"
+      },
+      {
+        "name": "private.notify_private_message",
+        "migration": "social-v2.sql"
+      },
+      {
+        "name": "private.notify_friend_link",
+        "migration": "social-v2.sql"
+      },
+      {
+        "name": "private.is_friend",
+        "migration": "social.sql"
+      },
+      {
+        "name": "private.is_app_admin",
+        "migration": "social.sql"
+      },
+      {
+        "name": "private.is_social_suspended",
+        "migration": "social.sql"
+      },
+      {
+        "name": "private.has_friend_link",
+        "migration": "social.sql"
+      },
+      {
+        "name": "private.active_link",
+        "migration": "social.sql"
+      },
+      {
+        "name": "private.group_member",
+        "migration": "social.sql"
+      },
+      {
+        "name": "private.group_invitee",
+        "migration": "social.sql"
+      },
+      {
+        "name": "private.group_moderator",
+        "migration": "social.sql"
+      },
+      {
+        "name": "private.shared_group",
+        "migration": "social.sql"
+      },
+      {
+        "name": "private.can_read_chat",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.ensure_social_profile",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.request_friend",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.accept_friend",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.decline_friend",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.remove_friend",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.block_friend",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.unblock_friend",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.publish_social_progress",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.set_social_online",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.friend_overview",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.create_friend_group",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.invite_group_member",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.accept_group_invite",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.decline_group_invite",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.set_group_moderator",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.remove_group_member",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.delete_friend_group",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.delete_friend_message",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.resolve_friend_report",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.suspend_social_member",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.unsuspend_social_member",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.report_friend_message",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.accept_shared_goal",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.accept_review_appointment",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.cancel_review_appointment",
+        "migration": "social.sql"
+      }
+    ],
+    "trigger": [
+      {
+        "name": "sync_admin_contacts",
+        "migration": "admin-contact.sql"
+      },
+      {
+        "name": "validate_invocation_recording",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "notify_recitation_corrected",
+        "migration": "notification-corrections.sql"
+      },
+      {
+        "name": "notify_private_message",
+        "migration": "notifications.sql"
+      },
+      {
+        "name": "quiz_challenge_push",
+        "migration": "quiz-notifications.sql"
+      },
+      {
+        "name": "quiz_answer_push",
+        "migration": "quiz-notifications.sql"
+      },
+      {
+        "name": "validate_recitation_message",
+        "migration": "recitation-sharing.sql"
+      },
+      {
+        "name": "notify_friend_link",
+        "migration": "social-v2.sql"
+      }
+    ],
+    "table": [
+      {
+        "name": "public.admin_notifications",
+        "migration": "admin-notifications.sql"
+      },
+      {
+        "name": "public.content_categories",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "public.daily_contents",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "public.daily_content_schedule",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "public.content_favorites",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "public.notification_preferences",
+        "migration": "notifications.sql"
+      },
+      {
+        "name": "public.push_devices",
+        "migration": "notifications.sql"
+      },
+      {
+        "name": "public.app_problem_reports",
+        "migration": "problem-reports.sql"
+      },
+      {
+        "name": "private.push_delivery_log",
+        "migration": "push-delivery-monitor.sql"
+      },
+      {
+        "name": "private.quiz_notification_events",
+        "migration": "quiz-notifications.sql"
+      },
+      {
+        "name": "public.quiz_questions",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_daily_responses",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_challenges",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_challenge_questions",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_challenge_answers",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.quiz_sets",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "public.recitations",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "public.recitation_corrections",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "public.recitation_feedback",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "public.user_state",
+        "migration": "schema.sql"
+      },
+      {
+        "name": "public.friend_message_reads",
+        "migration": "social-v2.sql"
+      },
+      {
+        "name": "public.friend_message_hidden",
+        "migration": "social-v2.sql"
+      },
+      {
+        "name": "public.friend_profiles",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.friend_links",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.friend_progress",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.friend_groups",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.friend_group_members",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.friend_messages",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.friend_message_reports",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.app_admins",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.social_suspensions",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.friend_shared_goals",
+        "migration": "social.sql"
+      },
+      {
+        "name": "public.friend_review_appointments",
+        "migration": "social.sql"
+      }
+    ],
+    "policy": [
+      {
+        "name": "admin_notifications_read",
+        "migration": "admin-notifications.sql"
+      },
+      {
+        "name": "daily_media_admin",
+        "migration": "daily-content-media.sql"
+      },
+      {
+        "name": "daily_media_active_read",
+        "migration": "daily-content-media.sql"
+      },
+      {
+        "name": "categories_read",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "categories_read_public",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "categories_admin",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "contents_read",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "contents_read_public",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "contents_admin",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "schedule_read",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "schedule_admin",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "favorites_own",
+        "migration": "daily-contents.sql"
+      },
+      {
+        "name": "friend_avatars_read",
+        "migration": "friend-avatars.sql"
+      },
+      {
+        "name": "friend_avatars_insert",
+        "migration": "friend-avatars.sql"
+      },
+      {
+        "name": "friend_avatars_update",
+        "migration": "friend-avatars.sql"
+      },
+      {
+        "name": "friend_avatars_delete",
+        "migration": "friend-avatars.sql"
+      },
+      {
+        "name": "friend_read_receipts",
+        "migration": "friend-avatars.sql"
+      },
+      {
+        "name": "friend_room_receive",
+        "migration": "friend-realtime.sql"
+      },
+      {
+        "name": "friend_room_send",
+        "migration": "friend-realtime.sql"
+      },
+      {
+        "name": "notification settings own",
+        "migration": "notifications.sql"
+      },
+      {
+        "name": "push devices own",
+        "migration": "notifications.sql"
+      },
+      {
+        "name": "problem_reports_read",
+        "migration": "problem-reports.sql"
+      },
+      {
+        "name": "problem_reports_insert",
+        "migration": "problem-reports.sql"
+      },
+      {
+        "name": "problem_reports_admin_update",
+        "migration": "problem-reports.sql"
+      },
+      {
+        "name": "problem_screenshots_insert",
+        "migration": "problem-reports.sql"
+      },
+      {
+        "name": "problem_screenshots_read",
+        "migration": "problem-reports.sql"
+      },
+      {
+        "name": "quiz_admin",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "quiz_daily_own",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "quiz_challenge_member",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "quiz_answer_own",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "quiz_question_member",
+        "migration": "quiz.sql"
+      },
+      {
+        "name": "recitations_read",
+        "migration": "recitation-sharing.sql"
+      },
+      {
+        "name": "recitation_files_read",
+        "migration": "recitation-sharing.sql"
+      },
+      {
+        "name": "recitations_owner_delete",
+        "migration": "recitation-sharing.sql"
+      },
+      {
+        "name": "recitation_files_owner_delete",
+        "migration": "recitation-sharing.sql"
+      },
+      {
+        "name": "recitations_read",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "recitations_insert",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "recitations_update",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "corrections_read",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "corrections_admin_insert",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "corrections_admin_update",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "feedback_read",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "feedback_admin_insert",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "recitation_files_owner_insert",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "recitation_files_read",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "recitation_feedback_admin_insert",
+        "migration": "recitations.sql"
+      },
+      {
+        "name": "own state select",
+        "migration": "schema.sql"
+      },
+      {
+        "name": "own state insert",
+        "migration": "schema.sql"
+      },
+      {
+        "name": "own state update",
+        "migration": "schema.sql"
+      },
+      {
+        "name": "own state delete",
+        "migration": "schema.sql"
+      },
+      {
+        "name": "own message reads",
+        "migration": "social-v2.sql"
+      },
+      {
+        "name": "own hidden messages",
+        "migration": "social-v2.sql"
+      },
+      {
+        "name": "profiles read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "profiles insert",
+        "migration": "social.sql"
+      },
+      {
+        "name": "profiles update",
+        "migration": "social.sql"
+      },
+      {
+        "name": "links read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "progress own read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "progress own insert",
+        "migration": "social.sql"
+      },
+      {
+        "name": "progress own update",
+        "migration": "social.sql"
+      },
+      {
+        "name": "groups read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "group members read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "chat read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "chat send",
+        "migration": "social.sql"
+      },
+      {
+        "name": "reports own read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "reports moderators read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "reports admins read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "admins own read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "suspensions read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "shared goals read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "shared goals propose",
+        "migration": "social.sql"
+      },
+      {
+        "name": "appointments read",
+        "migration": "social.sql"
+      },
+      {
+        "name": "appointments propose",
+        "migration": "social.sql"
+      }
+    ]
+  },
+  "calls": {
+    "src\\services\\adminAccounts.ts": {
+      "tables": [],
+      "rpc": [
+        "admin_learning_accounts"
+      ]
+    },
+    "src\\services\\adminNotifications.ts": {
+      "tables": [
+        "admin_notifications"
+      ],
+      "rpc": [
+        "admin_notification_recipients",
+        "send_admin_notification"
+      ]
+    },
+    "src\\services\\audioFocus.ts": {
+      "tables": [],
+      "rpc": []
+    },
+    "src\\services\\authStorage.ts": {
+      "tables": [],
+      "rpc": []
+    },
+    "src\\services\\avatars.ts": {
+      "tables": [
+        "friend_profiles"
+      ],
+      "rpc": [
+        "ensure_social_profile"
+      ]
+    },
+    "src\\services\\connectivity.ts": {
+      "tables": [],
+      "rpc": []
+    },
+    "src\\services\\dailyContentMedia.ts": {
+      "tables": [
+        "daily_contents"
+      ],
+      "rpc": []
+    },
+    "src\\services\\dailyContents.ts": {
+      "tables": [
+        "content_categories",
+        "content_favorites",
+        "daily_content_schedule",
+        "daily_contents"
+      ],
+      "rpc": [
+        "daily_content_for_date",
+        "save_daily_content"
+      ]
+    },
+    "src\\services\\notifications.ts": {
+      "tables": [
+        "notification_preferences",
+        "push_devices"
+      ],
+      "rpc": [
+        "my_push_delivery_status",
+        "register_push_device"
+      ]
+    },
+    "src\\services\\offlineSync.ts": {
+      "tables": [],
+      "rpc": []
+    },
+    "src\\services\\problemReports.ts": {
+      "tables": [
+        "app_problem_reports"
+      ],
+      "rpc": []
+    },
+    "src\\services\\quiz.ts": {
+      "tables": [],
+      "rpc": []
+    },
+    "src\\services\\quranAudioTimeline.ts": {
+      "tables": [],
+      "rpc": []
+    },
+    "src\\services\\quranDownload.ts": {
+      "tables": [],
+      "rpc": []
+    },
+    "src\\services\\quranSourceReady.ts": {
+      "tables": [],
+      "rpc": []
+    },
+    "src\\services\\recitations.ts": {
+      "tables": [
+        "recitation_corrections",
+        "recitation_feedback",
+        "recitations"
+      ],
+      "rpc": [
+        "finalize_recitation_correction"
+      ]
+    },
+    "src\\services\\social.ts": {
+      "tables": [
+        "app_admins",
+        "friend_group_members",
+        "friend_groups",
+        "friend_links",
+        "friend_message_hidden",
+        "friend_message_reads",
+        "friend_message_reports",
+        "friend_messages",
+        "friend_profiles",
+        "friend_review_appointments",
+        "friend_shared_goals",
+        "recitations",
+        "social_suspensions"
+      ],
+      "rpc": [
+        "accept_friend",
+        "accept_group_invite",
+        "accept_review_appointment",
+        "accept_shared_goal",
+        "block_friend",
+        "cancel_review_appointment",
+        "create_friend_group",
+        "decline_friend",
+        "decline_group_invite",
+        "delete_friend_group",
+        "delete_friend_message",
+        "ensure_social_profile",
+        "friend_inbox",
+        "friend_overview",
+        "invite_group_member",
+        "my_unread_messages",
+        "open_admin_contact",
+        "publish_social_progress",
+        "remove_friend",
+        "remove_group_member",
+        "report_friend_message",
+        "request_friend",
+        "resolve_friend_report",
+        "set_group_moderator",
+        "set_social_online",
+        "suspend_social_member",
+        "unblock_friend",
+        "unsuspend_social_member"
+      ]
+    },
+    "src\\services\\storage.ts": {
+      "tables": [],
+      "rpc": []
+    },
+    "src\\services\\sync.ts": {
+      "tables": [
+        "user_state"
+      ],
+      "rpc": []
+    },
+    "src\\services\\verseAudioCache.ts": {
+      "tables": [],
+      "rpc": []
+    }
+  }
+}

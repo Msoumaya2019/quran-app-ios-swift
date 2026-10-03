@@ -1,0 +1,11 @@
+DerivedData/
+.build/
+*.xcuserstate
+xcuserdata/
+Resources/Backend.local.plist
+Config/*.local.xcconfig
+*.p12
+*.mobileprovision
+*.p8
+.env*
+artifacts/
