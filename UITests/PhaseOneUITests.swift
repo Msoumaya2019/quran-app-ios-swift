@@ -24,7 +24,8 @@ final class PhaseOneUITests: XCTestCase {
         app.buttons["home.continue"].tap()
         XCTAssertTrue(app.buttons["quran.action.Plus"].waitForExistence(timeout: 5))
         let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5)), to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
-        print("[ReaderNavigationTest] \(app.images.firstMatch.label)")
+        let pages = app.images.matching(NSPredicate(format: "identifier BEGINSWITH %@", "quran.page."))
+        print("[ReaderNavigationTest] \(pages.allElementsBoundByIndex.map { $0.label })")
         from.press(forDuration: 0.1, thenDragTo: to)
         XCTAssertTrue(app.buttons["home.continue"].waitForExistence(timeout: 5))
     }
