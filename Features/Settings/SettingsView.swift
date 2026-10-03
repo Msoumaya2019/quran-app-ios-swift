@@ -23,8 +23,8 @@ struct SettingsView: View {
                     Text("Les choix d’apparence de cette version de test sont conservés sur cet appareil. Ils ne modifient pas l’application React Native.").font(.caption).foregroundStyle(theme.muted)
                 }
                 Section("Version native") {
-                    Text("Phase 1 • SwiftUI • iOS 17 et versions ultérieures")
-                    Text("Le lecteur, les programmes interactifs, les amis et le quiz seront migrés après validation de cette phase.").font(.caption).foregroundStyle(theme.muted)
+                    Text("Lecteur natif • SwiftUI et UIKit • iOS 17 et versions ultérieures")
+                    Text("Coran de Médine et Coran 1441 sont disponibles. Les programmes interactifs, les amis et le quiz seront migrés progressivement.").font(.caption).foregroundStyle(theme.muted)
                 }
                 if let error { Text(error).foregroundStyle(.red) }
                 Section { Button("Se déconnecter", role: .destructive) { Task { signingOut = true; defer { signingOut = false }; do { try await store.signOut(); dismiss() } catch { self.error = error.localizedDescription } } }.disabled(signingOut) }

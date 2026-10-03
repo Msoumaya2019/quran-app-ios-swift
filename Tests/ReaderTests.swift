@@ -32,7 +32,7 @@ final class ReaderTests: XCTestCase {
         let hits = await cache.hits
         XCTAssertGreaterThan(hits, 20)
         let times = await cache.renderMilliseconds
-        print("[ReaderMetrics] Medina render ms: \(times); cache hits: \(hits); decoded page count: \(await cache.cachedPageCount)")
+        print("[ReaderMetrics] Medina render ms: \(times); cache hits: \(hits); decoded page count: \(await cache.cachedPageCount); decoded image bytes: \(await cache.decodedBytes)")
     }
     func testSourcePageBounds() {
         for source in QuranSource.available { XCTAssertEqual(source.validPage(0), 1); XCTAssertEqual(source.validPage(605), 604) }

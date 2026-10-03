@@ -93,8 +93,8 @@ final class NativeQuranPageController: UIPageViewController {
         edge.delegate = nil; edge.isEnabled = navigation.viewControllers.count > 1
         for scroll in view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.panGestureRecognizer.require(toFail: edge) }
     }
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
         if installed, let edge = navigationController?.interactivePopGestureRecognizer {
             edge.delegate = previousDelegate; edge.isEnabled = previousEnabled; installed = false
         }
@@ -116,6 +116,7 @@ final class PageController: UIViewController {
         imageView.accessibilityIdentifier = "quran.page.\(page)"
         imageView.isAccessibilityElement = true
         imageView.accessibilityLabel = "Page \(page)"
+        imageView.accessibilityValue = "loading"
         for child in [imageView, spinner, errorLabel] { child.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(child) }
         NSLayoutConstraint.activate([
             imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor), imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -135,6 +136,6 @@ final class PageController: UIViewController {
         }
     }
     @objc private func tapped() { onTap() }
-    func set(image: UIImage) { loadViewIfNeeded(); imageView.image = image; spinner.stopAnimating(); errorLabel.text = nil }
+    func set(image: UIImage) { loadViewIfNeeded(); imageView.image = image; imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil }
     func show(error: String) { loadViewIfNeeded(); spinner.stopAnimating(); errorLabel.text = error }
 }

@@ -1,5 +1,6 @@
 import UIKit
 import ImageIO
+import os
 
 actor QuranPageCache {
     static let shared = QuranPageCache()
@@ -9,6 +10,8 @@ actor QuranPageCache {
     private var retained: Set<Key> = []
     private(set) var hits = 0
     private(set) var renders = 0
+    private let performanceLog = OSLog(subsystem: "com.coranmemoire.native.ios", category: "QuranReader")
+    var decodedBytes: Int { images.values.reduce(0) { total, image in total + (image.cgImage.map { $0.bytesPerRow * $0.height } ?? 0) } }
     private(set) var renderMilliseconds: [Double] = []
     func setWindow(source: QuranSource, page: Int) {
         retained = Set((max(1, page - 1)...min(source.pageCount, page + 1)).map { Key(source: source.id, page: $0) })
@@ -26,9 +29,11 @@ actor QuranPageCache {
         if let image = images[key] { hits += 1; return image }
         if let task = pending[key] { return try await task.value }
         let started = Date()
+        let signpost = OSSignpostID(log: performanceLog)
+        os_signpost(.begin, log: performanceLog, name: "Decode Quran page", signpostID: signpost, "%{public}@ page %d", source.id, page)
         let task = Task.detached(priority: .userInitiated) { try Self.render(source: source, page: page) }
         pending[key] = task
-        defer { pending[key] = nil }
+        defer { pending[key] = nil; os_signpost(.end, log: performanceLog, name: "Decode Quran page", signpostID: signpost) }
         let image = try await task.value
         renders += 1
         renderMilliseconds.append(Date().timeIntervalSince(started) * 1000)
