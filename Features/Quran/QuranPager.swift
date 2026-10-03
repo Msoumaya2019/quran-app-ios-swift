@@ -95,7 +95,9 @@ final class NativeQuranPageController: UIPageViewController {
         DispatchQueue.main.async { [weak self] in self?.enableNativeBack() }
     }
     private func enableNativeBack() {
-        guard let navigation = navigationController ?? findNavigation(view.window?.rootViewController),
+        let controllers = navigationControllers(view.window?.rootViewController)
+        let containingStack = controllers.first { $0.viewControllers.count > 1 && view.isDescendant(of: $0.view) }
+        guard let navigation = containingStack ?? navigationController ?? controllers.first(where: { view.isDescendant(of: $0.view) }),
               let edge = navigation.interactivePopGestureRecognizer else {
             (viewControllers?.first as? PageController)?.debugNavigation("no native navigation controller")
             return
@@ -107,14 +109,12 @@ final class NativeQuranPageController: UIPageViewController {
         print("[ReaderNavigation] native stack \(navigation.viewControllers.count), edge enabled \(edge.isEnabled)")
         (viewControllers?.first as? PageController)?.debugNavigation("stack \(navigation.viewControllers.count), edge \(edge.isEnabled)")
     }
-    private func findNavigation(_ value: UIViewController?) -> UINavigationController? {
-        guard let value else { return nil }
-        if let navigation = value as? UINavigationController { return navigation }
-        if let tabs = value as? UITabBarController { return findNavigation(tabs.selectedViewController) }
-        for child in value.children.reversed() {
-            if let result = findNavigation(child) { return result }
-        }
-        return nil
+    private func navigationControllers(_ value: UIViewController?) -> [UINavigationController] {
+        guard let value else { return [] }
+        if let tabs = value as? UITabBarController { return navigationControllers(tabs.selectedViewController) }
+        var result = value.children.flatMap { navigationControllers($0) }
+        if let navigation = value as? UINavigationController { result.append(navigation) }
+        return result
     }
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
