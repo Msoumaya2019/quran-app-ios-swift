@@ -34,7 +34,7 @@ actor QuranPageCache {
         let signpost = OSSignpostID(log: performanceLog)
         os_signpost(.begin, log: performanceLog, name: "Decode Quran page", signpostID: signpost, "%{public}@ page %d", source.id, page)
         let root = lineRoot
-        let task = Task.detached(priority: .userInitiated) { try Self.render(source: source, page: page, lineRoot: root) }
+        let task = Task.detached(priority: .userInitiated) { try autoreleasepool { try Self.render(source: source, page: page, lineRoot: root) } }
         pending[key] = task
         defer { pending[key] = nil; os_signpost(.end, log: performanceLog, name: "Decode Quran page", signpostID: signpost) }
         let image = try await task.value

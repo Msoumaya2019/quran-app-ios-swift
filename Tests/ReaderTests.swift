@@ -39,6 +39,7 @@ final class ReaderTests: XCTestCase {
     }
     func testTwenty1441PagesOfflineKeepOriginalRatioAndBoundedCache() async throws {
         let root = try XCTUnwrap(Bundle.main.resourceURL).appendingPathComponent("ReaderTestFixtures")
+        guard FileManager.default.fileExists(atPath: root.path) else { throw XCTSkip("Préparer les images de test 1441 avant ce test hors ligne ; GitHub les prépare automatiquement.") }
         let cache = QuranPageCache(lineRoot: root)
         for page in 1...21 {
             await cache.prepare(source: .edition1441, page: page)

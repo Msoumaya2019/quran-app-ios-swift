@@ -15,6 +15,7 @@ struct QuranPager: UIViewControllerRepresentable {
     }
     func updateUIViewController(_ controller: UIPageViewController, context: Context) {
         context.coordinator.parent = self
+        (controller as? NativeQuranPageController)?.refreshNativeBack()
         if context.coordinator.source != source || context.coordinator.current != page {
             context.coordinator.present(page: page, source: source)
         }
@@ -88,16 +89,18 @@ final class NativeQuranPageController: UIPageViewController {
     private weak var installedEdge: UIGestureRecognizer?
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        refreshNativeBack()
+    }
+    func refreshNativeBack() {
         DispatchQueue.main.async { [weak self] in self?.enableNativeBack() }
     }
     private func enableNativeBack() {
-        guard !installed else { return }
         guard let navigation = navigationController ?? findNavigation(view.window?.rootViewController),
               let edge = navigation.interactivePopGestureRecognizer else {
             (viewControllers?.first as? PageController)?.debugNavigation("no native navigation controller")
             return
         }
-        previousDelegate = edge.delegate; previousEnabled = edge.isEnabled; installed = true
+        if !installed { previousDelegate = edge.delegate; previousEnabled = edge.isEnabled; installed = true }
         installedEdge = edge
         edge.delegate = nil; edge.isEnabled = navigation.viewControllers.count > 1
         for scroll in view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.panGestureRecognizer.require(toFail: edge) }
@@ -108,7 +111,7 @@ final class NativeQuranPageController: UIPageViewController {
         guard let value else { return nil }
         if let navigation = value as? UINavigationController { return navigation }
         if let tabs = value as? UITabBarController { return findNavigation(tabs.selectedViewController) }
-        for child in value.children.reversed() where child.viewIfLoaded?.window != nil {
+        for child in value.children.reversed() {
             if let result = findNavigation(child) { return result }
         }
         return nil
