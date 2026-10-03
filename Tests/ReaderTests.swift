@@ -37,6 +37,19 @@ final class ReaderTests: XCTestCase {
     func testSourcePageBounds() {
         for source in QuranSource.available { XCTAssertEqual(source.validPage(0), 1); XCTAssertEqual(source.validPage(605), 604) }
     }
+    func testTwenty1441PagesOfflineKeepOriginalRatioAndBoundedCache() async throws {
+        let root = try XCTUnwrap(Bundle.main.resourceURL).appendingPathComponent("ReaderTestFixtures")
+        let cache = QuranPageCache(lineRoot: root)
+        for page in 1...21 {
+            await cache.prepare(source: .edition1441, page: page)
+            let image = try await cache.image(source: .edition1441, page: page)
+            XCTAssertEqual(image.size.width, 1440); XCTAssertEqual(image.size.height, 2320)
+            let count = await cache.cachedPageCount
+            XCTAssertLessThanOrEqual(count, 3)
+        }
+        for page in stride(from: 20, through: 17, by: -1) { await cache.prepare(source: .edition1441, page: page) }
+        print("[ReaderMetrics] 1441 render ms: \(await cache.renderMilliseconds); decoded page count: \(await cache.cachedPageCount); decoded image bytes: \(await cache.decodedBytes)")
+    }
     func test1441MappingUsesOriginalCoordinatesRatherThanCanonicalPagination() {
         let catalog = QuranCatalog()
         let id = QuranSourceMapping.firstVerse(source: .edition1441, page: 397, catalog: catalog)

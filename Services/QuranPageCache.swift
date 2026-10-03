@@ -4,6 +4,8 @@ import os
 
 actor QuranPageCache {
     static let shared = QuranPageCache()
+    private let lineRoot: URL?
+    init(lineRoot: URL? = nil) { self.lineRoot = lineRoot }
     private struct Key: Hashable { let source: String; let page: Int }
     private var images: [Key: UIImage] = [:]
     private var pending: [Key: Task<UIImage, Error>] = [:]
@@ -31,7 +33,8 @@ actor QuranPageCache {
         let started = Date()
         let signpost = OSSignpostID(log: performanceLog)
         os_signpost(.begin, log: performanceLog, name: "Decode Quran page", signpostID: signpost, "%{public}@ page %d", source.id, page)
-        let task = Task.detached(priority: .userInitiated) { try Self.render(source: source, page: page) }
+        let root = lineRoot
+        let task = Task.detached(priority: .userInitiated) { try Self.render(source: source, page: page, lineRoot: root) }
         pending[key] = task
         defer { pending[key] = nil; os_signpost(.end, log: performanceLog, name: "Decode Quran page", signpostID: signpost) }
         let image = try await task.value
@@ -43,7 +46,7 @@ actor QuranPageCache {
     }
     func clear() { images.removeAll(); retained.removeAll() }
     var cachedPageCount: Int { images.count }
-    private nonisolated static func render(source: QuranSource, page: Int) throws -> UIImage {
+    private nonisolated static func render(source: QuranSource, page: Int, lineRoot: URL?) throws -> UIImage {
         switch source.renderingType {
         case .pageImage:
             guard let root = Bundle.main.resourceURL,
@@ -55,7 +58,8 @@ actor QuranPageCache {
             let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
             var lines: [UIImage] = []
             for line in 1...15 {
-                guard let image = UIImage(contentsOfFile: QuranResourceService.shared.lineURL(page: page, line: line).path) else { throw URLError(.fileDoesNotExist) }
+                let url = lineRoot?.appendingPathComponent(String(format: "%03d-%02d.png", page, line)) ?? QuranResourceService.shared.lineURL(page: page, line: line)
+                guard let image = UIImage(contentsOfFile: url.path) else { throw URLError(.fileDoesNotExist) }
                 lines.append(image)
             }
             let markerURL = Bundle.main.url(forResource: "coran_1441-markers", withExtension: "json")!
