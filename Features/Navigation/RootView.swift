@@ -39,6 +39,7 @@ struct RootView: View {
                                 else if item == .quran { QuranReaderView(initialPage: store.snapshot.state["lastRead"]["page"].int ?? 1, sourceID: store.snapshot.state["reader"]["mushaf"].string, onHome: { tab = .home }) }
                                 else if item == .program { ProgramView() }
                                 else if item == .friends { FriendsView() }
+                                else if item == .progress { NativeProgressView() }
                                 else { PhasePlaceholder(title: item.rawValue) }
                             }
                             .toolbar {

@@ -33,7 +33,7 @@ struct SettingsView: View {
                 }
                 Section("Version native") {
                     Text("Lecteur natif • SwiftUI et UIKit • iOS 17 et versions ultérieures")
-                    Text("Coran de Médine, Coran 1441, apprentissage et révisions sont disponibles. Les amis et le quiz seront migrés progressivement.").font(.caption).foregroundStyle(theme.muted)
+                    Text("Coran de Médine, Coran 1441, apprentissage, révisions, amis, messagerie et Quiz natif.").font(.caption).foregroundStyle(theme.muted)
                 }
                 if quiz.isAdmin { Section("Administration") { NavigationLink("Quiz · Questions et thèmes") { QuizAdminView() } } }
                 if let error { Text(error).foregroundStyle(.red) }
