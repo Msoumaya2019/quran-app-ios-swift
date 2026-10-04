@@ -110,7 +110,7 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         }
         navigationOwner = navigation
         if readerBackGesture.view == nil { view.addGestureRecognizer(readerBackGesture) }
-        readerBackGesture.isEnabled = navigation.viewControllers.count > 1 && !navigation.isNavigationBarHidden
+        readerBackGesture.isEnabled = navigation.viewControllers.count > 1
         edge.require(toFail: readerBackGesture)
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
@@ -139,7 +139,9 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         value.subviews.flatMap { scrollViews($0) } + ((value as? UIScrollView).map { [$0] } ?? [])
     }
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard let navigationOwner, navigationOwner.viewControllers.count > 1, !navigationOwner.isNavigationBarHidden else { return false }
+        guard let navigationOwner, navigationOwner.viewControllers.count > 1 else { return false }
+        if gestureRecognizer === readerBackGesture { return true }
+        guard !navigationOwner.isNavigationBarHidden else { return false }
         let location = gestureRecognizer.location(in: navigationOwner.view)
         let translation = (gestureRecognizer as? UIPanGestureRecognizer)?.translation(in: navigationOwner.view) ?? .zero
         return location.x - translation.x <= 24 && translation.x >= 0
