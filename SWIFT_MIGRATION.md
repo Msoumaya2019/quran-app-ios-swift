@@ -61,3 +61,11 @@ Phase1 : dépôt indépendant, auth/session/cache/thème/navigation/accueil et t
 ## État actuel du lecteur
 
 Voir [NATIVE_READER_REPORT.md](Docs/NATIVE_READER_REPORT.md) : sources originales, UIKit, cache de trois pages, audio de base, reprise et marque-pages avec file locale compatible RN. Aucun fichier React Native modifié.
+
+## Compléments phase 3 — 4 octobre 2026
+
+La validation partielle et complète des révisions habituelles des cycles existants est intégrée, avec appréciation, conservation des dates, historique et reprise. Voir [NATIVE_REVISION_REPORT.md](Docs/NATIVE_REVISION_REPORT.md). La génération/rotation native des cycles et les files prioritaires/récentes complètes restent à migrer.
+
+L’édition et la génération du programme d’apprentissage sont disponibles dans Réglages → Modifier mon programme. L’enregistrement est direct, sans aperçu ni confirmation supplémentaire. Objectif, sens, rythme et jours sont modifiables ; séances commencées, terminées et historique restent conservés. Voir [NATIVE_PROGRAM_EDIT_REPORT.md](Docs/NATIVE_PROGRAM_EDIT_REPORT.md). Ces compléments remplacent les mentions « génération/édition à migrer » du tableau et des rapports précédents.
+
+Aucune migration SQL et aucun fichier React Native modifié. Tests Xcode de ces compléments : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37213209168 (en cours).

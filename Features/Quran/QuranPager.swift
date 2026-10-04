@@ -40,6 +40,20 @@ struct QuranPager: UIViewControllerRepresentable {
             if let existing = pages[page] { return existing }
             let value = PageController(page: page, onTap: { [weak self] in self?.parent.onTap() })
             pages[page] = value
+            // UIKit may ask for the next candidate before didFinishAnimating
+            // moves our three-page window. Never report a false end of Mushaf.
+            if let requestedSource = source {
+                Task { [weak self, weak value] in
+                    do {
+                        let image = try await QuranPageCache.shared.image(source: requestedSource, page: page)
+                        guard self?.source == requestedSource else { return }
+                        value?.set(image: image)
+                    } catch {
+                        guard self?.source == requestedSource else { return }
+                        value?.show(error: "La page n’a pas pu être chargée. Réessaie depuis le menu Plus.")
+                    }
+                }
+            }
             return value
         }
         private func prepareWindow(page: Int, source: QuranSource) {
@@ -64,11 +78,11 @@ struct QuranPager: UIViewControllerRepresentable {
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
             guard let value = viewController as? PageController, let source, value.page < source.pageCount else { return nil }
             // Arabic page order: a swipe towards the right advances the Mushaf.
-            return pages[value.page + 1]
+            return pageController(value.page + 1)
         }
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
             guard let value = viewController as? PageController, value.page > 1 else { return nil }
-            return pages[value.page - 1]
+            return pageController(value.page - 1)
         }
         func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
             guard completed, let value = pageViewController.viewControllers?.first as? PageController, let source else { return }
