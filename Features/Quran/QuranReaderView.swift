@@ -31,6 +31,7 @@ struct QuranReaderView: View {
     @StateObject private var audio = QuranAudioService()
     @State private var showAudio = false
     @State private var recording = false
+    @State private var confirmConsolidation = false
     private var verseID: Int {
         QuranSourceMapping.firstVerse(source: source, page: page, catalog: store.catalog)
     }
@@ -72,6 +73,13 @@ struct QuranReaderView: View {
             NavigationStack {
                 Form {
                     Section("Navigation") { NavigationLink("Sourates, Juz’ et Hizb") { QuranIndexView(source: source) { target in page = source.validPage(target); options = false } }.accessibilityIdentifier("quran.index.open") }
+                    if let session, session.mode == .consolidation {
+                        Section("Séance") {
+                            Button("Valider la consolidation") { confirmConsolidation = true }
+                                .disabled(!canConsolidate(session))
+                            Text("Valide uniquement lorsque tu as consolidé tout le passage prévu.").font(.caption)
+                        }
+                    }
                     Section("Ma voix") { NavigationLink("Mes récitations") { RecitationsView().onAppear { audio.pause() } }.accessibilityIdentifier("recitations.open") }
                     Section("Affichage du Coran") {
                         if loading { HStack { ProgressView(); Text("Téléchargement et préparation du Coran…").font(.caption) } }
@@ -114,7 +122,23 @@ struct QuranReaderView: View {
                 VoiceRecorderView(user: user, catalog: store.catalog, firstVerse: verseID, lastVerse: page < 604 ? max(verseID, QuranSourceMapping.firstVerse(source: source, page: page + 1, catalog: store.catalog) - 1) : 6236)
             }
         }
+        .confirmationDialog("Valider tout le passage de consolidation ?", isPresented: $confirmConsolidation, titleVisibility: .visible) {
+            Button("J’ai consolidé") {
+                if let session, let validation = ConsolidationValidation(context: session) {
+                    var operation = ReaderOperation(kind: .consolidation, verseID: session.range.start, page: page, source: source.id)
+                    operation.consolidation = validation
+                    store.readerChange(operation)
+                    options = false
+                    Task { await store.refresh() }
+                }
+            }
+            Button("Annuler", role: .cancel) { }
+        } message: { Text("La date prévue reste inchangée. Cette validation est conservée sur l’appareil et synchronisée lorsque la connexion est disponible.") }
         .alert("Le Coran", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
+    }
+    private func canConsolidate(_ context: QuranSessionContext) -> Bool {
+        guard let validation = ConsolidationValidation(context: context) else { return false }
+        return validation.applying(to: store.snapshot.state) != store.snapshot.state
     }
     private func action(_ title: String, _ icon: String, run: @escaping () -> Void) -> some View {
         Button(action: run) { VStack(spacing: 5) { Image(systemName: icon).font(.system(size: 21)); Text(title).font(.system(size: 10)) }.frame(maxWidth: .infinity).frame(minHeight: 44) }.foregroundStyle(theme.accent).accessibilityIdentifier("quran.action.\(title)")
