@@ -18,7 +18,7 @@ actor RecitationStorage {
         try JSONEncoder().encode(items).write(to: directory(owner).appendingPathComponent("index.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
     func save(source: URL, start: Int, end: Int, durationMs: Int, owner: UUID) throws -> Recitation {
-        guard Recitation.validRange(start, end), durationMs > 0 else { throw URLError(.cannotEncodeContentData) }
+        guard Recitation.validRange(start, end), durationMs > 0 else { throw URLError(.cannotParseResponse) }
         let size = try FileManager.default.attributesOfItem(atPath: source.path)[.size] as? NSNumber
         guard let size, size.intValue > 0, size.intValue <= 52_428_800 else { throw URLError(.dataLengthExceedsMaximum) }
         var items = try list(owner: owner)

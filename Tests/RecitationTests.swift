@@ -13,7 +13,7 @@ import XCTest
         attempts += 1
         if delay { try await Task.sleep(nanoseconds: 50_000_000) }
         if offline { throw URLError(.notConnectedToInternet) }
-        if item.id == rejectedID { throw URLError(.cannotEncodeContentData) }
+        if item.id == rejectedID { throw URLError(.cannotParseResponse) }
         uploaded.insert(item.storagePath)
         if failMetadataOnce { failMetadataOnce = false; throw URLError(.networkConnectionLost) }
         var confirmed = item; confirmed.synced = true
