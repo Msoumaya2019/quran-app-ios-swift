@@ -5,6 +5,7 @@ struct QuranPager: UIViewControllerRepresentable {
     let source: QuranSource
     @Binding var page: Int
     let onTap: () -> Void
+    var annotations = QuranPageAnnotations()
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIViewController(context: Context) -> UIPageViewController {
         let controller = NativeQuranPageController(transitionStyle: .scroll, navigationOrientation: .horizontal)
@@ -14,7 +15,9 @@ struct QuranPager: UIViewControllerRepresentable {
         return controller
     }
     func updateUIViewController(_ controller: UIPageViewController, context: Context) {
+        let annotationsChanged = context.coordinator.parent.annotations != annotations
         context.coordinator.parent = self
+        if annotationsChanged { context.coordinator.pages.values.forEach { $0.set(annotations: annotations) } }
         (controller as? NativeQuranPageController)?.refreshNativeBack()
         if context.coordinator.source != source || context.coordinator.current != page {
             context.coordinator.present(page: page, source: source)
@@ -38,7 +41,8 @@ struct QuranPager: UIViewControllerRepresentable {
         }
         private func pageController(_ page: Int) -> PageController {
             if let existing = pages[page] { return existing }
-            let value = PageController(page: page, onTap: { [weak self] in self?.parent.onTap() })
+            let value = PageController(page: page, source: source ?? parent.source, onTap: { [weak self] in self?.parent.onTap() })
+            value.set(annotations: parent.annotations)
             pages[page] = value
             // UIKit may ask for the next candidate before didFinishAnimating
             // moves our three-page window. Never report a false end of Mushaf.
@@ -183,7 +187,15 @@ final class PageController: UIViewController {
     private let imageView = UIImageView()
     private let spinner = UIActivityIndicatorView(style: .medium)
     private let errorLabel = UILabel()
-    init(page: Int, onTap: @escaping () -> Void) { self.page = page; self.onTap = onTap; super.init(nibName: nil, bundle: nil) }
+    private let margin = QuranMarginOverlay()
+    private let regions: [QuranVerseRegion]
+    private var annotations = QuranPageAnnotations()
+    private static let catalog = QuranCatalog()
+    init(page: Int, source: QuranSource = .medina, onTap: @escaping () -> Void) {
+        self.page = page; self.onTap = onTap
+        regions = QuranMarginGeometry.regions(source: source, page: page, catalog: Self.catalog)
+        super.init(nibName: nil, bundle: nil)
+    }
     required init?(coder: NSCoder) { fatalError("Programmatic page") }
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -193,12 +205,14 @@ final class PageController: UIViewController {
         imageView.isAccessibilityElement = true
         imageView.accessibilityLabel = "Page \(page)"
         imageView.accessibilityValue = "loading"
-        for child in [imageView, spinner, errorLabel] { child.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(child) }
+        for child in [imageView, spinner, errorLabel, margin] { child.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(child) }
         NSLayoutConstraint.activate([
             imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor), imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             imageView.topAnchor.constraint(equalTo: view.topAnchor), imageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             spinner.centerXAnchor.constraint(equalTo: view.centerXAnchor), spinner.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            errorLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24), errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24), errorLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+            errorLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24), errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24), errorLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            margin.leadingAnchor.constraint(equalTo: view.leadingAnchor), margin.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            margin.topAnchor.constraint(equalTo: view.topAnchor), margin.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         errorLabel.numberOfLines = 0; errorLabel.textAlignment = .center; errorLabel.font = .preferredFont(forTextStyle: .body)
         view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped)))
@@ -217,6 +231,14 @@ final class PageController: UIViewController {
         if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { imageView.accessibilityLabel = "Page \(page) · \(status)" }
         #endif
     }
-    func set(image: UIImage) { loadViewIfNeeded(); imageView.image = image; imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil }
+    func set(image: UIImage) { loadViewIfNeeded(); imageView.image = image; imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil; refreshMargin() }
+    func set(annotations: QuranPageAnnotations) {
+        guard self.annotations != annotations else { return }
+        self.annotations = annotations
+        if isViewLoaded { refreshMargin() }
+    }
+    private func refreshMargin() {
+        margin.configure(regions: regions, annotations: annotations, imageSize: imageView.image?.size ?? .zero)
+    }
     func show(error: String) { loadViewIfNeeded(); spinner.stopAnimating(); errorLabel.text = error }
 }

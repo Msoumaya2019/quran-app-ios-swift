@@ -38,11 +38,20 @@ struct QuranReaderView: View {
     }
     private var bookmarked: Bool { let value = store.snapshot.state["bookmarks"][String(verseID)]; return value != .null && value["deletedAt"] == .null }
     private func record(_ kind: ReaderOperation.Kind) { store.readerChange(ReaderOperation(kind: kind, verseID: verseID, page: page, source: source.id)) }
+    private var pageAnnotations: QuranPageAnnotations {
+        let difficult = Set(store.snapshot.state["difficultyMarkers"].object.keys.compactMap(Int.init).filter { DifficultyChange.isDifficult(store.snapshot.state, verseID: $0) })
+        var through = 0
+        if let session {
+            if session.mode == .learning { through = session.range.start + LearningValidation.completedCount(context: session, state: store.snapshot.state) - 1 }
+            else if session.mode == .revision { through = session.range.start + RevisionValidation.completedCount(context: session, state: store.snapshot.state) - 1 }
+        }
+        return QuranPageAnnotations(range: session?.range, through: through, difficultIDs: difficult, color: UIColor(session?.mode == .learning ? theme.accent : theme.review))
+    }
     var body: some View {
         VStack(spacing: 0) {
             if let session { QuranSessionHeader(context: session, source: source, catalog: store.catalog, completedCount: session.mode == .learning ? LearningValidation.completedCount(context: session, state: store.snapshot.state) : session.mode == .revision ? RevisionValidation.completedCount(context: session, state: store.snapshot.state) : nil) }
             if loading { HStack { ProgressView(); Text("Chargement du Coran…").font(.caption) }.padding(8) }
-            QuranPager(source: source, page: $page, onTap: { withAnimation(.easeInOut(duration: 0.18)) { immersive.toggle() } })
+            QuranPager(source: source, page: $page, onTap: { withAnimation(.easeInOut(duration: 0.18)) { immersive.toggle() } }, annotations: pageAnnotations)
                 .accessibilityIdentifier("quran.viewport")
             if !immersive {
                 if showAudio { QuranMiniPlayer(audio: audio, catalog: store.catalog, close: { showAudio = false }) }
@@ -79,6 +88,11 @@ struct QuranReaderView: View {
             NavigationStack {
                 Form {
                     Section("Navigation") { NavigationLink("Sourates, Juz’ et Hizb") { QuranIndexView(source: source) { target in page = source.validPage(target); options = false } }.accessibilityIdentifier("quran.index.open") }
+                    Section("Mes versets") {
+                        NavigationLink("Versets difficiles de cette page") {
+                            DifficultVersesView(source: source, page: page).onAppear { optionsDetent = .large }
+                        }.accessibilityIdentifier("difficulty.open")
+                    }
                     if let session, session.mode == .learning {
                         Section("Apprentissage") {
                             NavigationLink("J’ai appris jusqu’ici") {

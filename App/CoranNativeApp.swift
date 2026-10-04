@@ -11,7 +11,12 @@ import SwiftUI
         let auth = AuthService(client: client)
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") {
-            _store = StateObject(wrappedValue: AppStore(auth: PreviewAuth(), remote: PreviewRemote(), cache: PreviewCache()))
+            if let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--ui-test-difficulty-cache=") }),
+               let cacheID = UUID(uuidString: String(argument.dropFirst("--ui-test-difficulty-cache=".count))) {
+                _store = StateObject(wrappedValue: AppStore(auth: PreviewAuth(), remote: PreviewRemote(), cache: PreviewDiskCache(id: cacheID)))
+            } else {
+                _store = StateObject(wrappedValue: AppStore(auth: PreviewAuth(), remote: PreviewRemote(), cache: PreviewCache()))
+            }
             _recitations = StateObject(wrappedValue: RecitationLibrary(storage: RecitationStorage(directory: FileManager.default.temporaryDirectory.appendingPathComponent("PreviewRecitations-\(UUID().uuidString)")), remote: RecitationRepository(client: nil)))
             return
         }
@@ -45,6 +50,15 @@ import SwiftUI
 private struct PreviewCache: HomeCache {
     func load(userID: UUID) throws -> HomeSnapshot? {
         let snapshot = HomeSnapshot(state: .object(["schema":.number(1), "profile":.object(["firstName":.string("Mohamed")]), "lastRead":.object(["verseId":.number(3371), "page":.number(397)]), "goal":.object(["label":.string("Finir le Hizb 42")])]))
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-consolidation") {
+            let learned = ProgramProjection.addingDays(-1, to: LocalCalendar.key(.now), timeZone: .current)!
+            var value = snapshot
+            value.state = snapshot.state
+                .setting("knowledge", .object(Dictionary(uniqueKeysWithValues: (1...7).map { (String($0), JSONValue.string("perfect")) })))
+                .setting("memorizedAt", .object(Dictionary(uniqueKeysWithValues: (1...7).map { (String($0), JSONValue.string(learned)) })))
+                .setting("reviewConsolidations", .object(Dictionary(uniqueKeysWithValues: (1...7).map { (String($0), JSONValue.object(["learnedAt": .string(learned), "completed": .object([:])])) })))
+            return value
+        }
         if ProcessInfo.processInfo.arguments.contains("--ui-test-program") {
             let task: JSONValue = .object(["id": .string("preview-learning"), "start": .number(1), "end": .number(7), "status": .string("todo"), "scheduledDate": .string(LocalCalendar.key(.now))])
             var value = snapshot; value.state = snapshot.state.setting("sessions", .array([task])); return value
@@ -66,5 +80,19 @@ private struct PreviewCache: HomeCache {
         return snapshot
     }
     func save(_ snapshot: HomeSnapshot, userID: UUID) throws {}
+}
+private struct PreviewDiskCache: HomeCache {
+    let storage: LocalStorageService
+    init(id: UUID) {
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        storage = LocalStorageService(directory: root.appendingPathComponent("UITestDifficulty").appendingPathComponent(id.uuidString))
+    }
+    func load(userID: UUID) throws -> HomeSnapshot? {
+        if let cached = try storage.load(userID: userID) { return cached }
+        let seed = try PreviewCache().load(userID: userID)
+        if let seed { try storage.save(seed, userID: userID) }
+        return seed
+    }
+    func save(_ snapshot: HomeSnapshot, userID: UUID) throws { try storage.save(snapshot, userID: userID) }
 }
 #endif

@@ -1,7 +1,7 @@
 import Foundation
 
 struct ReaderOperation: Codable, Sendable, Identifiable {
-    enum Kind: String, Codable { case reading, bookmark, removeBookmark, source, reciter, consolidation, learning, revision, program }
+    enum Kind: String, Codable { case reading, bookmark, removeBookmark, source, reciter, consolidation, learning, revision, program, difficulty }
     let id: UUID
     let kind: Kind
     let verseID: Int
@@ -11,6 +11,7 @@ struct ReaderOperation: Codable, Sendable, Identifiable {
     var learning: LearningValidation? = nil
     var revision: RevisionValidation? = nil
     var program: ProgramEdit? = nil
+    var difficulty: DifficultyChange? = nil
     let at: String
     init(kind: Kind, verseID: Int, page: Int, source: String, date: Date = .now) {
         id = UUID(); self.kind = kind; self.verseID = verseID; self.page = page; self.source = source
@@ -20,6 +21,9 @@ struct ReaderOperation: Codable, Sendable, Identifiable {
     func applying(to state: JSONValue, catalog: QuranCatalog) -> JSONValue {
         var result = state
         switch kind {
+        case .difficulty:
+            guard let difficulty else { return state }
+            return difficulty.applying(to: state)
         case .program:
             guard let program else { return state }
             return program.applying(to: state, catalog: catalog)

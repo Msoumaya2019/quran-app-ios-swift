@@ -1,6 +1,54 @@
 import XCTest
 
 final class ReaderUITests: XCTestCase {
+    func testDifficultVersePersistsAcrossRelaunchAndSourceChangeWithoutMovingPage() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-program", "--ui-test-difficulty-cache=\(UUID().uuidString)"]
+        app.launch(); app.tabBars.buttons["Programme"].tap()
+        let task = app.buttons["program.task.preview-learning"].firstMatch
+        guard task.waitForExistence(timeout: 10) else { XCTFail("Learning task unavailable"); return }
+        task.tap()
+        let image = app.images["quran.page.1"]
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        let original = image.frame
+        XCTAssertTrue(app.staticTexts["quran.margin.1"].waitForExistence(timeout: 10))
+        app.buttons["quran.action.Plus"].tap(); app.buttons["difficulty.open"].tap()
+        let toggle = app.switches["difficulty.verse.1"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5)); toggle.tap()
+        XCTAssertEqual(toggle.value as? String, "1")
+        app.navigationBars.buttons.firstMatch.tap(); app.buttons["Fermer"].tap()
+        XCTAssertTrue(app.staticTexts["quran.margin.1"].label.contains("difficile"))
+        XCTAssertEqual(image.frame, original)
+        attach(app, name: "Apprentissage — repères et difficulté sans déplacement")
+        app.buttons["quran.action.Plus"].tap(); app.buttons["Coran 1441"].tap()
+        XCTAssertTrue(app.navigationBars["Coran 1441"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["quran.action.Plus"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["quran.margin.1"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["quran.margin.1"].label.contains("difficile"))
+        XCTAssertEqual(image.frame.midX, original.midX, accuracy: 1)
+        attach(app, name: "Coran 1441 — repères de séance dans la marge")
+        app.terminate(); app.launch(); app.tabBars.buttons["Programme"].tap()
+        XCTAssertTrue(task.waitForExistence(timeout: 10)); task.tap()
+        app.buttons["quran.action.Plus"].tap(); app.buttons["difficulty.open"].tap()
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10)); XCTAssertEqual(toggle.value as? String, "1")
+        toggle.tap(); XCTAssertEqual(toggle.value as? String, "0")
+        app.navigationBars.buttons.firstMatch.tap(); app.buttons["Fermer"].tap()
+        let marker = app.staticTexts["quran.margin.1"]
+        XCTAssertTrue(marker.waitForExistence(timeout: 10)); XCTAssertFalse(marker.label.contains("difficile"))
+    }
+    func testConsolidationHasMarginOverlayAndCenteredMushaf() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-consolidation"]
+        app.launch(); app.tabBars.buttons["Programme"].tap()
+        let task = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "program.task.consolidation-")).firstMatch
+        guard task.waitForExistence(timeout: 10) else { XCTFail("Consolidation task unavailable"); return }
+        task.tap()
+        XCTAssertTrue(app.otherElements["quran.session.header"].waitForExistence(timeout: 5))
+        let image = app.images["quran.page.1"]
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["quran.margin.1"].waitForExistence(timeout: 10))
+        XCTAssertEqual(image.frame.midX, app.frame.midX, accuracy: 1)
+        attach(app, name: "Consolidation — Mushaf centré et repères indépendants")
+    }
     func testProgramOpensPassageWithNativeSessionHeader() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-program"]
