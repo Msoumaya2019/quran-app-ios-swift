@@ -9,6 +9,11 @@ on:
         required: false
         default: ''
         type: string
+      build_ipa:
+        description: 'Generate an unsigned iPhone archive only when device delivery is needed'
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 jobs:
@@ -72,6 +77,7 @@ jobs:
           fi
           xcodebuild test "${test_options[@]}" -project CoranNative.xcodeproj -scheme CoranNative -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -derivedDataPath DerivedData -resultBundlePath artifacts/PhaseOne.xcresult CODE_SIGNING_ALLOWED=NO | tee xcode-tests.log
       - name: Archive unsigned iPhone application
+        if: github.event_name == 'workflow_dispatch' && inputs.build_ipa == true
         run: |
           set -o pipefail
           xcodebuild archive -project CoranNative.xcodeproj -scheme CoranNative -destination 'generic/platform=iOS' -archivePath artifacts/CoranNative.xcarchive -derivedDataPath DerivedData CODE_SIGNING_ALLOWED=NO | tee xcode-archive.log
