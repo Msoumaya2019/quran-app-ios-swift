@@ -20,6 +20,7 @@ struct LearningValidationView: View {
     }
     var body: some View {
         Form {
+            if let message { Section { Text(message).font(.subheadline).accessibilityIdentifier("learning.result") } }
             Section("Séance prévue") {
                 Text(ProgramProjection(snapshot: store.snapshot).dateLabel(context.scheduledDate))
                 Text("\(count) / \(context.range.count) versets validés")
@@ -37,7 +38,6 @@ struct LearningValidationView: View {
             } else {
                 Section { Label("Séance terminée", systemImage: "checkmark.circle.fill").foregroundStyle(theme.accent) }
             }
-            if let message { Section { Text(message).font(.subheadline).accessibilityIdentifier("learning.result") } }
         }
         .navigationTitle("Valider l’apprentissage").navigationBarTitleDisplayMode(.inline)
         .onChange(of: pending) { _, value in through = min(context.range.end, max(value, through)) }
