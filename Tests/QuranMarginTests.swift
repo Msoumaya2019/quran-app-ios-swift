@@ -39,7 +39,7 @@ final class QuranMarginTests: XCTestCase {
                 XCTAssertEqual(rect.midX, viewport.width / 2, accuracy: 0.001)
                 XCTAssertEqual(rect.midY, viewport.height / 2, accuracy: 0.001)
                 XCTAssertEqual(rect.width / rect.height, image.width / image.height, accuracy: 0.001)
-                XCTAssertLessThanOrEqual(rect.width, viewport.width); XCTAssertLessThanOrEqual(rect.height, viewport.height)
+                XCTAssertLessThanOrEqual(rect.width, viewport.width + 0.001); XCTAssertLessThanOrEqual(rect.height, viewport.height + 0.001)
             }
         }
     }

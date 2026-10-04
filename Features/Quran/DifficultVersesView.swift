@@ -19,11 +19,17 @@ struct DifficultVersesView: View {
                 ForEach(ids, id: \.self) { id in
                     let marker = store.snapshot.state["difficultyMarkers"][String(id)]
                     let surah = store.catalog.surah(for: id)
+                    let personal = marker["user"] != .null
                     VStack(alignment: .leading, spacing: 4) {
-                        Toggle("\(surah?.name ?? "Le Coran") · verset \(id - (surah?.start ?? 1) + 1)", isOn: Binding(get: {
-                            store.snapshot.state["difficultyMarkers"][String(id)]["user"] != .null
-                        }, set: { difficult in save(id, difficult: difficult) }))
-                            .frame(minHeight: 44).accessibilityIdentifier("difficulty.verse.\(id)")
+                        Button { save(id, difficult: !personal) } label: {
+                            HStack {
+                                Text("\(surah?.name ?? "Le Coran") · verset \(id - (surah?.start ?? 1) + 1)")
+                                Spacer()
+                                Image(systemName: personal ? "checkmark.circle.fill" : "circle").font(.title3)
+                                    .foregroundStyle(personal ? Color.red : theme.muted)
+                            }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                        }.buttonStyle(.plain).accessibilityIdentifier("difficulty.verse.\(id)")
+                            .accessibilityValue(personal ? "Difficile" : "Normal")
                         if marker["admin"] != .null { Text("Également signalé par l’administrateur.").font(.caption).foregroundStyle(theme.muted) }
                     }
                 }
@@ -33,6 +39,7 @@ struct DifficultVersesView: View {
     private func save(_ id: Int, difficult: Bool) {
         var operation = ReaderOperation(kind: .difficulty, verseID: id, page: page, source: source.id)
         operation.difficulty = DifficultyChange(verseID: id, difficult: difficult)
-        if !store.readerChange(operation) { error = "La modification n’a pas pu être enregistrée sur l’appareil." }
+        if store.readerChange(operation) { error = nil }
+        else { error = "La modification n’a pas pu être enregistrée sur l’appareil." }
     }
 }

@@ -13,9 +13,9 @@ final class ReaderUITests: XCTestCase {
         let original = image.frame
         XCTAssertTrue(app.staticTexts["quran.margin.1"].waitForExistence(timeout: 10))
         app.buttons["quran.action.Plus"].tap(); app.buttons["difficulty.open"].tap()
-        let toggle = app.switches["difficulty.verse.1"]
+        let toggle = app.buttons["difficulty.verse.1"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5)); toggle.tap()
-        XCTAssertEqual(toggle.value as? String, "1")
+        XCTAssertEqual(toggle.value as? String, "Difficile")
         app.navigationBars.buttons.firstMatch.tap(); app.buttons["Fermer"].tap()
         XCTAssertTrue(app.staticTexts["quran.margin.1"].label.contains("difficile"))
         XCTAssertEqual(image.frame, original)
@@ -30,8 +30,8 @@ final class ReaderUITests: XCTestCase {
         app.terminate(); app.launch(); app.tabBars.buttons["Programme"].tap()
         XCTAssertTrue(task.waitForExistence(timeout: 10)); task.tap()
         app.buttons["quran.action.Plus"].tap(); app.buttons["difficulty.open"].tap()
-        XCTAssertTrue(toggle.waitForExistence(timeout: 10)); XCTAssertEqual(toggle.value as? String, "1")
-        toggle.tap(); XCTAssertEqual(toggle.value as? String, "0")
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10)); XCTAssertEqual(toggle.value as? String, "Difficile")
+        toggle.tap(); XCTAssertEqual(toggle.value as? String, "Normal")
         app.navigationBars.buttons.firstMatch.tap(); app.buttons["Fermer"].tap()
         let marker = app.staticTexts["quran.margin.1"]
         XCTAssertTrue(marker.waitForExistence(timeout: 10)); XCTAssertFalse(marker.label.contains("difficile"))
