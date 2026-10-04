@@ -159,7 +159,9 @@ final class ReaderUITests: XCTestCase {
         app.buttons["quran.audio.toggle"].tap()
         slider.adjust(toNormalizedSliderPosition: 0.5)
         let elapsed = app.staticTexts["quran.audio.elapsed"]
-        let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label MATCHES %@", "0:(2[89]|3[0-2])"), object: elapsed)
+        // XCTest's normalized slider gesture can land a few percent from its target.
+        // The 60-second fixture must seek near its midpoint, not remain at the start.
+        let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label MATCHES %@", "0:(2[6-9]|3[0-4])"), object: elapsed)
         XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 10), .completed)
         XCTAssertEqual(image.frame.midX, original.midX, accuracy: 1)
         XCTAssertLessThan(image.frame.height, original.height)
