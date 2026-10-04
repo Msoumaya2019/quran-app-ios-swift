@@ -39,3 +39,5 @@ Dans Xcode → Target CoranNative → Signing & Capabilities : choisir sa Team A
 Le lecteur classique natif est maintenant intégré : Coran de Médine, Coran 1441 à télécharger à la sélection, cache de trois pages, reprise, marque-pages et audio de base avec timeline, cache MP3 partagé et réciteur persistant. L’enregistrement vocal, la réécoute et la sauvegarde locale avec synchronisation vers les récitations Supabase existantes sont intégrés. Voir [rapport du lecteur](Docs/NATIVE_READER_REPORT.md) et [rapport des récitations](Docs/NATIVE_RECORDING_REPORT.md). Les notifications APNs, moteurs de programme, amis et quiz interactifs attendent les phases suivantes. Le backend Expo push actuel reste intact.
 
 Voir [SWIFT_MIGRATION.md](SWIFT_MIGRATION.md), [analyse Supabase](Docs/SUPABASE_ANALYSIS.md) et [rapport phase 1](Docs/PHASE_ONE_REPORT.md).
+
+L’index natif est accessible dans **Plus → Sourates, Juz’ et Hizb**. [Rapport et état de validation](Docs/NATIVE_INDEX_REPORT.md).
