@@ -3,6 +3,7 @@ import SwiftUI
 @main struct CoranNativeApp: App {
     @StateObject private var store: AppStore
     @StateObject private var recitations: RecitationLibrary
+    @StateObject private var friends: FriendsLibrary
     @StateObject private var theme = ThemeManager()
     @StateObject private var network = ConnectivityService()
     @Environment(\.scenePhase) private var scenePhase
@@ -18,18 +19,21 @@ import SwiftUI
                 _store = StateObject(wrappedValue: AppStore(auth: PreviewAuth(), remote: PreviewRemote(), cache: PreviewCache()))
             }
             _recitations = StateObject(wrappedValue: RecitationLibrary(storage: RecitationStorage(directory: FileManager.default.temporaryDirectory.appendingPathComponent("PreviewRecitations-\(UUID().uuidString)")), remote: RecitationRepository(client: nil)))
+            _friends = StateObject(wrappedValue: FriendsLibrary(client: nil))
             return
         }
         #endif
         _store = StateObject(wrappedValue: AppStore(auth: auth, remote: HomeRepository(client: client), cache: LocalStorageService()))
         _recitations = StateObject(wrappedValue: RecitationLibrary(remote: RecitationRepository(client: client)))
+        _friends = StateObject(wrappedValue: FriendsLibrary(client: client))
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations)
+            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends)
                 .onOpenURL { url in Task { await store.receive(url) } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in Task { await recitations.select(user); await recitations.synchronize() } }
+                .onChange(of: store.identity?.id, initial: true) { _, user in friends.select(user) }
         }
     }
 }

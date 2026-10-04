@@ -23,6 +23,7 @@ struct RootView: View {
     @EnvironmentObject var theme: ThemeManager
     @EnvironmentObject var network: ConnectivityService
     @EnvironmentObject var recitations: RecitationLibrary
+    @EnvironmentObject var friends: FriendsLibrary
     @State private var tab: MainTab = .home
     @State private var settings = false
     var body: some View {
@@ -36,6 +37,7 @@ struct RootView: View {
                                 if item == .home { HomeView(tab: $tab) }
                                 else if item == .quran { QuranReaderView(initialPage: store.snapshot.state["lastRead"]["page"].int ?? 1, sourceID: store.snapshot.state["reader"]["mushaf"].string, onHome: { tab = .home }) }
                                 else if item == .program { ProgramView() }
+                                else if item == .friends { FriendsView() }
                                 else { PhasePlaceholder(title: item.rawValue) }
                             }
                             .toolbar {
@@ -65,7 +67,7 @@ struct RootView: View {
         }
         .tint(theme.accent)
         .sheet(isPresented: $store.passwordRecovery) { PasswordRecoveryView() }
-        .task { network.onAvailable = { Task { await store.refresh(); await recitations.synchronize() } }; await store.start() }
+        .task { network.onAvailable = { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh() } }; await store.start() }
         .onChange(of: store.identity?.id) { _, id in if let id { theme.importPreferences(state: store.snapshot.state, userID: id) } }
         .onChange(of: store.snapshot.state) { _, state in if let id = store.identity?.id { theme.importPreferences(state: state, userID: id) } }
         .onAppear { if let id = store.identity?.id { theme.importPreferences(state: store.snapshot.state, userID: id) } }

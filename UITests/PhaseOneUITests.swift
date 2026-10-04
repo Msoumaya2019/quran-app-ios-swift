@@ -1,6 +1,18 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testFriendsScreenOpensOfflineAndRequestRequiresCode() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
+        app.tabBars.buttons["Amis"].tap()
+        XCTAssertTrue(app.textFields["friends.search"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Mes amis"].exists)
+        app.buttons["Ajouter un ami"].tap()
+        XCTAssertTrue(app.textFields["Code d’invitation"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Envoyer la demande"].isEnabled)
+        attach(app, name: "Amis natifs — ajout par code")
+        app.buttons["Fermer"].tap()
+        XCTAssertTrue(app.textFields["friends.search"].exists)
+    }
     func testRevisionRhythmCanBeChangedFromSettingsOffline() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-revision"]; app.launch()
         app.buttons["settings.open"].tap()
