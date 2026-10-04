@@ -69,3 +69,11 @@ La validation partielle et complète des révisions habituelles des cycles exist
 L’édition et la génération du programme d’apprentissage sont disponibles dans Réglages → Modifier mon programme. L’enregistrement est direct, sans aperçu ni confirmation supplémentaire. Objectif, sens, rythme et jours sont modifiables ; séances commencées, terminées et historique restent conservés. Voir [NATIVE_PROGRAM_EDIT_REPORT.md](Docs/NATIVE_PROGRAM_EDIT_REPORT.md). Ces compléments remplacent les mentions « génération/édition à migrer » du tableau et des rapports précédents.
 
 Aucune migration SQL et aucun fichier React Native modifié. Tests Xcode de ces compléments : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37214295583 (65 tests réussis, archive non signée générée).
+
+## Repères de séance et difficultés — 4 octobre 2026
+
+Les annotations en marge sont intégrées au lecteur commun pour les deux sources. Elles utilisent les coordonnées originales et un calque UIKit indépendant, sans changer le centrage, la taille ou le rendu du Mushaf. Les repères d’apprentissage et de révision reflètent les validations partielles ; la consolidation utilise le même calque.
+
+Plus → Versets difficiles de cette page permet le marquage personnel et son retrait, avec sauvegarde dans le cache par compte et la file existante. Les difficultés apparaissent dans la marge, également en lecture classique. Les marqueurs administrateur restent conservés. Ces fonctionnalités remplacent les mentions « annotations marge » et « difficile » à migrer du tableau précédent. Voir [NATIVE_MARGIN_DIFFICULTY_REPORT.md](Docs/NATIVE_MARGIN_DIFFICULTY_REPORT.md).
+
+Vérification Xcode réussie : **64 tests unitaires et 12 tests d’interface (76 sans échec)**, sur simulateur iPhone 17 Pro Max. Archive Release et IPA non signée générées : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37219844054. Le dépôt React Native reste intact (3279 fichiers suivis vérifiés).
