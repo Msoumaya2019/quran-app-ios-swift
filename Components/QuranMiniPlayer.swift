@@ -32,7 +32,11 @@ private struct AudioTimelineView: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(QuranAudioTimeline.timeLabel(scrubbing ? draft : timeline.elapsed)).accessibilityIdentifier("quran.audio.elapsed")
-            Slider(value: Binding(get: { scrubbing ? draft : timeline.elapsed }, set: { draft = $0 }), in: 0...max(1, timeline.duration)) { editing in
+            Slider(value: Binding(get: { scrubbing ? draft : timeline.elapsed }, set: { value in
+                draft = value
+                // Accessibility changes do not always send drag begin/end events.
+                if !scrubbing { seek(value) }
+            }), in: 0...max(1, timeline.duration)) { editing in
                 if editing { draft = timeline.elapsed } else { seek(draft) }
                 scrubbing = editing
             }.disabled(timeline.duration <= 0).frame(minHeight: 44).accessibilityLabel("Position dans le verset").accessibilityIdentifier("quran.audio.timeline")

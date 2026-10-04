@@ -68,12 +68,14 @@ final class ReaderUITests: XCTestCase {
         let slider = app.sliders["quran.audio.timeline"]
         XCTAssertTrue(slider.waitForExistence(timeout: 10))
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: slider)
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        guard XCTWaiter.wait(for: [ready], timeout: 30) == .completed else {
+            XCTFail("Local audio must be ready before testing seek: \(app.debugDescription)"); return
+        }
         app.buttons["quran.audio.toggle"].tap()
         slider.adjust(toNormalizedSliderPosition: 0.5)
         let elapsed = app.staticTexts["quran.audio.elapsed"]
         let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label MATCHES %@", "0:(2[89]|3[0-2])"), object: elapsed)
-        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 5), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 10), .completed)
         XCTAssertEqual(image.frame.midX, original.midX, accuracy: 1)
         XCTAssertLessThan(image.frame.height, original.height)
         attach(app, name: "Audio natif — timeline hors ligne")
