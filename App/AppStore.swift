@@ -21,6 +21,7 @@ import SwiftUI
         // Keep the latest resume/source operation; bookmark tombstones retain their order.
         if operation.kind == .reading { queue.removeAll { $0.kind == .reading && $0.page == operation.page && $0.source == operation.source } }
         if operation.kind == .source { queue.removeAll { $0.kind == .source } }
+        if operation.kind == .reciter { queue.removeAll { $0.kind == .reciter } }
         queue.append(operation); next.readerOperations = queue
         do { try cache.save(next, userID: userID); snapshot = next }
         catch { message = "Impossible d’enregistrer cette modification sur l’appareil." }

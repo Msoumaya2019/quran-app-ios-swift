@@ -82,7 +82,10 @@ struct QuranReaderView: View {
                         Button("Ouvrir la page") { page = source.validPage(jumpPage); options = false }
                     }
                     Section("Réciteur") {
-                        Picker("Réciteur", selection: Binding(get: { audio.reciterID }, set: { audio.changeReciter($0) })) {
+                        Picker("Réciteur", selection: Binding(get: { audio.reciterID }, set: { id in
+                            audio.changeReciter(id)
+                            store.readerChange(ReaderOperation(kind: .reciter, verseID: verseID, page: page, source: id))
+                        })) {
                             ForEach(QuranAudioService.Reciter.available) { reciter in Text(reciter.name).tag(reciter.id) }
                         }
                     }

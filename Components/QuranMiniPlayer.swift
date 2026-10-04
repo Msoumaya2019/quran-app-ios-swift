@@ -13,12 +13,30 @@ struct QuranMiniPlayer: View {
                     Text("Verset \(audio.verseID - (catalog.surah(for: audio.verseID)?.start ?? 1) + 1)").font(.caption).foregroundStyle(theme.muted)
                 }
                 Spacer()
-                Button { audio.play(audio.verseID - 1) } label: { Image(systemName: "backward.end.fill").frame(width: 44, height: 44) }.accessibilityLabel("Verset précédent")
+                Button { audio.play(audio.verseID - 1) } label: { Image(systemName: "backward.end.fill").frame(width: 44, height: 44) }.disabled(audio.verseID <= 1).accessibilityLabel("Verset précédent")
                 Button { audio.toggle(start: audio.verseID) } label: { Group { if audio.loading { ProgressView() } else { Image(systemName: audio.playing ? "pause.fill" : "play.fill") } }.frame(width: 44, height: 44) }.accessibilityLabel("Lecture ou pause")
-                Button { audio.play(audio.verseID + 1) } label: { Image(systemName: "forward.end.fill").frame(width: 44, height: 44) }.accessibilityLabel("Verset suivant")
+                Button { audio.play(audio.verseID + 1) } label: { Image(systemName: "forward.end.fill").frame(width: 44, height: 44) }.disabled(audio.verseID >= 6236).accessibilityLabel("Verset suivant")
                 Button(action: close) { Image(systemName: "chevron.down").frame(width: 44, height: 44) }.accessibilityLabel("Réduire le lecteur audio")
             }
+            AudioTimelineView(timeline: audio.timeline, seek: audio.seek)
             if let error = audio.error { Text(error).font(.caption).foregroundStyle(theme.muted) }
         }.padding(.horizontal, 12).background(theme.surface).foregroundStyle(theme.accent)
+    }
+}
+
+private struct AudioTimelineView: View {
+    @ObservedObject var timeline: QuranAudioTimeline
+    let seek: (Double) -> Void
+    @State private var scrubbing = false
+    @State private var draft = 0.0
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(QuranAudioTimeline.timeLabel(scrubbing ? draft : timeline.elapsed))
+            Slider(value: Binding(get: { scrubbing ? draft : timeline.elapsed }, set: { draft = $0 }), in: 0...max(1, timeline.duration)) { editing in
+                if editing { draft = timeline.elapsed } else { seek(draft) }
+                scrubbing = editing
+            }.disabled(timeline.duration <= 0).frame(minHeight: 44).accessibilityLabel("Position dans le verset").accessibilityIdentifier("quran.audio.timeline")
+            Text(QuranAudioTimeline.timeLabel(timeline.duration))
+        }.font(.caption.monospacedDigit())
     }
 }

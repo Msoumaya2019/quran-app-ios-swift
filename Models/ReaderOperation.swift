@@ -1,7 +1,7 @@
 import Foundation
 
 struct ReaderOperation: Codable, Sendable, Identifiable {
-    enum Kind: String, Codable { case reading, bookmark, removeBookmark, source }
+    enum Kind: String, Codable { case reading, bookmark, removeBookmark, source, reciter }
     let id: UUID
     let kind: Kind
     let verseID: Int
@@ -16,6 +16,8 @@ struct ReaderOperation: Codable, Sendable, Identifiable {
     func applying(to state: JSONValue, catalog: QuranCatalog) -> JSONValue {
         var result = state
         switch kind {
+        case .reciter:
+            result = result.setting("audioPreferences", state["audioPreferences"].setting("reciterId", .string(source)))
         case .source:
             result = result.setting("reader", state["reader"].setting("mushaf", .string(source)))
         case .reading:
