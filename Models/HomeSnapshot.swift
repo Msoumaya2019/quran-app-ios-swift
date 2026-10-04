@@ -27,7 +27,7 @@ struct HomeSnapshot: Codable, Sendable {
     var quizDate: String?
     var fetchedAt: Date?
 }
-struct VerseRange: Equatable, Sendable {
+struct VerseRange: Hashable, Sendable {
     let start: Int
     let end: Int
     var count: Int { max(0, end - start + 1) }

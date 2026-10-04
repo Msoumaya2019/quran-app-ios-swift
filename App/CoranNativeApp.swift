@@ -43,7 +43,14 @@ import SwiftUI
     func fetch(userID: UUID, cached: HomeSnapshot) async throws -> HomeSnapshot { cached }
 }
 private struct PreviewCache: HomeCache {
-    func load(userID: UUID) throws -> HomeSnapshot? { HomeSnapshot(state: .object(["schema":.number(1), "profile":.object(["firstName":.string("Mohamed")]), "lastRead":.object(["verseId":.number(3371), "page":.number(397)]), "goal":.object(["label":.string("Finir le Hizb 42")])])) }
+    func load(userID: UUID) throws -> HomeSnapshot? {
+        let snapshot = HomeSnapshot(state: .object(["schema":.number(1), "profile":.object(["firstName":.string("Mohamed")]), "lastRead":.object(["verseId":.number(3371), "page":.number(397)]), "goal":.object(["label":.string("Finir le Hizb 42")])]))
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-program") {
+            let task: JSONValue = .object(["id": .string("preview-learning"), "start": .number(1), "end": .number(7), "status": .string("todo"), "scheduledDate": .string(LocalCalendar.key(.now))])
+            var value = snapshot; value.state = snapshot.state.setting("sessions", .array([task])); return value
+        }
+        return snapshot
+    }
     func save(_ snapshot: HomeSnapshot, userID: UUID) throws {}
 }
 #endif

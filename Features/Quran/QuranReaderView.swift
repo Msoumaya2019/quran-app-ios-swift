@@ -3,13 +3,15 @@ import SwiftUI
 struct QuranReaderView: View {
     var onHome: (() -> Void)? = nil
     let mode: ReadingMode
-    init(initialPage: Int = 1, sourceID: String? = nil, mode: ReadingMode = .classic, onHome: (() -> Void)? = nil) {
+    let session: QuranSessionContext?
+    init(initialPage: Int = 1, sourceID: String? = nil, mode: ReadingMode = .classic, session: QuranSessionContext? = nil, onHome: (() -> Void)? = nil) {
         self.onHome = onHome
         self.mode = mode
+        self.session = session
         let preferred = QuranSource.available.first { $0.id == sourceID } ?? .medina
         let ready = QuranResourceService.shared.isReady(preferred) ? preferred : .medina
         _source = State(initialValue: ready)
-        var firstPage = ready.validPage(initialPage)
+        var firstPage = session.map { QuranSourceMapping.page(source: ready, verseID: $0.range.start, catalog: QuranCatalog()) } ?? ready.validPage(initialPage)
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--ui-test-reader-fixtures") { firstPage = 1 }
         #endif
@@ -36,6 +38,7 @@ struct QuranReaderView: View {
     private func record(_ kind: ReaderOperation.Kind) { store.readerChange(ReaderOperation(kind: kind, verseID: verseID, page: page, source: source.id)) }
     var body: some View {
         VStack(spacing: 0) {
+            if let session { QuranSessionHeader(context: session, source: source, catalog: store.catalog) }
             if loading { HStack { ProgressView(); Text("Chargement du Coran…").font(.caption) }.padding(8) }
             QuranPager(source: source, page: $page, onTap: { withAnimation(.easeInOut(duration: 0.18)) { immersive.toggle() } })
                 .accessibilityIdentifier("quran.viewport")

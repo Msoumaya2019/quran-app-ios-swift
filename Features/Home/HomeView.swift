@@ -36,6 +36,12 @@ struct HomeView: View {
         .refreshable { await store.refresh() }
         .navigationDestination(item: $route) { item in
             if item == .reading { QuranReaderView(initialPage: store.snapshot.state["lastRead"]["page"].int ?? 1, sourceID: store.snapshot.state["reader"]["mushaf"].string) }
+            else if item == .learning || item == .revision {
+                let program = ProgramProjection(snapshot: store.snapshot)
+                if let task = item == .learning ? program.todayLearning : program.revision {
+                    QuranReaderView(sourceID: store.snapshot.state["reader"]["mushaf"].string, mode: task.mode, session: task)
+                } else { ProgramView() }
+            }
             else { PhasePlaceholder(title: item.rawValue) }
         }
         .sheet(item: $content) { value in DailyContentView(content: value) }

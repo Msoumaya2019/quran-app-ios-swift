@@ -1,6 +1,19 @@
 import XCTest
 
 final class ReaderUITests: XCTestCase {
+    func testProgramOpensPassageWithNativeSessionHeader() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-program"]
+        app.launch(); app.tabBars.buttons["Programme"].tap()
+        XCTAssertTrue(app.buttons["program.task.preview-learning"].firstMatch.waitForExistence(timeout: 5))
+        attach(app, name: "Programme natif — séances locales")
+        app.buttons["program.task.preview-learning"].firstMatch.tap()
+        XCTAssertTrue(app.otherElements["quran.session.header"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.images["quran.page.1"].waitForExistence(timeout: 5))
+        attach(app, name: "Apprentissage natif — passage et capsule")
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["program.task.preview-learning"].firstMatch.waitForExistence(timeout: 5))
+    }
     func testNativeIndexSearchAndDivisionNavigation() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures"]
