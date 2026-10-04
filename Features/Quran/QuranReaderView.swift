@@ -68,6 +68,7 @@ struct QuranReaderView: View {
         .sheet(isPresented: $options) {
             NavigationStack {
                 Form {
+                    Section("Ma voix") { NavigationLink("Mes récitations") { RecitationsView().onAppear { audio.pause() } }.accessibilityIdentifier("recitations.open") }
                     Section("Affichage du Coran") {
                         if loading { HStack { ProgressView(); Text("Téléchargement et préparation du Coran…").font(.caption) } }
                         ForEach(QuranSource.available) { value in
@@ -90,7 +91,6 @@ struct QuranReaderView: View {
                             ForEach(QuranAudioService.Reciter.available) { reciter in Text(reciter.name).tag(reciter.id) }
                         }
                     }
-                    Section("Ma voix") { NavigationLink("Mes récitations") { RecitationsView().onAppear { audio.pause() } }.accessibilityIdentifier("recitations.open") }
                     Section("Marque-pages") {
                         ForEach(store.snapshot.state["bookmarks"].object.keys.sorted(), id: \.self) { key in
                             let bookmark = store.snapshot.state["bookmarks"][key]

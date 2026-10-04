@@ -14,7 +14,9 @@ final class ReaderUITests: XCTestCase {
         app.buttons["recitation.save"].tap()
         XCTAssertTrue(app.buttons["quran.action.Plus"].waitForExistence(timeout: 5))
         app.buttons["quran.action.Plus"].tap()
-        app.buttons["recitations.open"].tap()
+        let library = app.buttons["recitations.open"]
+        XCTAssertTrue(library.waitForExistence(timeout: 5))
+        library.tap()
         let saved = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "recitation.item."))
         XCTAssertTrue(saved.firstMatch.waitForExistence(timeout: 5))
         XCTAssertEqual(saved.count, 1)
