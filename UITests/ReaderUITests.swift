@@ -101,6 +101,31 @@ final class ReaderUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["1 / 7 versets validés"].exists)
         attach(app, name: "Révision native — validation partielle hors ligne")
     }
+    func testPriorityRevisionCanBeValidatedOffline() { validateSupplemental(category: "priority", start: 1, end: 3) }
+    func testRecentRevisionCanBeValidatedOffline() { validateSupplemental(category: "recent", start: 4, end: 7) }
+    private func validateSupplemental(category: String, start: Int, end: Int) {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-review-queues"]
+        app.launch(); app.tabBars.buttons["Programme"].tap()
+        let learned = { () -> String in
+            let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.locale = Locale(identifier: "en_US_POSIX")
+            return formatter.string(from: Calendar.current.date(byAdding: .day, value: -1, to: .now)!)
+        }()
+        let id = category == "priority" ? "native-priority-\(dayKey())-1-3" : "native-recent-\(learned)-1-4-7"
+        let task = app.buttons["program.task.\(id)"].firstMatch
+        XCTAssertTrue(task.waitForExistence(timeout: 10))
+        for _ in 0..<6 where !task.isHittable { app.swipeUp() }
+        task.tap()
+        XCTAssertTrue(app.images["quran.page.1"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[category == "priority" ? "Révision prioritaire" : "Révision récente · J+1"].exists)
+        app.buttons["quran.action.Plus"].tap(); app.buttons["revision.open"].tap()
+        let validate = app.buttons["revision.validate"]
+        for _ in 0..<3 where !validate.isHittable { app.swipeUp() }
+        validate.tap(); app.buttons["J’ai révisé jusqu’ici"].tap()
+        XCTAssertTrue(app.staticTexts["revision.result"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["1 / \(end - start + 1) versets validés"].exists)
+        attach(app, name: "Révision \(category) — validation partielle hors ligne")
+    }
     private func dayKey() -> String {
         let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.locale = Locale(identifier: "en_US_POSIX")
         return formatter.string(from: .now)

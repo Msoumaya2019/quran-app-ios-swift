@@ -50,6 +50,17 @@ import SwiftUI
 private struct PreviewCache: HomeCache {
     func load(userID: UUID) throws -> HomeSnapshot? {
         let snapshot = HomeSnapshot(state: .object(["schema":.number(1), "profile":.object(["firstName":.string("Mohamed")]), "lastRead":.object(["verseId":.number(3371), "page":.number(397)]), "goal":.object(["label":.string("Finir le Hizb 42")])]))
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-review-queues") {
+            let today = LocalCalendar.key(.now), learned = ProgramProjection.addingDays(-1, to: LocalCalendar.key(.now), timeZone: .current)!
+            var value = snapshot
+            value.state = snapshot.state
+                .setting("knowledge", .object(Dictionary(uniqueKeysWithValues: (1...7).map { (String($0), JSONValue.string("perfect")) })))
+                .setting("memorizedAt", .object(Dictionary(uniqueKeysWithValues: (4...7).map { (String($0), JSONValue.string(learned)) })))
+                .setting("difficultyMarkers", .object(Dictionary(uniqueKeysWithValues: (1...3).map { (String($0), JSONValue.object(["user": .object(["createdAt": .string(today)])])) })))
+                .setting("reviewConsolidations", .object(Dictionary(uniqueKeysWithValues: (4...7).map { (String($0), JSONValue.object(["learnedAt": .string(learned), "completed": .object([:])])) })))
+                .setting("reviewCycle", .object(["index": .number(1), "startDate": .string(today), "lengthDays": .number(7), "corpus": .array((1...3).map { .number(Double($0)) }), "days": .array([.array((1...3).map { .number(Double($0)) })]), "completed": .array([]), "assignments": .object([today: .number(0)])]))
+            return value
+        }
         if ProcessInfo.processInfo.arguments.contains("--ui-test-consolidation") {
             let learned = ProgramProjection.addingDays(-1, to: LocalCalendar.key(.now), timeZone: .current)!
             var value = snapshot

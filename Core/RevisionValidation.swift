@@ -8,6 +8,9 @@ enum RevisionGrade: String, Codable, CaseIterable, Hashable {
 }
 
 struct RevisionValidation: Codable, Sendable {
+    var category: String? = nil
+    var consolidationOffset: Int? = nil
+    var priorityDueAnchors: [String: String]? = nil
     let eventID: String
     let taskID: String
     let start: Int
@@ -23,18 +26,23 @@ struct RevisionValidation: Codable, Sendable {
     let page: Int
     let learnedAnchors: [String: String]
     init?(context: QuranSessionContext, through: Int, grade: RevisionGrade, state: JSONValue, source: QuranSource, catalog: QuranCatalog, now: Date = .now, timeZone: TimeZone = .current) {
-        guard context.mode == .revision, let index = context.revisionCycleIndex, let cycleStart = context.revisionCycleStart,
+        let category = context.revisionCategory ?? "habitual"
+        guard ["habitual", "priority", "recent"].contains(category), context.mode == .revision,
+              category != "habitual" || (context.revisionCycleIndex != nil && context.revisionCycleStart != nil),
               (context.range.start...context.range.end).contains(through) else { return nil }
         eventID = UUID().uuidString; taskID = context.id; start = context.range.start; end = context.range.end; self.through = through
         scheduledDate = context.scheduledDate; completedDate = LocalCalendar.key(now, timeZone: timeZone)
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        completedAt = formatter.string(from: now); cycleIndex = index; self.cycleStart = cycleStart; self.grade = grade
+        completedAt = formatter.string(from: now); cycleIndex = context.revisionCycleIndex ?? -1; self.cycleStart = context.revisionCycleStart ?? ""; self.grade = grade
+        self.category = category; consolidationOffset = context.consolidationDay
+        if category == "priority" { priorityDueAnchors = Dictionary(uniqueKeysWithValues: (start...end).map { (String($0), state["reviewPriorityDue"][String($0)].string ?? "") }) }
         self.source = source.id; page = QuranSourceMapping.page(source: source, verseID: through, catalog: catalog)
         learnedAnchors = Dictionary(uniqueKeysWithValues: (start...end).map { (String($0), state["memorizedAt"][String($0)].string ?? "") })
     }
     func applying(to state: JSONValue) -> JSONValue {
         guard (1...6236).contains(start), (start...6236).contains(end), (start...end).contains(through),
               state["reviewSettings"]["enabled"].bool != false else { return state }
+        if category == "priority" || category == "recent" { return applyingSupplemental(to: state) }
         let currentCycle = state["reviewCycle"]
         let isCurrent = currentCycle["index"].int == cycleIndex && currentCycle["startDate"].string == cycleStart
         var archives = state["reviewCycleHistory"].array

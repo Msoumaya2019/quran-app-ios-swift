@@ -116,17 +116,7 @@ struct HomeProjection {
         while dates.contains(LocalCalendar.key(day, timeZone: timeZone)) { count += 1; day = c.date(byAdding: .day, value: -1, to: day)! }
         return count
     }
-    // Read the persisted cycle only. No program generation or validation is migrated in phase 1.
     var revision: VerseRange? {
-        guard state["reviewSettings"]["enabled"].bool != false else { return nil }
-        let partial = state["studyProgress"].object.values.first { $0["mode"].string == "revision" && $0["status"].string == "partial" }
-        if let p = partial, let through = p["through"].int, let end = p["end"].int, through < end { return VerseRange(json: .object(["start": .number(Double(through + 1)), "end": .number(Double(end))])) }
-        let cycle = state["reviewCycle"]
-        if let index = cycle["assignments"][today].int, cycle["days"].array.indices.contains(index) {
-            let completed = Set(cycle["completed"].array.compactMap(\.int))
-            let ids = cycle["days"].array[index].array.compactMap(\.int).filter { !completed.contains($0) && ["perfect", "review"].contains(state["knowledge"][String($0)].string ?? "") }.sorted()
-            if let first = ids.first { var end = first; for id in ids.dropFirst() { if id != end + 1 { break }; end = id }; return VerseRange(json: .object(["start": .number(Double(first)), "end": .number(Double(end))])) }
-        }
-        return nil
+        ProgramProjection(snapshot: snapshot, now: now, timeZone: timeZone).revision?.range
     }
 }

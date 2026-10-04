@@ -7,13 +7,14 @@ struct QuranSessionContext: Identifiable, Hashable, Sendable {
     let scheduledDate: String
     var consolidationDay: Int? = nil
     var learnedAt: String? = nil
+    var revisionCategory: String? = nil
     var revisionCycleIndex: Int? = nil
     var revisionCycleStart: String? = nil
     var title: String {
         switch mode {
         case .classic: return "Lecture"
         case .learning: return "Apprentissage du jour"
-        case .revision: return "Révision du jour"
+        case .revision: return revisionCategory == "priority" ? "Révision prioritaire" : revisionCategory == "recent" ? "Révision récente · J+\(consolidationDay ?? 1)" : "Révision du jour"
         case .consolidation: return "Consolidation · J+\(consolidationDay ?? 1)"
         }
     }
@@ -51,7 +52,8 @@ struct ProgramProjection {
         let end = Self.addingDays(10, to: today, timeZone: timeZone) ?? today
         return learning.filter { $0.scheduledDate >= today && $0.scheduledDate <= end }
     }
-    var revision: QuranSessionContext? {
+    var revision: QuranSessionContext? { ReviewQueueProjection(program: self).tasks.first }
+    var habitualRevision: QuranSessionContext? {
         let state = snapshot.state, cycle = state["reviewCycle"]
         guard state["reviewSettings"]["enabled"].bool != false, let index = cycle["index"].int,
               let startDate = cycle["startDate"].string else { return nil }

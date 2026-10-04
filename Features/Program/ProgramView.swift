@@ -5,6 +5,7 @@ struct ProgramView: View {
     @EnvironmentObject private var theme: ThemeManager
     @State private var selected: QuranSessionContext?
     private var projection: ProgramProjection { ProgramProjection(snapshot: store.snapshot) }
+    private var reviewTasks: [QuranSessionContext] { ReviewQueueProjection(program: projection).tasks }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -17,7 +18,7 @@ struct ProgramView: View {
                         Text(RevisionPreferences(state: store.snapshot.state).title).font(.caption).foregroundStyle(theme.review)
                         if let task = projection.todayLearning { row(task) }
                         else { Text("Aucune séance d’apprentissage prévue aujourd’hui").font(.subheadline).foregroundStyle(theme.muted) }
-                        if let task = projection.revision { row(task) }
+                        if let task = reviewTasks.first { row(task) }
                     }
                 }
                 let week = HomeProjection(snapshot: store.snapshot).week
@@ -31,6 +32,17 @@ struct ProgramView: View {
                 if !projection.overdue.isEmpty {
                     Text("Séances à reprendre").font(theme.title()).foregroundStyle(theme.accent)
                     ForEach(projection.overdue) { task in AppCard { row(task) } }
+                }
+                let recent = reviewTasks.filter { $0.revisionCategory == "recent" }
+                let priority = reviewTasks.filter { $0.revisionCategory == "priority" }
+                if !recent.isEmpty {
+                    Text("Révisions récentes").font(theme.title()).foregroundStyle(theme.review)
+                    ForEach(recent) { task in AppCard { row(task) } }
+                }
+                if !priority.isEmpty {
+                    Text("Révisions prioritaires").font(theme.title()).foregroundStyle(theme.review)
+                    Text("Tes versets difficiles à revoir").font(.caption).foregroundStyle(theme.muted)
+                    ForEach(priority) { task in AppCard { row(task) } }
                 }
                 if !projection.consolidations.isEmpty {
                     Text("Nouveaux versets à consolider").font(theme.title()).foregroundStyle(theme.accent)
