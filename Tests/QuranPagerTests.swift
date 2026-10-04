@@ -5,6 +5,19 @@ import UIKit
 
 @MainActor
 final class QuranPagerTests: XCTestCase {
+    func testReturningToRetainedPageKeepsVisibleControllerInAnnotationWindow() throws {
+        let coordinator = QuranPager(source: .medina, page: .constant(1), onTap: {}).makeCoordinator()
+        let controller = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal)
+        coordinator.controller = controller; coordinator.present(page: 1, source: .medina)
+        let retained = try XCTUnwrap(controller.viewControllers?.first as? PageController)
+        coordinator.present(page: 4, source: .medina)
+        XCTAssertNil(coordinator.pages[1])
+        controller.setViewControllers([retained], direction: .reverse, animated: false)
+        coordinator.pageViewController(controller, didFinishAnimating: true, previousViewControllers: [], transitionCompleted: true)
+        XCTAssertTrue(coordinator.pages[1] === retained)
+        XCTAssertEqual(coordinator.current, 1)
+        XCTAssertEqual(Set(coordinator.pages.keys), Set([1, 2]))
+    }
     func testUIKitCanRequestCandidateBeforeWindowAdvances() throws {
         let pager = QuranPager(source: .medina, page: .constant(1), onTap: {})
         let coordinator = pager.makeCoordinator()

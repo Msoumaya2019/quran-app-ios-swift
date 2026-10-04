@@ -90,6 +90,10 @@ struct QuranPager: UIViewControllerRepresentable {
         }
         func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
             guard completed, let value = pageViewController.viewControllers?.first as? PageController, let source else { return }
+            // UIKit can return a controller it retained outside our latest window.
+            // Keep the visible instance authoritative for subsequent overlay updates.
+            pages[value.page] = value
+            value.set(annotations: parent.annotations)
             current = value.page; parent.page = value.page
             generation += 1
             prepareWindow(page: value.page, source: source)
