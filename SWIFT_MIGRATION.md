@@ -30,7 +30,7 @@ Le stockage SQLite (`storage.ts`) conserve app_state, account_state et pending_s
 | Consolidation | core/review.ts, core/studyProgress.ts | J+1/J+3/J+7, dates et validations séparées | reviewConsolidations, consolidationHistory dans data | ConsolidationService | 3 consultation, ouverture et validation J+1/J+3/J+7 intégrées avec file locale et historique compatible |
 | Difficile | core/review.ts, lecteur actuel | marque utilisateur/admin persistante | difficultyMarkers/history dans data | DifficultyChange / QuranMarginOverlay | 3 intégré : marqueurs personnels/admin, retrait personnel et persistance |
 | Semaine / statistiques | core/weeklyProgress.ts, program.stats | calendrier local, dédoublonnage | sessions/studyProgress/histoires | HomeProjection / WeeklyProgressService | 1 affichage en lecture, 3 moteur complet |
-| Amis / profils / demandes | SocialScreens.tsx, services/social.ts, avatars.ts | RLS, profils, liens et presence | friend_profiles, friend_links et RPC | FriendsLibrary | 4 liste/cache/recherche/demandes intégrés ; détail/profil/photos restent à migrer |
+| Amis / profils / demandes | SocialScreens.tsx, services/social.ts, avatars.ts | RLS, profils, liens et presence | friend_profiles, friend_links et RPC | FriendsLibrary | 4 liste/cache/recherche/demandes et progression partagée intégrés ; édition du profil/photos restent à migrer |
 | Messagerie / groupes | SocialScreens.tsx, services/social.ts | Realtime, inbox, messages, read receipts | friend_messages, groups/members et RPC | messaging repository | 4 à faire |
 | Question du jour / historique | ui/QuizScreen.tsx, core/quiz.ts, services/quiz.ts | réponse immutable, cache, outbox | quiz_snapshot, quiz_answer_daily | QuizService | 4 à faire ; disponibilité seulement sur accueil |
 | Défis / quiz thématiques admin | ui/AdminQuiz.tsx, ui/AdminQuizSets.tsx | 5/10, 48h, mêmes questions, correction protégée | quiz tables et RPC | quiz views/repository | 4 à faire |
@@ -89,6 +89,10 @@ Un complément ajoute les répétitions de chaque verset ou du passage entier, l
 La file commune récente/prioritaire/habituelle est maintenant intégrée, avec reprise partielle et dédoublonnage. Les nouvelles catégories utilisent le lecteur, l’audio, les repères en marge, la validation et la file de synchronisation existants. Les consolidations des anciens comptes sont récupérées à partir des véritables révisions historiques, sans validation fictive. Ces ajouts remplacent les anciennes mentions « files prioritaires/récentes à migrer ». Voir [NATIVE_REVIEW_QUEUE_REPORT.md](Docs/NATIVE_REVIEW_QUEUE_REPORT.md).
 
 La génération d’archive/IPA est désormais optionnelle et désactivée pour les vérifications ordinaires. Elle sera réservée aux jalons où un essai sur appareil nécessite une livraison.
+
+Politique de livraison mise à jour le 5 octobre : une IPA de test sur GitHub à chaque grand ajout fonctionnel (Amis, Quiz, évolution majeure du lecteur), sans archive systématique pour les petites corrections.
+
+Le profil d’un ami accepté est maintenant consultable, avec statistiques/objectifs provenant du RPC friend_overview et cache rétrocompatible. L’affichage exige le consentement explicite share_progress. Vérification : 96 tests unitaires et 18 tests d’interface réussis. IPA Amis non signée publiée le 5 octobre : https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-amis-2026-10-05 ; voir le rapport Amis pour les résultats et limites.
 
 ## Première étape Amis — 4 octobre 2026
 Liste, filtres, recherche, code partageable et demandes par les RPC existants sont intégrés, avec cache isolé par compte. 94 tests unitaires et 17 tests d’interface réussis, sans archive. Voir [NATIVE_FRIENDS_REPORT.md](Docs/NATIVE_FRIENDS_REPORT.md). La migration sociale complète et le Quiz restent en cours. Estimation indicative de la migration finale : environ 65 %, incluant le travail restant sur appareil réel ; ce pourcentage n’est pas une mesure automatique de couverture.

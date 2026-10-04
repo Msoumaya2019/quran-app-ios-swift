@@ -14,7 +14,7 @@ Le projet est déjà généré et partage un schéma Xcode. Si les fichiers sour
 
 ## Tests sur GitHub
 
-Le workflow `ios-native.yml` exécute XCTest et UI Tests sur un Mac GitHub avec simulateur iPhone. L’archive et l’IPA sont désactivées par défaut ; le lancement manuel avec `build_ipa=true` les génère lorsqu’un essai sur appareil est demandé. Il utilise le secret de dépôt `SUPABASE_PUBLIC_KEY` (configuration publique de client, jamais service role). Les artefacts contiennent les rapports `.xcresult`, captures UI et logs. L’IPA non signée doit être signée avant installation sur iPhone.
+Le workflow `ios-native.yml` exécute XCTest et UI Tests sur un Mac GitHub avec simulateur iPhone. L’archive et l’IPA sont désactivées pour les petites corrections ; à chaque grand ajout fonctionnel, un lancement manuel avec `build_ipa=true` génère une IPA de test publiée sur GitHub. Il utilise le secret de dépôt `SUPABASE_PUBLIC_KEY` (configuration publique de client, jamais service role). Les artefacts contiennent les rapports `.xcresult`, captures UI et logs. L’IPA non signée doit être signée avant installation sur iPhone.
 
 Les tests d’interface utilisent un compte fictif **local au simulateur**, uniquement dans DEBUG. Ils n’envoient aucun faux utilisateur ou programme à Supabase. Une connexion réelle au compte existant reste à valider sur simulateur/appareil par son propriétaire.
 
