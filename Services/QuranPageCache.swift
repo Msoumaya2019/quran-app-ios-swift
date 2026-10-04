@@ -50,7 +50,7 @@ actor QuranPageCache {
         switch source.renderingType {
         case .pageImage:
             guard let root = Bundle.main.resourceURL,
-                  let image = UIImage(contentsOfFile: root.appendingPathComponent("Medina/page\(String(format: "%03d", page)).png").path),
+                  let image = UIImage(contentsOfFile: root.appendingPathComponent(source.resourceLocation).appendingPathComponent("page\(String(format: "%03d", page)).png").path),
                   let decoded = image.preparingForDisplay() else { throw URLError(.fileDoesNotExist) }
             return decoded
         case .lineImages:

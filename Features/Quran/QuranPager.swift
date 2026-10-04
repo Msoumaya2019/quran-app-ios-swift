@@ -79,37 +79,14 @@ struct QuranPager: UIViewControllerRepresentable {
     }
 }
 
-// Hiding SwiftUI's navigation bar can disable UIKit's interactive pop gesture.
-// Restore its native recognizer only while this reader is visible, then restore
-// the previous delegate so other screens retain their navigation behaviour.
+// Keep UIKit's native edge recognizer and give it priority over page pans.
+// iOS 26's content-wide back recognizer is limited to the leading edge here
+// so ordinary Arabic page swipes continue to work inside a pushed reader.
 final class NativeQuranPageController: UIPageViewController, UIGestureRecognizerDelegate {
-    private weak var previousDelegate: UIGestureRecognizerDelegate?
-    private var previousEnabled = true
-    private var installed = false
-    private weak var installedEdge: UIGestureRecognizer?
     private weak var navigationOwner: UINavigationController?
     private weak var contentGesture: UIGestureRecognizer?
     private weak var previousContentDelegate: UIGestureRecognizerDelegate?
     private var previousContentEnabled = true
-    private let navigationEdgeLane = UIView()
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // A narrow native back-gesture lane is a sibling of the paging scroll
-        // view. Touches starting here reach UINavigationController rather than
-        // its descendant page pan. This changes hit-testing only, never layout.
-        navigationEdgeLane.backgroundColor = .clear
-        navigationEdgeLane.isAccessibilityElement = false
-        navigationEdgeLane.translatesAutoresizingMaskIntoConstraints = false
-        navigationEdgeLane.isHidden = true
-        view.addSubview(navigationEdgeLane)
-        NSLayoutConstraint.activate([
-            navigationEdgeLane.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navigationEdgeLane.topAnchor.constraint(equalTo: view.topAnchor),
-            navigationEdgeLane.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            navigationEdgeLane.widthAnchor.constraint(equalToConstant: 24)
-        ])
-    }
-    override func viewDidLayoutSubviews() { super.viewDidLayoutSubviews(); view.bringSubviewToFront(navigationEdgeLane) }
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         refreshNativeBack()
@@ -125,15 +102,12 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
             (viewControllers?.first as? PageController)?.debugNavigation("no native navigation controller")
             return
         }
-        if !installed { previousDelegate = edge.delegate; previousEnabled = edge.isEnabled; installed = true }
-        installedEdge = edge
         navigationOwner = navigation
-        navigationEdgeLane.isHidden = navigation.viewControllers.count <= 1
-        edge.delegate = self; edge.isEnabled = navigation.viewControllers.count > 1
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
             if contentGesture == nil { previousContentDelegate = content.delegate; previousContentEnabled = content.isEnabled }
-            contentGesture = content; content.delegate = self; content.isEnabled = navigation.viewControllers.count > 1
+            contentGesture = content; content.delegate = self
+            content.isEnabled = navigation.viewControllers.count > 1 && !navigation.isNavigationBarHidden
         }
         #endif
         for scroll in scrollViews(view) {
@@ -147,7 +121,7 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         value.subviews.flatMap { scrollViews($0) } + ((value as? UIScrollView).map { [$0] } ?? [])
     }
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard let navigationOwner, navigationOwner.viewControllers.count > 1 else { return false }
+        guard let navigationOwner, navigationOwner.viewControllers.count > 1, !navigationOwner.isNavigationBarHidden else { return false }
         let location = gestureRecognizer.location(in: navigationOwner.view)
         let translation = (gestureRecognizer as? UIPanGestureRecognizer)?.translation(in: navigationOwner.view) ?? .zero
         return location.x - translation.x <= 24 && translation.x >= 0
@@ -161,11 +135,8 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
     }
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
-        if installed, let edge = installedEdge {
-            edge.delegate = previousDelegate; edge.isEnabled = previousEnabled; installed = false
-            contentGesture?.delegate = previousContentDelegate; contentGesture?.isEnabled = previousContentEnabled
-            contentGesture = nil
-        }
+        contentGesture?.delegate = previousContentDelegate; contentGesture?.isEnabled = previousContentEnabled
+        contentGesture = nil
     }
 }
 

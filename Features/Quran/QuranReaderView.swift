@@ -50,7 +50,11 @@ struct QuranReaderView: View {
             }
         }
         .background(.white)
-        .toolbar(.hidden, for: .navigationBar, .tabBar)
+        .navigationTitle(source.displayName)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(immersive ? .hidden : .visible, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbarBackground(.white, for: .navigationBar)
         .statusBarHidden(immersive)
         .onAppear {
             guard !initialized else { return }; initialized = true
