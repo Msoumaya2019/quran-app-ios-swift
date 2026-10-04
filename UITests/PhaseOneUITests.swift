@@ -1,6 +1,19 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testProgramCanBeEditedFromSettingsOffline() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-program-edit"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let editor = app.buttons["settings.program.open"]
+        guard editor.waitForExistence(timeout: 10) else { XCTFail("Program settings unavailable"); return }
+        editor.tap()
+        let save = app.buttons["program.editor.save"]
+        for _ in 0..<5 { if save.isHittable { break }; app.swipeUp() }
+        guard save.isHittable else { XCTFail("Program save unavailable: \(app.debugDescription)"); return }
+        save.tap()
+        XCTAssertTrue(app.staticTexts["program.editor.result"].waitForExistence(timeout: 10))
+        attach(app, name: "Réglages natifs — modification du programme hors ligne")
+    }
     func testAuthenticationScreenAndDisabledEmptyLogin() {
         let app = XCUIApplication(); app.launch()
         XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 10))

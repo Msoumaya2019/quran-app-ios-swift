@@ -57,6 +57,12 @@ private struct PreviewCache: HomeCache {
                 .setting("reviewCycle", .object(["index": .number(1), "startDate": .string(today), "lengthDays": .number(7), "corpus": .array(ids), "days": .array([.array(ids)]), "completed": .array([]), "assignments": .object([today: .number(0)])]))
             return value
         }
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-program-edit") {
+            var value = snapshot
+            value.state = snapshot.state.setting("goal", .object(["label": .string("Al Fâtiha"), "ranges": .array([.object(["start": .number(1), "end": .number(7)])])]))
+                .setting("pace", .string("verse3")).setting("learningDays", .array((0...6).map { .number(Double($0)) }))
+            return value
+        }
         return snapshot
     }
     func save(_ snapshot: HomeSnapshot, userID: UUID) throws {}

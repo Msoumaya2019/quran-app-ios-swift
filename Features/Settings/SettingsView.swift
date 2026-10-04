@@ -14,6 +14,11 @@ struct SettingsView: View {
                     if let id = store.identity?.id { Text(id.uuidString).font(.caption).textSelection(.enabled) }
                     Button("Actualiser mes données") { Task { await store.refresh() } }.disabled(store.isRefreshing)
                 }
+                Section("Mon programme") {
+                    NavigationLink { ProgramEditorView(state: store.snapshot.state) } label: {
+                        Label("Modifier mon programme", systemImage: "calendar.badge.clock").frame(minHeight: 44)
+                    }.accessibilityIdentifier("settings.program.open")
+                }
                 Section("Apparence") {
                     Picker("Thème de l’application", selection: $theme.name) {
                         Text("Thème blanc").tag("white"); Text("Thème vert").tag("classic"); Text("Thème rose").tag("feminine"); Text("Lilas & Perle").tag("lilac"); Text("Bleu Nuit & Or").tag("night")

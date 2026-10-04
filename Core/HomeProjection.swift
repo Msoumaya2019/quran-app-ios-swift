@@ -30,6 +30,7 @@ struct QuranCatalog: Sendable {
     let surahs: [Surah]
     let juzs: [QuranDivision]
     let hizbs: [QuranDivision]
+    let quarters: [QuranDivision]
     let pageStarts: [(Int, Int)]
     init(bundle: Bundle = .main) {
         let meta = bundle.url(forResource: "quran-meta", withExtension: "json")
@@ -38,6 +39,7 @@ struct QuranCatalog: Sendable {
         self.surahs = surahs
         juzs = metadata?.juzs ?? []
         let quarters = metadata?.quarters ?? []
+        self.quarters = quarters
         hizbs = stride(from: 0, to: quarters.count, by: 4).compactMap { offset in
             guard offset + 3 < quarters.count else { return nil }
             return QuranDivision(number: offset / 4 + 1, start: quarters[offset].start, end: quarters[offset + 3].end)
