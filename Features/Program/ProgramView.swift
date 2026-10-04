@@ -56,7 +56,7 @@ struct ProgramView: View {
                     Text("\(projection.dateLabel(task.scheduledDate)) · \(task.range.count) versets").font(.caption).foregroundStyle(theme.muted)
                 }
                 Spacer(minLength: 4); Image(systemName: "chevron.right").font(.caption).foregroundStyle(theme.muted)
-            }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityIdentifier("program.task.\(task.id)")
     }
 }

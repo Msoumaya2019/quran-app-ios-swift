@@ -21,7 +21,7 @@ struct QuranSessionHeader: View {
         }.foregroundStyle(theme.review).padding(.horizontal, 14).padding(.vertical, 9)
             .background(theme.review.opacity(0.06), in: RoundedRectangle(cornerRadius: 22))
             .overlay(RoundedRectangle(cornerRadius: 22).stroke(theme.review.opacity(0.1), lineWidth: 1))
-            .padding(.horizontal, 12).padding(.vertical, 4).accessibilityIdentifier("quran.session.header")
+            .padding(.horizontal, 12).padding(.vertical, 4).accessibilityElement(children: .contain).accessibilityIdentifier("quran.session.header")
     }
     private var pageLabel: String {
         let first = QuranSourceMapping.page(source: source, verseID: context.range.start, catalog: catalog)
