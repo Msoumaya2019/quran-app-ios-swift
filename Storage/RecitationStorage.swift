@@ -25,12 +25,14 @@ actor RecitationStorage {
         let id = UUID().uuidString.lowercased(), filename = "\(id).m4a"
         let destination = directory(owner).appendingPathComponent(filename)
         try FileManager.default.createDirectory(at: directory(owner), withIntermediateDirectories: true)
-        try FileManager.default.copyItem(at: source, to: destination)
-        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: destination.path)
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let item = Recitation(id: id, userID: owner, start: start, end: end, durationMs: durationMs, createdAt: formatter.string(from: .now), storagePath: "\(owner.uuidString.lowercased())/\(filename)", localFile: filename, synced: false)
         items.append(item)
-        do { try write(items, owner: owner) } catch { try? FileManager.default.removeItem(at: destination); throw error }
+        do {
+            try FileManager.default.copyItem(at: source, to: destination)
+            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: destination.path)
+            try write(items, owner: owner)
+        } catch { try? FileManager.default.removeItem(at: destination); throw error }
         return item
     }
     func file(for item: Recitation) throws -> URL {

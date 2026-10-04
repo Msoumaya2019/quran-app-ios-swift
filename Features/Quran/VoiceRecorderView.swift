@@ -41,7 +41,7 @@ struct VoiceRecorderView: View {
                     } else {
                         Button { recorder.togglePreview() } label: { Label(recorder.previewing ? "Arrêter la réécoute" : "Réécouter", systemImage: recorder.previewing ? "stop.fill" : "play.fill").frame(minHeight: 44) }
                         Button("Recommencer") { recorder.discard() }.frame(minHeight: 44).disabled(saving)
-                        Button { Task { await save() } } label: { Label(saving ? "Enregistrement…" : "Conserver la récitation", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity, minHeight: 44) }.disabled(saving).accessibilityIdentifier("recitation.save")
+                        Button { Task { await save() } } label: { Label(saving ? "Enregistrement…" : "Conserver la récitation", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity, minHeight: 44) }.disabled(saving || recorder.elapsed <= 0).accessibilityIdentifier("recitation.save")
                     }
                 } footer: {
                     Text("Ta récitation est conservée sur cet iPhone, puis synchronisée pour la correction lorsque la connexion est disponible. Durée maximale : 30 minutes.")
@@ -63,7 +63,7 @@ struct VoiceRecorderView: View {
         guard let draft = recorder.draft, store.identity?.id == user else { return }
         saving = true; defer { saving = false }
         do {
-            try await library.save(source: draft, start: surah.start + first - 1, end: surah.start + last - 1, durationMs: max(1, Int(recorder.elapsed * 1000)), user: user)
+            try await library.save(source: draft, start: surah.start + first - 1, end: surah.start + last - 1, durationMs: Int(recorder.elapsed * 1000), user: user)
             recorder.discard(); dismiss()
             Task { await library.synchronize() }
         } catch { saveError = "La récitation n’a pas pu être sauvegardée. Ton essai reste disponible ici pour réessayer." }

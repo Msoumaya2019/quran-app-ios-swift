@@ -8,10 +8,12 @@ import XCTest
     var rows: [Recitation] = []
     var attempts = 0
     var delay = false
+    var rejectedID: String?
     func upload(_ item: Recitation, file: URL) async throws {
         attempts += 1
         if delay { try await Task.sleep(nanoseconds: 50_000_000) }
         if offline { throw URLError(.notConnectedToInternet) }
+        if item.id == rejectedID { throw URLError(.cannotEncodeContentData) }
         uploaded.insert(item.storagePath)
         if failMetadataOnce { failMetadataOnce = false; throw URLError(.networkConnectionLost) }
         var confirmed = item; confirmed.synced = true
@@ -79,6 +81,20 @@ import XCTest
         await library.synchronize()
         XCTAssertEqual(library.items[0].id, original.id); XCTAssertEqual(remote.uploaded.count, 1); XCTAssertEqual(remote.rows.count, 1)
         XCTAssertTrue(library.items[0].synced)
+    }
+    func testOneRejectedRecordingDoesNotBlockOtherPendingRecordings() async throws {
+        let root = directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let remote = RecordingRemoteProbe(), library = RecitationLibrary(storage: RecitationStorage(directory: root.appendingPathComponent("saved")), remote: remote)
+        let user = UUID(); await library.select(user)
+        let file = try source(in: root)
+        try await library.save(source: file, start: 1, end: 1, durationMs: 1000, user: user)
+        let rejected = library.items[0].id
+        try await library.save(source: file, start: 2, end: 2, durationMs: 1000, user: user)
+        remote.rejectedID = rejected
+        await library.synchronize()
+        XCTAssertEqual(remote.rows.count, 1)
+        XCTAssertFalse(library.items.first(where: { $0.id == rejected })!.synced)
+        XCTAssertEqual(library.items.filter(\.synced).count, 1)
     }
     func testDelayedResponseCannotRestorePreviousAccountRecordings() async throws {
         let root = directory(); defer { try? FileManager.default.removeItem(at: root) }

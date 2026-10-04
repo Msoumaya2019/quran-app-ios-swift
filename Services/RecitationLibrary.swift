@@ -32,11 +32,17 @@ import Combine
         inFlight.insert(user); syncing = true
         defer { inFlight.remove(user); if token == generation { syncing = false } }
         do {
+            var failed = false
             for item in try await storage.list(owner: user) where !item.synced {
                 guard token == generation else { return }
-                let file = try await storage.file(for: item)
-                try await remote.upload(item, file: file)
-                try await storage.confirm(item)
+                do {
+                    let file = try await storage.file(for: item)
+                    try await remote.upload(item, file: file)
+                    try await storage.confirm(item)
+                } catch {
+                    failed = true
+                    if let error = error as? URLError, [.notConnectedToInternet, .networkConnectionLost, .userAuthenticationRequired].contains(error.code) { break }
+                }
             }
             guard token == generation else { return }
             let incoming = try await remote.list(owner: user)
@@ -44,7 +50,7 @@ import Combine
             try await storage.merge(incoming, owner: user)
             let local = try await storage.list(owner: user)
             guard token == generation else { return }
-            items = local; message = nil
+            items = local; message = failed ? "Certaines récitations n’ont pas encore été synchronisées. Elles restent conservées sur cet iPhone." : nil
         } catch {
             guard token == generation else { return }
             let local = try? await storage.list(owner: user)

@@ -90,6 +90,7 @@ import Combine
             }
         } catch {
             capture?.stop(); capture = nil
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             if let captureURL { try? FileManager.default.removeItem(at: captureURL) }
             captureURL = nil; self.error = "Le microphone n’a pas pu démarrer. Réessaie après avoir fermé les autres applications audio."
         }
