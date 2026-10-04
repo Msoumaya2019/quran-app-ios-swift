@@ -191,12 +191,19 @@ final class ReaderUITests: XCTestCase {
         let highlight = app.otherElements["quran.audio.highlight"]
         XCTAssertTrue(highlight.waitForExistence(timeout: 5))
         XCTAssertEqual(highlight.value as? String, "1")
-        slider.adjust(toNormalizedSliderPosition: 0.5)
         let elapsed = app.staticTexts["quran.audio.elapsed"]
+        let parts = elapsed.label.split(separator: ":").compactMap { Double($0) }
+        let seconds = parts.count == 2 ? parts[0] * 60 + parts[1] : 0
+        // XCUITest adjust(toNormalizedSliderPosition:) landed at 14/60 seconds
+        // on this simulator. Drag the actual thumb to the measured track midpoint.
+        let width = slider.frame.width
+        let thumbX = (14 + (width - 28) * min(1, seconds / 60)) / width
+        slider.coordinate(withNormalizedOffset: CGVector(dx: thumbX, dy: 0.5))
+            .press(forDuration: 0.15, thenDragTo: slider.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
         // XCTest's normalized slider gesture can land a few percent from its target.
         // The 60-second fixture must seek near its midpoint, not remain at the start.
         let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label MATCHES %@", "0:(2[6-9]|3[0-4])"), object: elapsed)
-        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 10), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 10), .completed, "Midpoint seek must be near 30 seconds, actual: \(elapsed.label)")
         XCTAssertEqual(image.frame.midX, original.midX, accuracy: 1)
         XCTAssertLessThan(image.frame.height, original.height)
         attach(app, name: "Audio natif — timeline hors ligne")
