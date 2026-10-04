@@ -37,6 +37,6 @@ struct RecitationsView: View {
             let file = try await library.playable(item)
             guard store.identity?.id == item.userID, !Task.isCancelled else { return }
             try player.play(file: file, id: item.id)
-        } catch { error = "Cette récitation n’est pas disponible hors connexion ou n’a pas pu être lue." }
+        } catch { self.error = "Cette récitation n’est pas disponible hors connexion ou n’a pas pu être lue." }
     }
 }
