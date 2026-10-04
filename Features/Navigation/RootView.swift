@@ -19,6 +19,7 @@ struct PhasePlaceholder: View {
     }
 }
 struct RootView: View {
+    @EnvironmentObject var quiz: QuizLibrary
     @EnvironmentObject var store: AppStore
     @EnvironmentObject var theme: ThemeManager
     @EnvironmentObject var network: ConnectivityService
@@ -67,7 +68,7 @@ struct RootView: View {
         }
         .tint(theme.accent)
         .sheet(isPresented: $store.passwordRecovery) { PasswordRecoveryView() }
-        .task { network.onAvailable = { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh() } }; await store.start() }
+        .task { network.onAvailable = { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh(); await quiz.refresh() } }; await store.start() }
         .onChange(of: store.identity?.id) { _, id in if let id { theme.importPreferences(state: store.snapshot.state, userID: id) } }
         .onChange(of: store.snapshot.state) { _, state in if let id = store.identity?.id { theme.importPreferences(state: state, userID: id) } }
         .onAppear { if let id = store.identity?.id { theme.importPreferences(state: store.snapshot.state, userID: id) } }

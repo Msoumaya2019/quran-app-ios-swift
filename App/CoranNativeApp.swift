@@ -4,6 +4,7 @@ import SwiftUI
     @StateObject private var store: AppStore
     @StateObject private var recitations: RecitationLibrary
     @StateObject private var friends: FriendsLibrary
+    @StateObject private var quiz: QuizLibrary
     @StateObject private var theme = ThemeManager()
     @StateObject private var network = ConnectivityService()
     @Environment(\.scenePhase) private var scenePhase
@@ -30,20 +31,23 @@ import SwiftUI
                 if let data = try? JSONEncoder().encode(friend) { try? data.write(to: friendsDirectory.appendingPathComponent(owner.uuidString.lowercased() + ".json")) }
             }
             _friends = StateObject(wrappedValue: FriendsLibrary(client: nil, directory: friendsDirectory))
+            _quiz = StateObject(wrappedValue: QuizLibrary(client: nil, directory: friendsDirectory.appendingPathComponent("Quiz")))
             return
         }
         #endif
         _store = StateObject(wrappedValue: AppStore(auth: auth, remote: HomeRepository(client: client), cache: LocalStorageService()))
         _recitations = StateObject(wrappedValue: RecitationLibrary(remote: RecitationRepository(client: client)))
         _friends = StateObject(wrappedValue: FriendsLibrary(client: client))
+        _quiz = StateObject(wrappedValue: QuizLibrary(client: client))
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends)
+            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz)
                 .onOpenURL { url in Task { await store.receive(url) } }
-                .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh() } } }
+                .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh(); await quiz.refresh() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in Task { await recitations.select(user); await recitations.synchronize() } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in friends.select(user) }
+                .onChange(of: store.identity?.id, initial: true) { _, user in quiz.select(user); Task { await quiz.refresh() } }
         }
     }
 }

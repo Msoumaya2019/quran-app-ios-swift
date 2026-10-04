@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var store: AppStore
     @EnvironmentObject var theme: ThemeManager
+    @EnvironmentObject var quiz: QuizLibrary
     @Binding var tab: MainTab
     @State private var route: HomeRoute?
     @State private var content: DailyContent?
@@ -42,12 +43,15 @@ struct HomeView: View {
                     QuranReaderView(sourceID: store.snapshot.state["reader"]["mushaf"].string, mode: task.mode, session: task)
                 } else { ProgramView() }
             }
+            else if item == .quiz { QuizView() }
             else { PhasePlaceholder(title: item.rawValue) }
         }
         .sheet(item: $content) { value in DailyContentView(content: value) }
         .accessibilityIdentifier("home.screen")
     }
     private var quizStatus: String {
+        if quiz.cache?.response(day: today) != nil { return "Question du jour terminée" }
+        if quiz.cache?.data["day"].string == today { return quiz.cache?.data["daily"] == .null ? "Aucune question aujourd’hui" : "Question du jour disponible" }
         guard store.snapshot.quizDate == today else { return "Question du jour à synchroniser" }
         if store.snapshot.quizDone { return "Question du jour terminée" }
         return store.snapshot.quizAvailable ? "Question du jour disponible" : "Aucune question aujourd’hui"

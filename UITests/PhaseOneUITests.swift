@@ -100,4 +100,15 @@ final class PhaseOneUITests: XCTestCase {
     private func attach(_ app: XCUIApplication, name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
+    func testQuizOpensOfflineWithoutAddingNavigationTab() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
+        XCTAssertTrue(app.buttons["home.Quiz"].waitForExistence(timeout: 10))
+        app.buttons["home.Quiz"].tap()
+        XCTAssertTrue(app.buttons["quiz.daily"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.tabBars.buttons.count, 5)
+        app.buttons["quiz.daily"].tap()
+        XCTAssertTrue(app.navigationBars["Question du jour"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Aucune question du jour disponible. Connecte-toi pour actualiser le Quiz."].exists)
+        attach(app, name: "Question du jour sans réseau")
+    }
 }
