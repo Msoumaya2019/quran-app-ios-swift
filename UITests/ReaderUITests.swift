@@ -163,6 +163,9 @@ final class ReaderUITests: XCTestCase {
             XCTFail("Local audio must be ready before testing seek: \(app.debugDescription)"); return
         }
         app.buttons["quran.audio.toggle"].tap()
+        let highlight = app.otherElements["quran.audio.highlight"]
+        XCTAssertTrue(highlight.waitForExistence(timeout: 5))
+        XCTAssertEqual(highlight.value as? String, "1")
         slider.adjust(toNormalizedSliderPosition: 0.5)
         let elapsed = app.staticTexts["quran.audio.elapsed"]
         // XCTest's normalized slider gesture can land a few percent from its target.
@@ -172,6 +175,13 @@ final class ReaderUITests: XCTestCase {
         XCTAssertEqual(image.frame.midX, original.midX, accuracy: 1)
         XCTAssertLessThan(image.frame.height, original.height)
         attach(app, name: "Audio natif — timeline hors ligne")
+        app.buttons["Verset suivant"].tap()
+        let nextAyah = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "2"), object: highlight)
+        XCTAssertEqual(XCTWaiter.wait(for: [nextAyah], timeout: 10), .completed)
+        attach(app, name: "Récitation native — surlignage du verset suivant")
+        app.buttons["Verset précédent"].tap()
+        let previousAyah = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: highlight)
+        XCTAssertEqual(XCTWaiter.wait(for: [previousAyah], timeout: 10), .completed)
         app.buttons["quran.audio.close"].tap()
         XCTAssertEqual(image.frame.height, original.height, accuracy: 1)
         XCTAssertTrue(app.buttons["quran.action.Plus"].exists)

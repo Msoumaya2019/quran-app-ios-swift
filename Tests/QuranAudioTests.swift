@@ -78,6 +78,20 @@ final class QuranAudioTests: XCTestCase {
         XCTAssertEqual(QuranAudioTimeline.timeLabel(.nan), "0:00")
         XCTAssertEqual(QuranAudioTimeline.timeLabel(65), "1:05")
     }
+    @MainActor func testEndOfRecitationAdvancesCurrentAyahAutomatically() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let wave = Self.silentWave()
+        let audio = QuranAudioService(cache: QuranAudioCache(directory: directory, downloader: { _ in wave }))
+        defer { audio.pause() }
+        audio.play(1)
+        let ready = await waitUntil { audio.timeline.duration > 0 || audio.error != nil }
+        XCTAssertTrue(ready); XCTAssertNil(audio.error)
+        guard audio.timeline.duration > 0 else { return }
+        audio.seek(to: 2.6)
+        let advanced = await waitUntil { audio.verseID == 2 || audio.error != nil }
+        XCTAssertTrue(advanced); XCTAssertEqual(audio.verseID, 2); XCTAssertNil(audio.error)
+    }
     @MainActor private func waitUntil(_ condition: () -> Bool) async -> Bool {
         for _ in 0..<100 { if condition() { return true }; try? await Task.sleep(nanoseconds: 50_000_000) }
         return condition()

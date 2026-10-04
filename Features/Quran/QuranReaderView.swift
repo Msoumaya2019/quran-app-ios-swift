@@ -45,7 +45,8 @@ struct QuranReaderView: View {
             if session.mode == .learning { through = session.range.start + LearningValidation.completedCount(context: session, state: store.snapshot.state) - 1 }
             else if session.mode == .revision { through = session.range.start + RevisionValidation.completedCount(context: session, state: store.snapshot.state) - 1 }
         }
-        return QuranPageAnnotations(range: session?.range, through: through, difficultIDs: difficult, color: UIColor(session?.mode == .learning ? theme.accent : theme.review))
+        return QuranPageAnnotations(range: session?.range, through: through, difficultIDs: difficult, color: UIColor(session?.mode == .learning ? theme.accent : theme.review),
+            audioVerseID: audio.playing || audio.loading || audio.timeline.duration > 0 ? audio.verseID : nil, audioColor: UIColor(theme.accent))
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -83,6 +84,11 @@ struct QuranReaderView: View {
             record(.reading)
         }
         .onChange(of: page) { _, _ in if initialized { record(.reading) } }
+        .onChange(of: audio.verseID) { _, current in
+            if store.snapshot.state["reader"]["followAudio"].bool != false {
+                page = QuranSourceMapping.page(source: source, verseID: current, catalog: store.catalog)
+            }
+        }
         .onDisappear { audio.pause(); record(.reading); Task { await store.refresh() } }
         .sheet(isPresented: $options) {
             NavigationStack {

@@ -192,6 +192,7 @@ final class PageController: UIViewController {
     private let spinner = UIActivityIndicatorView(style: .medium)
     private let errorLabel = UILabel()
     private let margin = QuranMarginOverlay()
+    private let audioHighlight = QuranAudioOverlay()
     private let regions: [QuranVerseRegion]
     private var annotations = QuranPageAnnotations()
     private static let catalog = QuranCatalog()
@@ -209,14 +210,16 @@ final class PageController: UIViewController {
         imageView.isAccessibilityElement = true
         imageView.accessibilityLabel = "Page \(page)"
         imageView.accessibilityValue = "loading"
-        for child in [imageView, spinner, errorLabel, margin] { child.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(child) }
+        for child in [imageView, audioHighlight, spinner, errorLabel, margin] { child.translatesAutoresizingMaskIntoConstraints = false; view.addSubview(child) }
         NSLayoutConstraint.activate([
             imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor), imageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             imageView.topAnchor.constraint(equalTo: view.topAnchor), imageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             spinner.centerXAnchor.constraint(equalTo: view.centerXAnchor), spinner.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             errorLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24), errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24), errorLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             margin.leadingAnchor.constraint(equalTo: view.leadingAnchor), margin.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            margin.topAnchor.constraint(equalTo: view.topAnchor), margin.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            margin.topAnchor.constraint(equalTo: view.topAnchor), margin.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            audioHighlight.leadingAnchor.constraint(equalTo: view.leadingAnchor), audioHighlight.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            audioHighlight.topAnchor.constraint(equalTo: view.topAnchor), audioHighlight.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         errorLabel.numberOfLines = 0; errorLabel.textAlignment = .center; errorLabel.font = .preferredFont(forTextStyle: .body)
         view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped)))
@@ -243,6 +246,7 @@ final class PageController: UIViewController {
     }
     private func refreshMargin() {
         margin.configure(regions: regions, annotations: annotations, imageSize: imageView.image?.size ?? .zero)
+        audioHighlight.configure(regions: regions, imageSize: imageView.image?.size ?? .zero, verseID: annotations.audioVerseID, color: annotations.audioColor)
     }
     func show(error: String) { loadViewIfNeeded(); spinner.stopAnimating(); errorLabel.text = error }
 }

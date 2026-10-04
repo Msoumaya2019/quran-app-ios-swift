@@ -5,8 +5,11 @@ struct QuranPageAnnotations: Equatable {
     var through = 0
     var difficultIDs: Set<Int> = []
     var color: UIColor = .systemGreen
+    var audioVerseID: Int? = nil
+    var audioColor: UIColor = .systemGreen
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.range == rhs.range && lhs.through == rhs.through && lhs.difficultIDs == rhs.difficultIDs && lhs.color.isEqual(rhs.color)
+            && lhs.audioVerseID == rhs.audioVerseID && lhs.audioColor.isEqual(rhs.audioColor)
     }
 }
 
