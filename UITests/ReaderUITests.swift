@@ -1,6 +1,30 @@
 import XCTest
 
 final class ReaderUITests: XCTestCase {
+    func testOfflineAudioTimelineAndReaderViewport() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-audio"]
+        app.launch(); app.tabBars.buttons["Coran"].tap()
+        let image = app.images["quran.page.1"]
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        let original = image.frame
+        app.buttons["quran.action.Écouter"].tap()
+        let slider = app.sliders["quran.audio.timeline"]
+        XCTAssertTrue(slider.waitForExistence(timeout: 10))
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: slider)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        app.buttons["quran.audio.toggle"].tap()
+        slider.adjust(toNormalizedSliderPosition: 0.5)
+        let elapsed = app.staticTexts["quran.audio.elapsed"]
+        let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label MATCHES %@", "0:(2[89]|3[0-2])"), object: elapsed)
+        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 5), .completed)
+        XCTAssertEqual(image.frame.midX, original.midX, accuracy: 1)
+        XCTAssertLessThan(image.frame.height, original.height)
+        attach(app, name: "Audio natif — timeline hors ligne")
+        app.buttons["quran.audio.close"].tap()
+        XCTAssertEqual(image.frame.height, original.height, accuracy: 1)
+        XCTAssertTrue(app.buttons["quran.action.Plus"].exists)
+    }
     func testTwentyPagesBothSourcesOfflineFixtures() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures"]

@@ -15,13 +15,16 @@ jobs:
         run: |
           curl --fail --retry 3 --location 'https://files.quran.app/hafs/madani_1441/zips/images_1440.zip' -o "$RUNNER_TEMP/coran1441.zip"
           python3 - <<'PY'
-          import zipfile, os
+          import zipfile, os, wave
           from pathlib import Path
           output=Path('Resources/ReaderTestFixtures'); output.mkdir(parents=True,exist_ok=True)
           with zipfile.ZipFile(os.environ['RUNNER_TEMP']+'/coran1441.zip') as archive:
               for page in range(1,26):
                   for line in range(1,16):
                       (output/f'{page:03d}-{line:02d}.png').write_bytes(archive.read(f'width_1440/{page}/{line}.png'))
+          with wave.open(str(output/'audio.wav'),'wb') as audio:
+              audio.setnchannels(1); audio.setsampwidth(2); audio.setframerate(8000)
+              audio.writeframes(bytes(8000*2*60))
           PY
       - name: Configure public Supabase client
         env:

@@ -14,9 +14,9 @@ struct QuranMiniPlayer: View {
                 }
                 Spacer()
                 Button { audio.play(audio.verseID - 1) } label: { Image(systemName: "backward.end.fill").frame(width: 44, height: 44) }.disabled(audio.verseID <= 1).accessibilityLabel("Verset précédent")
-                Button { audio.toggle(start: audio.verseID) } label: { Group { if audio.loading { ProgressView() } else { Image(systemName: audio.playing ? "pause.fill" : "play.fill") } }.frame(width: 44, height: 44) }.accessibilityLabel("Lecture ou pause")
+                Button { audio.toggle(start: audio.verseID) } label: { Group { if audio.loading { ProgressView() } else { Image(systemName: audio.playing ? "pause.fill" : "play.fill") } }.frame(width: 44, height: 44) }.accessibilityLabel("Lecture ou pause").accessibilityIdentifier("quran.audio.toggle")
                 Button { audio.play(audio.verseID + 1) } label: { Image(systemName: "forward.end.fill").frame(width: 44, height: 44) }.disabled(audio.verseID >= 6236).accessibilityLabel("Verset suivant")
-                Button(action: close) { Image(systemName: "chevron.down").frame(width: 44, height: 44) }.accessibilityLabel("Réduire le lecteur audio")
+                Button(action: close) { Image(systemName: "chevron.down").frame(width: 44, height: 44) }.accessibilityLabel("Réduire le lecteur audio").accessibilityIdentifier("quran.audio.close")
             }
             AudioTimelineView(timeline: audio.timeline, seek: audio.seek)
             if let error = audio.error { Text(error).font(.caption).foregroundStyle(theme.muted) }
@@ -31,7 +31,7 @@ private struct AudioTimelineView: View {
     @State private var draft = 0.0
     var body: some View {
         HStack(spacing: 8) {
-            Text(QuranAudioTimeline.timeLabel(scrubbing ? draft : timeline.elapsed))
+            Text(QuranAudioTimeline.timeLabel(scrubbing ? draft : timeline.elapsed)).accessibilityIdentifier("quran.audio.elapsed")
             Slider(value: Binding(get: { scrubbing ? draft : timeline.elapsed }, set: { draft = $0 }), in: 0...max(1, timeline.duration)) { editing in
                 if editing { draft = timeline.elapsed } else { seek(draft) }
                 scrubbing = editing

@@ -19,7 +19,17 @@ import Foundation
     private var itemObserver: NSKeyValueObservation?
     private var prefetch: Task<Void, Never>?
     private var request = 0
-    init(cache: QuranAudioCache = .shared) { self.cache = cache }
+    init(cache: QuranAudioCache? = nil) {
+        #if DEBUG
+        if cache == nil, ProcessInfo.processInfo.arguments.contains("--ui-test-audio"),
+           let url = Bundle.main.resourceURL?.appendingPathComponent("ReaderTestFixtures/audio.wav"),
+           let data = try? Data(contentsOf: url) {
+            self.cache = QuranAudioCache(directory: FileManager.default.temporaryDirectory.appendingPathComponent("UITestAudio-\(UUID().uuidString)"), downloader: { _ in data })
+            return
+        }
+        #endif
+        self.cache = cache ?? .shared
+    }
     func pause() { request += 1; player?.pause(); playing = false; loading = false; prefetch?.cancel() }
     func toggle(start: Int) {
         if playing || loading { pause() }
