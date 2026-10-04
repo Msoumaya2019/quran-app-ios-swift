@@ -67,4 +67,15 @@ final class RevisionValidationTests: XCTestCase {
         XCTAssertEqual(resumed.range.start, 1)
         XCTAssertEqual(RevisionValidation.completedCount(context: resumed, state: partial), 1)
     }
+    func testDelayedOfflineReviewCreditsArchivedCycleWithoutChangingCurrentCycle() throws {
+        let original = try state(), op = try operation(original, grade: .rework)
+        let current = original["reviewCycle"].setting("index", .number(2)).setting("startDate", .string("2026-10-12"))
+        let switched = original.setting("reviewCycle", current).setting("reviewCycleHistory", .array([original["reviewCycle"]]))
+        let next = op.applying(to: switched, catalog: QuranCatalog())
+        XCTAssertEqual(next["reviewCycle"], current)
+        XCTAssertEqual(next["reviewCycleHistory"].array[0]["completed"].array.compactMap(\.int), [1, 2, 3])
+        XCTAssertEqual(next["difficultyMarkers"], original["difficultyMarkers"])
+        XCTAssertEqual(next["reviewHistory"].array.count, 1)
+        XCTAssertEqual(op.applying(to: next, catalog: QuranCatalog()), next)
+    }
 }

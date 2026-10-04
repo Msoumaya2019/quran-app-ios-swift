@@ -34,15 +34,20 @@ struct RevisionValidation: Codable, Sendable {
     }
     func applying(to state: JSONValue) -> JSONValue {
         guard (1...6236).contains(start), (start...6236).contains(end), (start...end).contains(through),
-              state["reviewSettings"]["enabled"].bool != false,
-              state["reviewCycle"]["index"].int == cycleIndex, state["reviewCycle"]["startDate"].string == cycleStart else { return state }
+              state["reviewSettings"]["enabled"].bool != false else { return state }
+        let currentCycle = state["reviewCycle"]
+        let isCurrent = currentCycle["index"].int == cycleIndex && currentCycle["startDate"].string == cycleStart
+        var archives = state["reviewCycleHistory"].array
+        let archivedIndex = archives.firstIndex { $0["index"].int == cycleIndex && $0["startDate"].string == cycleStart }
+        guard isCurrent || archivedIndex != nil else { return state }
+        let cycle = isCurrent ? currentCycle : archives[archivedIndex!]
         let key = "revision:\(taskID)", previous = state["studyProgress"][key]
         guard previous == .null || (previous["start"].int == start && previous["end"].int == end) else { return state }
         let first = max(start, (previous["through"].int ?? (start - 1)) + 1)
         guard first <= through else { return state }
-        let corpus = Set(state["reviewCycle"]["corpus"].array.compactMap(\.int))
+        let corpus = Set(cycle["corpus"].array.compactMap(\.int))
         let zone = TimeZone(secondsFromGMT: 0)!
-        guard let planned = state["reviewCycle"]["days"].array.enumerated().first(where: {
+        guard let planned = cycle["days"].array.enumerated().first(where: {
             ProgramProjection.addingDays($0.offset, to: cycleStart, timeZone: zone) == scheduledDate
         }), Set(planned.element.array.compactMap(\.int)).isSuperset(of: Set(first...through)) else { return state }
         for verse in first...through {
@@ -57,12 +62,14 @@ struct RevisionValidation: Codable, Sendable {
         }
         let newIDs = (first...through).filter { !reviewed.contains($0) }
         var markers = state["difficultyMarkers"], due = state["reviewPriorityDue"], difficultyHistory = state["difficultyHistory"].array
-        var completed = Set(state["reviewCycle"]["completed"].array.compactMap(\.int))
+        var completed = Set(cycle["completed"].array.compactMap(\.int))
         var consolidations = state["reviewConsolidations"]
         let cycleDays = state["reviewSettings"]["cycleDays"].int ?? 7
         completed.formUnion(first...through)
         for verse in newIDs {
             let id = String(verse); completed.insert(verse)
+            // A delayed operation can credit its archived cycle and history, never alter a later cycle's difficulties or dates.
+            if !isCurrent { continue }
             let marker = markers[id]
             if grade != .perfect {
                 if marker["user"] == .null {
@@ -93,7 +100,11 @@ struct RevisionValidation: Codable, Sendable {
         var validations = previous["validations"].array
         validations.append(.object(["start": .number(Double(first)), "end": .number(Double(through)), "date": .string(completedDate), "validatedAt": .string(completedAt)]))
         let progress: JSONValue = .object(["id": .string(taskID), "mode": .string("revision"), "category": .string("habitual"), "start": .number(Double(start)), "end": .number(Double(end)), "through": .number(Double(through)), "page": .number(Double(page)), "source": .string(source), "updatedAt": .string(completedAt), "scheduledDate": .string(scheduledDate), "status": .string(through == end ? "completed" : "partial"), "validations": .array(validations)])
-        return state.setting("reviewCycle", state["reviewCycle"].setting("completed", .array(completed.sorted().map { .number(Double($0)) })))
+        let updatedCycle = cycle.setting("completed", .array(completed.sorted().map { .number(Double($0)) }))
+        var result = state
+        if isCurrent { result = result.setting("reviewCycle", updatedCycle) }
+        else if let archivedIndex { archives[archivedIndex] = updatedCycle; result = result.setting("reviewCycleHistory", .array(archives)) }
+        return result
             .setting("reviewHistory", .array(history)).setting("difficultyMarkers", markers).setting("reviewPriorityDue", due)
             .setting("difficultyHistory", .array(difficultyHistory)).setting("reviewConsolidations", consolidations)
             .setting("studyProgress", state["studyProgress"].setting(key, progress)).setting("updatedAt", .string(max(state["updatedAt"].string ?? "", completedAt)))
