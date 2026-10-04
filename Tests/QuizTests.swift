@@ -61,18 +61,50 @@ final class QuizTests: XCTestCase {
         reopened.select(UUID()); XCTAssertEqual(reopened.cache?.data, .null)
         reopened.select(owner); XCTAssertEqual(reopened.cache?.response(day: day)?["selectedAnswerId"].string, "a")
     }
+    @MainActor func testRejectedOldQuestionDoesNotBlockTodaysAnswerOrSnapshot() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let owner = UUID(), day = LocalCalendar.key(.now), old = question(day: "2000-01-01"), today = question(day: LocalCalendar.key(.now))
+        var seed = QuizCache(owner: owner)
+        try seed.answer(old, answerID: "a", day: "2000-01-01")
+        try seed.answer(today, answerID: "b", day: day)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(seed).write(to: directory.appendingPathComponent(owner.uuidString.lowercased() + ".json"))
+        let library = QuizLibrary(client: nil, directory: directory, dailyRemote: RejectOldDailyRemote(question: today))
+        library.select(owner); await library.refresh()
+        XCTAssertEqual(library.cache?.pending.count, 1)
+        XCTAssertEqual(library.cache?.pending.first?.day, "2000-01-01")
+        XCTAssertEqual(library.cache?.data["day"].string, day)
+        XCTAssertEqual(library.cache?.response(day: day)?["selectedAnswerId"].string, "b")
+    }
 }
 
 @MainActor private final class FakeDailyQuizRemote: DailyQuizRemote {
     let question: JSONValue
     var saved: QuizPendingAnswer?
     var inserts = 0
+    var lostConfirmation = false
     init(question: JSONValue) { self.question = question }
     func answer(owner: UUID, value: QuizPendingAnswer) async throws {
-        if saved == nil { saved = value; inserts += 1; throw URLError(.networkConnectionLost) }
+        if saved == nil { saved = value; inserts += 1; lostConfirmation = true; throw URLError(.networkConnectionLost) }
     }
     func snapshot(owner: UUID, day: String) async throws -> JSONValue {
+        if lostConfirmation { lostConfirmation = false; throw URLError(.networkConnectionLost) }
         let responses: [JSONValue] = saved.map { [.object(["day": .string($0.day), "selectedAnswerId": .string($0.answerID), "isCorrect": .bool(true), "question": question.setting("correctAnswerId", .string("a"))])] } ?? []
         return .object(["day": .string(day), "daily": question, "responses": .array(responses)])
+    }
+}
+
+@MainActor private final class RejectOldDailyRemote: DailyQuizRemote {
+    struct Rejected: Error {}
+    let question: JSONValue
+    var response: QuizPendingAnswer?
+    init(question: JSONValue) { self.question = question }
+    func answer(owner: UUID, value: QuizPendingAnswer) async throws {
+        guard value.question["id"].string == question["id"].string else { throw Rejected() }; response = value
+    }
+    func snapshot(owner: UUID, day: String) async throws -> JSONValue {
+        let rows: [JSONValue] = response.map { [.object(["day": .string($0.day), "selectedAnswerId": .string($0.answerID), "question": question, "isCorrect": .bool(false)])] } ?? []
+        return .object(["day": .string(day), "daily": question, "responses": .array(rows)])
     }
 }

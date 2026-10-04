@@ -112,18 +112,22 @@ import Supabase
         defer { if token == generation { loading = false } }
         do {
             guard token == generation else { return }
-            while let pending = cache?.pending.first {
-                try await remote.answer(owner: initial.owner, value: pending)
-                guard token == generation else { return }
-                // Keep the durable operation until the authoritative snapshot confirms it.
-                let data = try await remote.snapshot(owner: initial.owner, day: LocalCalendar.key(.now))
-                guard token == generation, var next = cache else { return }
-                guard data["responses"].array.contains(where: { $0["day"].string == pending.day }) else { throw URLError(.badServerResponse) }
-                next.data = data; next.pending.removeAll { $0.day == pending.day }; try save(next)
+            for pending in initial.pending {
+                do {
+                    try await remote.answer(owner: initial.owner, value: pending)
+                    guard token == generation else { return }
+                } catch {
+                    guard token == generation else { return }
+                    // A rejected, edited question must not block other dates. Network
+                    // failures stop the drain, while the local operation remains intact.
+                    if let network = error as? URLError, [.notConnectedToInternet, .networkConnectionLost, .timedOut, .cannotConnectToHost, .userAuthenticationRequired].contains(network.code) { break }
+                }
             }
             let data = try await remote.snapshot(owner: initial.owner, day: LocalCalendar.key(.now))
             guard token == generation, var next = cache else { return }
-            next.data = data; try save(next); message = nil
+            let confirmedDays = Set(data["responses"].array.compactMap { $0["day"].string })
+            next.data = data; next.pending.removeAll { confirmedDays.contains($0.day) }; try save(next)
+            message = next.pending.isEmpty ? nil : "Certaines réponses attendent encore une confirmation. Elles restent conservées sur cet appareil."
         } catch {
             guard token == generation else { return }
             message = "Actualisation du Quiz indisponible. Tes réponses restent enregistrées et seront réessayées."
