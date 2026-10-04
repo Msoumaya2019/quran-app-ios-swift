@@ -17,7 +17,7 @@ import SwiftUI
         guard let userID = identity?.id else { return false }
         var next = snapshot
         next.state = operation.applying(to: next.state, catalog: catalog)
-        if operation.kind == .program, next.state == snapshot.state { return false }
+        if [.program, .reviewSchedule].contains(operation.kind), next.state == snapshot.state { return false }
         var queue = next.readerOperations ?? []
         // Keep the latest resume/source operation; bookmark tombstones retain their order.
         if operation.kind == .reading { queue.removeAll { $0.kind == .reading && $0.page == operation.page && $0.source == operation.source } }
@@ -57,6 +57,7 @@ import SwiftUI
         generation += 1; identity = nil; snapshot = HomeSnapshot(); message = nil
     }
     func refresh() async {
+        prepareReviews()
         guard let original = identity, refreshingGeneration != generation else { return }
         let token = generation
         refreshingGeneration = token; isRefreshing = true
@@ -78,10 +79,19 @@ import SwiftUI
             for operation in next.readerOperations ?? [] { next.state = operation.applying(to: next.state, catalog: catalog) }
             try cache.save(next, userID: original.id)
             snapshot = next; message = nil
+            prepareReviews()
         } catch {
             guard generation == token else { return }
             // The local session and cached UI survive refresh/network/server failures.
             message = "Synchronisation indisponible. Tes données locales restent accessibles. Réessaie lorsque la connexion revient."
         }
+    }
+    func prepareReviews(now: Date = .now, timeZone: TimeZone = .current) {
+        guard identity != nil else { return }
+        let change = RevisionScheduleChange(now: now, timeZone: timeZone)
+        guard change.applying(to: snapshot.state, catalog: catalog) != snapshot.state else { return }
+        var operation = ReaderOperation(kind: .reviewSchedule, verseID: 1, page: 1, source: "", date: now)
+        operation.reviewSchedule = change
+        readerChange(operation)
     }
 }

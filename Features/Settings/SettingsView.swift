@@ -18,6 +18,9 @@ struct SettingsView: View {
                     NavigationLink { ProgramEditorView(state: store.snapshot.state) } label: {
                         Label("Modifier mon programme", systemImage: "calendar.badge.clock").frame(minHeight: 44)
                     }.accessibilityIdentifier("settings.program.open")
+                    NavigationLink { RevisionSettingsView(state: store.snapshot.state) } label: {
+                        Label("Modifier mes révisions", systemImage: "arrow.triangle.2.circlepath").frame(minHeight: 44)
+                    }.accessibilityIdentifier("settings.revision.open")
                 }
                 Section("Apparence") {
                     Picker("Thème de l’application", selection: $theme.name) {
@@ -29,7 +32,7 @@ struct SettingsView: View {
                 }
                 Section("Version native") {
                     Text("Lecteur natif • SwiftUI et UIKit • iOS 17 et versions ultérieures")
-                    Text("Coran de Médine et Coran 1441 sont disponibles. Les programmes interactifs, les amis et le quiz seront migrés progressivement.").font(.caption).foregroundStyle(theme.muted)
+                    Text("Coran de Médine, Coran 1441, apprentissage et révisions sont disponibles. Les amis et le quiz seront migrés progressivement.").font(.caption).foregroundStyle(theme.muted)
                 }
                 if let error { Text(error).foregroundStyle(.red) }
                 Section { Button("Se déconnecter", role: .destructive) { Task { signingOut = true; defer { signingOut = false }; do { try await store.signOut(); dismiss() } catch { self.error = error.localizedDescription } } }.disabled(signingOut) }

@@ -1,6 +1,24 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testRevisionRhythmCanBeChangedFromSettingsOffline() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-revision"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let editor = app.buttons["settings.revision.open"]
+        guard editor.waitForExistence(timeout: 10) else { XCTFail("Revision settings unavailable"); return }
+        editor.tap()
+        app.segmentedControls.buttons["Quantité quotidienne"].tap()
+        let save = app.buttons["revision.settings.save"]
+        for _ in 0..<4 { if save.isHittable { break }; app.swipeUp() }
+        guard save.isHittable else { XCTFail("Revision save unavailable: \(app.debugDescription)"); return }
+        save.tap()
+        XCTAssertTrue(app.staticTexts["revision.settings.result"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["revision.settings.result"].label.contains("1 Hizb / jour"))
+        attach(app, name: "Réglages de révision — quantité quotidienne hors ligne")
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["settings.revision.open"].tap()
+        XCTAssertTrue(app.segmentedControls.buttons["Quantité quotidienne"].isSelected)
+    }
     func testProgramCanBeEditedFromSettingsOffline() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-program-edit"]; app.launch()
         app.buttons["settings.open"].tap()

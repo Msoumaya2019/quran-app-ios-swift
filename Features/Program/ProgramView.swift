@@ -14,6 +14,7 @@ struct ProgramView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Aujourd’hui", systemImage: "calendar").font(theme.title()).foregroundStyle(theme.accent)
                         Text(projection.today).font(.caption).foregroundStyle(theme.muted)
+                        Text(RevisionPreferences(state: store.snapshot.state).title).font(.caption).foregroundStyle(theme.review)
                         if let task = projection.todayLearning { row(task) }
                         else { Text("Aucune séance d’apprentissage prévue aujourd’hui").font(.subheadline).foregroundStyle(theme.muted) }
                         if let task = projection.revision { row(task) }
