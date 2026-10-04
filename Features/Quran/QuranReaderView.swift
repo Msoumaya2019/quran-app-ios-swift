@@ -127,9 +127,10 @@ struct QuranReaderView: View {
                 if let session, let validation = ConsolidationValidation(context: session) {
                     var operation = ReaderOperation(kind: .consolidation, verseID: session.range.start, page: page, source: source.id)
                     operation.consolidation = validation
-                    store.readerChange(operation)
-                    options = false
-                    Task { await store.refresh() }
+                    if store.readerChange(operation) {
+                        options = false
+                        Task { await store.refresh() }
+                    } else { error = "La validation n’a pas pu être enregistrée sur l’appareil. Réessaie." }
                 }
             }
             Button("Annuler", role: .cancel) { }

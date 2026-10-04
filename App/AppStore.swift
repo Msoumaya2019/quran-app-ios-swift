@@ -13,8 +13,8 @@ import SwiftUI
     private let cache: any HomeCache
     private var generation = 0
     private var refreshingGeneration: Int?
-    func readerChange(_ operation: ReaderOperation) {
-        guard let userID = identity?.id else { return }
+    @discardableResult func readerChange(_ operation: ReaderOperation) -> Bool {
+        guard let userID = identity?.id else { return false }
         var next = snapshot
         next.state = operation.applying(to: next.state, catalog: catalog)
         var queue = next.readerOperations ?? []
@@ -23,8 +23,8 @@ import SwiftUI
         if operation.kind == .source { queue.removeAll { $0.kind == .source } }
         if operation.kind == .reciter { queue.removeAll { $0.kind == .reciter } }
         queue.append(operation); next.readerOperations = queue
-        do { try cache.save(next, userID: userID); snapshot = next }
-        catch { message = "Impossible d’enregistrer cette modification sur l’appareil." }
+        do { try cache.save(next, userID: userID); snapshot = next; return true }
+        catch { message = "Impossible d’enregistrer cette modification sur l’appareil."; return false }
     }
     init(auth: any AuthGateway, remote: any HomeRemote, cache: any HomeCache, catalog: QuranCatalog = QuranCatalog()) {
         self.auth = auth; self.remote = remote; self.cache = cache; self.catalog = catalog

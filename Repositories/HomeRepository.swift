@@ -18,7 +18,8 @@ extension HomeRemote {
     struct VersionedRow: Decodable { let data: JSONValue; let updated_at: String }
     struct StatePatch: Encodable { let data: JSONValue; let updated_at: String }
     func syncReader(userID: UUID, operations: [ReaderOperation], catalog: QuranCatalog) async throws {
-        guard let client, !operations.isEmpty else { return }
+        guard !operations.isEmpty else { return }
+        guard let client else { throw ConfigurationError.missing }
         for _ in 0..<4 {
             let rows: [VersionedRow] = try await client.from("user_state").select("data,updated_at").eq("user_id", value: userID.uuidString).limit(1).execute().value
             guard let row = rows.first, row.data["schema"].int == 1,
