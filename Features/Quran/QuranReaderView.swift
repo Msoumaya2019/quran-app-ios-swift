@@ -28,6 +28,7 @@ struct QuranReaderView: View {
     @State private var jumpPage = 1
     @StateObject private var audio = QuranAudioService()
     @State private var showAudio = false
+    @State private var recording = false
     private var verseID: Int {
         QuranSourceMapping.firstVerse(source: source, page: page, catalog: store.catalog)
     }
@@ -43,7 +44,7 @@ struct QuranReaderView: View {
                 HStack(spacing: 0) {
                     action("Accueil", "house.fill") { if let onHome { onHome() } else { dismiss() } }
                     action("Écouter", "play.fill") { showAudio = true; audio.toggle(start: verseID) }
-                    action("Enregistrer", "mic.fill") { error = "L’enregistrement vocal sera migré dans la prochaine étape." }
+                    action("Enregistrer", "mic.fill") { audio.pause(); recording = true }
                     action("Marque-page", bookmarked ? "bookmark.fill" : "bookmark") { record(bookmarked ? .removeBookmark : .bookmark) }
                     action("Plus", "ellipsis") { jumpPage = page; options = true }
                 }.padding(.vertical, 8).background(theme.surface)
@@ -89,6 +90,7 @@ struct QuranReaderView: View {
                             ForEach(QuranAudioService.Reciter.available) { reciter in Text(reciter.name).tag(reciter.id) }
                         }
                     }
+                    Section("Ma voix") { NavigationLink("Mes récitations") { RecitationsView().onAppear { audio.pause() } }.accessibilityIdentifier("recitations.open") }
                     Section("Marque-pages") {
                         ForEach(store.snapshot.state["bookmarks"].object.keys.sorted(), id: \.self) { key in
                             let bookmark = store.snapshot.state["bookmarks"][key]
@@ -102,6 +104,11 @@ struct QuranReaderView: View {
                 }.navigationTitle("Le Coran").navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { options = false } } }
             }.presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $recording) {
+            if let user = store.identity?.id {
+                VoiceRecorderView(user: user, catalog: store.catalog, firstVerse: verseID, lastVerse: page < 604 ? max(verseID, QuranSourceMapping.firstVerse(source: source, page: page + 1, catalog: store.catalog) - 1) : 6236)
+            }
         }
         .alert("Le Coran", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
     }

@@ -15,7 +15,8 @@ struct BackendConfiguration {
     }
     func client() -> SupabaseClient {
         let settings = URLSessionConfiguration.default
-        settings.timeoutIntervalForRequest = 8; settings.timeoutIntervalForResource = 15
+        // Requests still fail promptly offline; an upload may need more time to finish.
+        settings.timeoutIntervalForRequest = 8; settings.timeoutIntervalForResource = 120
         settings.waitsForConnectivity = false
         return SupabaseClient(supabaseURL: url, supabaseKey: publicKey, options: .init(auth: .init(storage: KeychainVault(), redirectToURL: URL(string: "corannative://auth"), storageKey: "native-supabase-session", autoRefreshToken: false), global: .init(session: URLSession(configuration: settings))))
     }

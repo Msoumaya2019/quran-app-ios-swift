@@ -1,6 +1,25 @@
 import XCTest
 
 final class ReaderUITests: XCTestCase {
+    func testRecordingCanBeSavedAndFoundOffline() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-recording"]
+        app.launch(); app.tabBars.buttons["Coran"].tap()
+        app.buttons["quran.action.Enregistrer"].tap()
+        XCTAssertTrue(app.buttons["recitation.start"].waitForExistence(timeout: 10))
+        app.buttons["recitation.start"].tap()
+        XCTAssertTrue(app.buttons["recitation.stop"].waitForExistence(timeout: 5))
+        attach(app, name: "Récitation native — enregistrement")
+        app.buttons["recitation.stop"].tap()
+        app.buttons["recitation.save"].tap()
+        XCTAssertTrue(app.buttons["quran.action.Plus"].waitForExistence(timeout: 5))
+        app.buttons["quran.action.Plus"].tap()
+        app.buttons["recitations.open"].tap()
+        let saved = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "recitation.item."))
+        XCTAssertTrue(saved.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(saved.count, 1)
+        attach(app, name: "Récitation native — sauvegarde hors ligne")
+    }
     func testOfflineAudioTimelineAndReaderViewport() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-audio"]
