@@ -14,6 +14,22 @@ final class ReaderUITests: XCTestCase {
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(app.buttons["program.task.preview-learning"].firstMatch.waitForExistence(timeout: 5))
     }
+    func testLearningCanBePartiallyValidatedOffline() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-program"]
+        app.launch(); app.tabBars.buttons["Programme"].tap()
+        let task = app.buttons["program.task.preview-learning"].firstMatch
+        guard task.waitForExistence(timeout: 10) else { XCTFail("Learning task unavailable"); return }
+        task.tap(); app.buttons["quran.action.Plus"].tap()
+        let open = app.buttons["learning.open"]
+        guard open.waitForExistence(timeout: 10) else { XCTFail("Learning validation unavailable"); return }
+        open.tap()
+        app.buttons["learning.validate"].tap()
+        app.buttons["J’ai appris jusqu’ici"].tap()
+        XCTAssertTrue(app.staticTexts["learning.result"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["1 / 7 versets validés"].exists)
+        attach(app, name: "Apprentissage natif — validation partielle hors ligne")
+    }
     func testNativeIndexSearchAndDivisionNavigation() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures"]

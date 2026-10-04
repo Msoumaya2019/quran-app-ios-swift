@@ -39,7 +39,7 @@ struct QuranReaderView: View {
     private func record(_ kind: ReaderOperation.Kind) { store.readerChange(ReaderOperation(kind: kind, verseID: verseID, page: page, source: source.id)) }
     var body: some View {
         VStack(spacing: 0) {
-            if let session { QuranSessionHeader(context: session, source: source, catalog: store.catalog) }
+            if let session { QuranSessionHeader(context: session, source: source, catalog: store.catalog, completedCount: session.mode == .learning ? LearningValidation.completedCount(context: session, state: store.snapshot.state) : nil) }
             if loading { HStack { ProgressView(); Text("Chargement du Coran…").font(.caption) }.padding(8) }
             QuranPager(source: source, page: $page, onTap: { withAnimation(.easeInOut(duration: 0.18)) { immersive.toggle() } })
                 .accessibilityIdentifier("quran.viewport")
@@ -65,6 +65,10 @@ struct QuranReaderView: View {
             guard !initialized else { return }; initialized = true
             if let reciter = store.snapshot.state["audioPreferences"]["reciterId"].string,
                QuranAudioService.Reciter.available.contains(where: { $0.id == reciter }) { audio.changeReciter(reciter) }
+            if let session, session.mode == .learning {
+                let pending = session.range.start + LearningValidation.completedCount(context: session, state: store.snapshot.state)
+                if pending <= session.range.end { page = QuranSourceMapping.page(source: source, verseID: pending, catalog: store.catalog) }
+            }
             record(.reading)
         }
         .onChange(of: page) { _, _ in if initialized { record(.reading) } }
@@ -73,6 +77,13 @@ struct QuranReaderView: View {
             NavigationStack {
                 Form {
                     Section("Navigation") { NavigationLink("Sourates, Juz’ et Hizb") { QuranIndexView(source: source) { target in page = source.validPage(target); options = false } }.accessibilityIdentifier("quran.index.open") }
+                    if let session, session.mode == .learning {
+                        Section("Apprentissage") {
+                            NavigationLink("J’ai appris jusqu’ici") {
+                                LearningValidationView(context: session, source: source, firstPending: session.range.start + LearningValidation.completedCount(context: session, state: store.snapshot.state))
+                            }.accessibilityIdentifier("learning.open")
+                        }
+                    }
                     if let session, session.mode == .consolidation {
                         Section("Séance") {
                             Button("Valider la consolidation") { confirmConsolidation = true }

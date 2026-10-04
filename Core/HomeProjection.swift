@@ -93,7 +93,7 @@ struct HomeProjection {
     }
     var weeklyVerseCounts: [Int] {
         var days: [String: Set<Int>] = [:]
-        for s in state["sessions"].array where s["status"].string == "done" {
+        for s in state["sessions"].array where s["status"].string == "done" && state["studyProgress"]["learning:\(s["id"].string ?? "")"] == .null {
             let day = s["completedDate"].string ?? s["completedAt"].string.map { String($0.prefix(10)) } ?? s["date"].string ?? ""
             if let r = VerseRange(json: s) { days[day, default: []].formUnion(r.start...r.end) }
         }

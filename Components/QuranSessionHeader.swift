@@ -4,13 +4,14 @@ struct QuranSessionHeader: View {
     let context: QuranSessionContext
     let source: QuranSource
     let catalog: QuranCatalog
+    var completedCount: Int? = nil
     @EnvironmentObject private var theme: ThemeManager
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "book.fill").font(.headline)
             VStack(alignment: .leading, spacing: 2) {
                 Text(context.title).font(.subheadline.weight(.semibold))
-                Text("\(context.range.count) versets").font(.caption2)
+                Text(completedCount.map { "\($0) / \(context.range.count) versets" } ?? "\(context.range.count) versets").font(.caption2)
             }.lineLimit(2)
             Spacer(minLength: 4)
             Rectangle().fill(theme.review.opacity(0.2)).frame(width: 1, height: 28)
