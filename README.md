@@ -1,6 +1,6 @@
 # Coran natif — SwiftUI
 
-Deuxième application iPhone indépendante de [coran-memoire](https://github.com/Msoumaya2019/coran-memoire). Phase 1 uniquement. Aucun React Native, Expo, WebView ni dépendance JavaScript.
+Deuxième application iPhone indépendante de [coran-memoire](https://github.com/Msoumaya2019/coran-memoire). Phase 1 et lecteur classique natif (phase 2). Aucun React Native, Expo, WebView ni dépendance JavaScript.
 
 ## Ouvrir et lancer
 
@@ -22,7 +22,7 @@ Les tests d’interface utilisent un compte fictif **local au simulateur**, uniq
 
 Bundle ID distinct : `com.coranmemoire.native.ios`. Nom installé : **Coran natif**. Schéma de lien distinct : `corannative://auth`. Keychain distinct et tokens protégés `AfterFirstUnlockThisDeviceOnly`. La déconnexion est limitée à la session Swift et ne révoque pas la session React Native.
 
-Aucune migration Supabase en phase 1. `user_state` est lu exclusivement ; les champs non migrés restent présents dans le JSON en cache. Aucun upsert de progression ou reconstruction de programme. Les préférences d’apparence sont locales à la version Swift.
+Aucune migration Supabase. Le lecteur synchronise uniquement reprise, pages lues, source et marque-pages dans le JSON existant, avec contrôle de concurrence. Les champs non migrés sont préservés ; aucun programme n’est reconstruit. Les préférences d’apparence sont locales à la version Swift.
 
 ## iOS minimum
 

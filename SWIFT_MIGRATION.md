@@ -20,10 +20,10 @@ Le stockage SQLite (`storage.ts`) conserve app_state, account_state et pending_s
 | Thèmes, accents, polices | ui/theme.tsx, theme/tokens.ts, theme/fonts.ts | 5 thèmes, 4 accents | préférences dans user_state.data | ThemeManager, SettingsView | 1 local, couleurs/illustrations conservées |
 | Accueil | ui/MainScreens.tsx Home | reprises, grille 2×2, semaine, objectif | user_state, friend_profiles | HomeView, HomeProjection | 1 lecture dynamique, routes futures explicites |
 | Rappel/invocation du jour | DailyContentsScreen.tsx, services/dailyContents.ts | contenu admin, sources, images, swipe | daily_content_for_date, daily_contents, schedule | HomeRepository, DailyContentView | 1 affichage lecture seule ; favoris/audio phase 4 |
-| Lecteur et liste Coran | MushafPage.tsx, coranTest/*, ui/ZoomableReader.tsx | sources, pages, coordonnées, gestes, cache | préférence reader / bookmarks dans user_state | QuranService, reader natif UIKit/SwiftUI | 2 à faire, aucun lecteur intégré |
-| Sources et téléchargements | core/quranSources.ts, services/quranDownload.ts, quranSourceReady.ts | lazy ZIP1441, source transition prête avant commit | user_state.reader | source registry, cache fichiers | 2 à faire |
+| Lecteur et liste Coran | MushafPage.tsx, coranTest/*, ui/ZoomableReader.tsx | sources, pages, coordonnées, gestes, cache | préférence reader / bookmarks dans user_state | QuranService, reader natif UIKit/SwiftUI | 2 lecteur classique intégré, 19 tests Xcode réussis |
+| Sources et téléchargements | core/quranSources.ts, services/quranDownload.ts, quranSourceReady.ts | lazy ZIP1441, source transition prête avant commit | user_state.reader | source registry, cache fichiers | 2 intégré : téléchargement 1441, cache et source atomique |
 | Annotations marge | core/marginAnnotations.ts, ui/QuranSessionHeader.tsx | overlay indépendant, Mushaf intact | studyProgress | session header / overlay natif | 2/3 à faire |
-| Audio verset/répétitions | PassageAudioPlayer.tsx, services/audioFocus.ts, verseAudioCache.ts, quranAudioTimeline.ts | Expo audio, plage, réciteur, répétition | préférences / fichiers | AudioService AVFoundation | 2 à faire |
+| Audio verset/répétitions | PassageAudioPlayer.tsx, services/audioFocus.ts, verseAudioCache.ts, quranAudioTimeline.ts | Expo audio, plage, réciteur, répétition | préférences / fichiers | QuranAudioService AVFoundation | 2 audio de base intégré ; répétitions avancées à migrer |
 | Enregistrement voix | RecitationRecorder.tsx, RecitationsScreen.tsx, services/recitations.ts | microphone, fichiers privés, partage | recitations, storage | recorder AVFoundation | 2/4 à faire |
 | Programme / connaissance / objectif | core/program.ts, ui/GoalScreen.tsx, ui/MainScreens.tsx | schema1, knowledge, scheduledDate/completedAt | user_state.data | LearningProgramService | 3 à faire ; phase1 seulement projection lecture |
 | Révision cycle / quantité | core/review.ts, ReviewDashboard.tsx | 7/14/21/30, Nisf/Hizb/Juz/2Juz, corpus connu | reviewCycle, reviewHistory dans data | RevisionProgramService | 3 à faire |
@@ -46,14 +46,18 @@ Le stockage SQLite (`storage.ts`) conserve app_state, account_state et pending_s
 - JSON conservé entier en cache. Aucun défaut Swift ne remplace les données serveur et aucune mutation de progression n’est envoyée.
 - HomeProjection calcule les informations d’affichage (semaine / activité / reprise), ne crée ni ne valide de séances. La carte Révision lit le cycle déjà enregistré : le calcul complet récent/prioritaire/habituel attend la phase 3, donc elle peut rester à jour alors qu’un nouveau cycle doit être généré.
 - La semaine suit actuellement le comportement RN : lundi 00:00 local. L’exigence historique évoque 00:01 ; vérifier cette minute de transition lors de la phase3, sans modifier RN ni effacer l’historique.
-- Les routes lecteur/quiz/programme/amis mènent aux espaces réservés nommés ; elles ne prétendent pas offrir les fonctionnalités non migrées.
+- Le lecteur classique est intégré. Les routes quiz/programme/amis restent des espaces réservés pour les fonctionnalités non migrées.
 - Les anciens ZIP test ont été retirés de la version actuelle et remplacés par1441. La nouvelle demande les mentionne à nouveau ; confirmer les versions à exposer en phase2 avant d’intégrer des ressources supplémentaires.
 - Analyse des tables, fonctions, triggers et policies dans [Docs/SUPABASE_ANALYSIS.md](Docs/SUPABASE_ANALYSIS.md), inventaire détaillé [Docs/backend-inventory.json](Docs/backend-inventory.json). Les catalogues de production et configurations Auth/Storage/Edge Functions privées restent à vérifier avec accès propriétaire.
 
 ## Phases et arrêt
 
-Phase1 : dépôt indépendant, auth/session/cache/thème/navigation/accueil et tests. **Arrêt obligatoire après rapport.** Phase2 : lecteur/cache/audio seulement après validation. Phase3 : moteurs programme/révision/consolidation. Phase4 : social/quiz/notifications. Phase5 : offline complet, sync et instrumentation appareil.
+Phase1 : dépôt indépendant, auth/session/cache/thème/navigation/accueil et tests. **Arrêt obligatoire après rapport.** Phase2 autorisée par l’utilisateur : lecteur/cache/audio intégrés, validation Xcode réussie (19 tests). Phase3 : moteurs programme/révision/consolidation. Phase4 : social/quiz/notifications. Phase5 : offline complet, sync et instrumentation appareil.
 
 ## Sources SDK
 
 [SDK Supabase Swift officiel](https://github.com/supabase/supabase-swift/tree/v2.33.1), [auth Swift](https://supabase.com/docs/reference/swift/auth-api). SDK fixé pour une compilation reproductible. Minimum iOS17. Pas de dépendance RN/Expo dans ce dépôt.
+
+## État actuel du lecteur
+
+Voir [NATIVE_READER_REPORT.md](Docs/NATIVE_READER_REPORT.md) : sources originales, UIKit, cache de trois pages, audio de base, reprise et marque-pages avec file locale compatible RN. Aucun fichier React Native modifié.

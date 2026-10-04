@@ -12,7 +12,7 @@ Le dépôt Swift, le projet Xcode, l’authentification Supabase, la session Key
 
 ## Architecture
 
-`QuranReaderView` fournit les options et la barre d’actions. `QuranPager`, un `UIViewControllerRepresentable`, pilote `UIPageViewController` en transition scroll native avec ordre arabe. Chaque contrôleur affiche un `UIImageView` en `scaleAspectFit` : centrage horizontal et vertical dans la zone disponible, sans déformation ni scroll vertical. Le tap masque ou rétablit les commandes. La Safe Area et les éléments SwiftUI inférieurs déterminent la hauteur disponible.
+`QuranReaderView` fournit les options et la barre d’actions. `QuranPager`, un `UIViewControllerRepresentable`, pilote `UIPageViewController` en transition scroll native avec ordre arabe. Chaque contrôleur affiche un `UIImageView` en `scaleAspectFit` : centrage horizontal et vertical dans la zone disponible, sans déformation ni scroll vertical. En lecture classique, une barre de navigation iOS compacte affiche le nom de la source. Le tap masque ou rétablit cette barre et les commandes. Le bord gauche est réservé au retour dans une navigation empilée ; les swipes internes tournent les pages. La Safe Area et les éléments SwiftUI inférieurs déterminent la hauteur disponible.
 
 `QuranPageCache` décode hors du thread principal et conserve au maximum trois pages décodées. Les contrôleurs de page partagent ces images. La page courante est publiée avant le préchargement des voisines. Le changement de source vérifie les fichiers et prépare la page avant de remplacer la source affichée ; une erreur conserve le lecteur et sa source précédente.
 
@@ -30,4 +30,36 @@ AVFoundation : lecture, pause, précédent, suivant, enchaînement verset par ve
 
 Des tests vérifient la conservation des champs inconnus, les suppressions persistantes, la relecture des anciennes sauvegardes, les limites de page et un parcours de 20 pages avec cache limité à trois images. Un test UI effectue le parcours dans les deux sources, avec des images 1441 originales préparées avant lancement ; ces fichiers de test ne sont pas inclus dans l’IPA Release.
 
-Les résultats Xcode, captures et mesures sont complétés après exécution. La mémoire totale, le CPU, le taux réel d’images et les conflits de gestes sur iPhone demandent une mesure sur appareil avec Instruments. Aucun chiffre de fluidité 120 Hz n’est déduit d’un simulateur.
+Xcode GitHub sur iPhone 17 Pro Max : 16 tests unitaires et 3 tests UI réussis, archive iOS réussie. Le parcours de 20 pages dans chaque source, le changement de source sur place, les marque-pages et le retour par le bord gauche passent. Rapport : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37165111376. Une IPA non signée est disponible dans les artefacts ; une signature Apple est nécessaire pour installation sur iPhone. La mémoire totale, le CPU, le taux réel d’images et les conflits de gestes sur iPhone demandent une mesure sur appareil avec Instruments. Aucun chiffre de fluidité 120 Hz n’est déduit d’un simulateur.
+
+## Fichiers ajoutés et modifiés
+
+Swift ajouté :
+- Models/QuranSource.swift, Models/ReaderOperation.swift
+- Services/QuranResourceService.swift, Services/QuranPageCache.swift, Services/QuranAudioService.swift
+- Features/Quran/QuranReaderView.swift, Features/Quran/QuranPager.swift
+- Components/QuranMiniPlayer.swift
+- Tests/ReaderTests.swift, UITests/ReaderUITests.swift
+
+Swift existant complété : AppStore, HomeSnapshot, HomeRepository, HomeView, RootView, SettingsView et PhaseOneUITests. Le projet Xcode existant et son générateur, le workflow GitHub, la documentation et les règles d’exclusion des ressources de test sont également mis à jour. Les ressources ajoutées sont les 604 PNG Médine et les JSON originaux bounds/markers 1441.
+
+## Limites de cette étape
+
+- Enregistrer reste une action indiquant la migration future ; aucune fonction RN n’a été supprimée.
+- Le marque-page rapide utilise le premier verset de la page ; la sélection de verset par coordonnées viendra ensuite.
+- L’audio ne suit pas encore visuellement les changements de page. Les changements de réciteur dans ce lecteur ne sont pas encore synchronisés comme préférence.
+- Les modes apprentissage/révision/consolidation sont déclarés dans l’architecture, mais leurs moteurs et annotations ne sont pas encore migrés.
+- Les tests hors ligne utilisent des ressources locales et une session simulée. Le téléchargement complet sur appareil, l’auth réelle et la synchronisation avec un vrai compte demandent une vérification sur iPhone.
+- Le temps de décodage d’une page est mesuré ; le temps total tap → première page, le CPU, le pic mémoire de toute l’app et le FPS réel ne sont pas encore mesurés avec Instruments.
+- Pas de nouvelle table, colonne, migration ou policy Supabase.
+
+## Mesures de décodage sur simulateur GitHub
+
+Exécution du 4 octobre 2026 :
+
+| Source | Premier décodage | Autres décodages observés | Trois images décodées en cache |
+|---|---:|---:|---:|
+| Médine | 41,7 ms | environ 36,8–55,7 ms | 71 562 240 octets (68,25 Mio) |
+| Coran 1441 | 112,2 ms | environ 65,4–84,1 ms | 40 089 600 octets (38,23 Mio) |
+
+Ces valeurs sont celles des tests unitaires de cache, pas la mémoire totale du processus ni un benchmark sur iPhone. Elles varient selon la charge du runner. Le parcours conserve trois pages au maximum ; Médine a produit 73 accès servis par le cache pendant le test. Les 19 tests passent. Le geste réservé au bord gauche déclenche une transition de retour native au relâchement ; il ne pilote pas encore une transition interactive de retour suivant le doigt. Les swipes de pages suivent le doigt via UIPageViewController.
