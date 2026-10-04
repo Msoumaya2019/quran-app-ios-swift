@@ -84,7 +84,13 @@ final class ReaderUITests: XCTestCase {
         app.launch(); app.tabBars.buttons["Programme"].tap()
         let task = app.buttons["program.task.native-revision-1-\(dayKey())-1-7"].firstMatch
         guard task.waitForExistence(timeout: 10) else { XCTFail("Revision task unavailable: \(app.debugDescription)"); return }
-        task.tap(); app.buttons["quran.action.Plus"].tap()
+        task.tap()
+        let page = app.images["quran.page.1"]
+        XCTAssertTrue(page.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["quran.margin.1"].waitForExistence(timeout: 5))
+        XCTAssertEqual(page.frame.midX, app.frame.midX, accuracy: 1)
+        attach(app, name: "Révision — Mushaf centré et repères en marge")
+        app.buttons["quran.action.Plus"].tap()
         let open = app.buttons["revision.open"]
         guard open.waitForExistence(timeout: 10) else { XCTFail("Revision validation unavailable"); return }
         open.tap()
