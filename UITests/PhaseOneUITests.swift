@@ -1,6 +1,21 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testMessageSavedOfflineSurvivesConversationReopening() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-friends"]; app.launch()
+        app.tabBars.buttons["Amis"].tap()
+        let friend = app.staticTexts["Yassine"]; XCTAssertTrue(friend.waitForExistence(timeout: 10)); friend.tap()
+        let chat = app.buttons["friends.chat.open"]; XCTAssertTrue(chat.waitForExistence(timeout: 5)); chat.tap()
+        let field = app.descendants(matching: .any)["chat.composer"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5)); field.tap()
+        let body = "Message local \(UUID().uuidString.prefix(8))"; field.typeText(body)
+        app.buttons["chat.send"].tap()
+        XCTAssertTrue(app.staticTexts[body].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["À synchroniser"].firstMatch.exists)
+        attach(app, name: "Conversation native — message conservé hors ligne")
+        app.navigationBars.buttons.firstMatch.tap(); app.buttons["friends.chat.open"].tap()
+        XCTAssertTrue(app.staticTexts[body].waitForExistence(timeout: 5))
+    }
     func testCachedFriendProfileShowsSharedProgress() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-friends"]; app.launch()
         app.tabBars.buttons["Amis"].tap()

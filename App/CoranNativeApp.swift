@@ -23,7 +23,7 @@ import SwiftUI
             if ProcessInfo.processInfo.arguments.contains("--ui-test-friends") {
                 let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, other = "00000000-0000-0000-0000-000000000002"
                 let friend = FriendsSnapshot(owner: owner,
-                    links: .array([.object(["id": .string("preview-friend"), "requester_id": .string(owner.uuidString), "recipient_id": .string(other), "status": .string("accepted")])]),
+                    links: .array([.object(["id": .string("00000000-0000-0000-0000-000000000003"), "requester_id": .string(owner.uuidString), "recipient_id": .string(other), "status": .string("accepted")])]),
                     profiles: .array([.object(["id": .string(other), "display_name": .string("Yassine"), "share_progress": .bool(true)])]),
                     overviews: [other: .object(["id": .string(other), "weekly_verses": .number(28), "weekly_sessions": .number(5), "quran_percent": .number(33), "goal_label": .string("Finir le Hizb 42"), "goal_percent": .number(58)])])
                 try? FileManager.default.createDirectory(at: friendsDirectory, withIntermediateDirectories: true)

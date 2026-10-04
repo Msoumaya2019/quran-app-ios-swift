@@ -19,6 +19,11 @@ struct FriendDetailView: View {
                         }
                     }
                 }
+                if let conversation = library.conversation(for: item) {
+                    NavigationLink { ConversationView(name: item.name, library: conversation) } label: {
+                        Label("Envoyer un message", systemImage: "bubble.left.and.bubble.right").frame(maxWidth: .infinity, minHeight: 44)
+                    }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("friends.chat.open")
+                }
                 if overview != .null {
                     AppCard {
                         VStack(alignment: .leading, spacing: 10) {

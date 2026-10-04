@@ -1,0 +1,44 @@
+import Foundation
+
+@MainActor final class ConversationLibrary: ObservableObject {
+    @Published private(set) var snapshot: ChatSnapshot
+    @Published private(set) var loading = false
+    @Published private(set) var message: String?
+    @Published private(set) var hasOlder = true
+    private let remote: ChatRemote
+    private let cache: ChatCache
+    private var generation = UUID()
+    init(owner: UUID, link: UUID, remote: ChatRemote, cache: ChatCache = ChatCache()) {
+        self.remote = remote; self.cache = cache
+        snapshot = (try? cache.load(owner: owner, link: link)) ?? ChatSnapshot(owner: owner, linkID: link)
+    }
+    func enqueue(_ body: String) -> Bool {
+        do { var next = snapshot; _ = try next.enqueue(body); try cache.save(next); snapshot = next; message = nil; return true }
+        catch { message = error.localizedDescription; return false }
+    }
+    func stop() { generation = UUID(); loading = false }
+    func refresh(older: Bool = false) async {
+        guard !loading else { return }
+        let token = generation; loading = true
+        defer { if token == generation { loading = false } }
+        let owner = snapshot.owner, link = snapshot.linkID
+        do {
+            while let pending = snapshot.pending.first {
+                let confirmed = try await remote.send(owner: owner, message: pending)
+                guard token == generation, !Task.isCancelled else { return }
+                guard confirmed.acknowledges(pending) else { throw ChatError.mismatch }
+                var next = snapshot; next.merge([confirmed]); try cache.save(next); snapshot = next
+            }
+            let cursor = older ? snapshot.messages.min(by: { $0.timestamp == $1.timestamp ? $0.id.uuidString < $1.id.uuidString : $0.timestamp < $1.timestamp }) : nil
+            let page = try await remote.load(owner: owner, link: link, before: cursor)
+            guard token == generation, !Task.isCancelled else { return }
+            var next = snapshot; next.merge(page.messages, hiddenIDs: page.hidden); try cache.save(next); snapshot = next
+            if older || cursor == nil { hasOlder = page.messages.count == 50 }
+            message = nil
+            if let latest = snapshot.messages.max(by: { $0.timestamp < $1.timestamp }) { try? await remote.markRead(owner: owner, link: link, through: latest.createdAt) }
+        } catch {
+            guard token == generation, !Task.isCancelled else { return }
+            message = "Connexion indisponible. Tes messages restent conservés ; les envois non confirmés seront réessayés."
+        }
+    }
+}
