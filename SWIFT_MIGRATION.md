@@ -68,4 +68,4 @@ La validation partielle et complète des révisions habituelles des cycles exist
 
 L’édition et la génération du programme d’apprentissage sont disponibles dans Réglages → Modifier mon programme. L’enregistrement est direct, sans aperçu ni confirmation supplémentaire. Objectif, sens, rythme et jours sont modifiables ; séances commencées, terminées et historique restent conservés. Voir [NATIVE_PROGRAM_EDIT_REPORT.md](Docs/NATIVE_PROGRAM_EDIT_REPORT.md). Ces compléments remplacent les mentions « génération/édition à migrer » du tableau et des rapports précédents.
 
-Aucune migration SQL et aucun fichier React Native modifié. Tests Xcode de ces compléments : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37213209168 (en cours).
+Aucune migration SQL et aucun fichier React Native modifié. Tests Xcode de ces compléments : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37214295583 (65 tests réussis, archive non signée générée).

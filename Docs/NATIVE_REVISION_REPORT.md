@@ -15,6 +15,6 @@ Avec hésitations et À retravailler ajoutent un marqueur utilisateur et une éc
 Le payload Codable utilise readerOperations et le même cache par compte, puis l’écriture conditionnelle Supabase existante. Aucune migration SQL. Champs inconnus conservés.
 
 ## Tests et limites
-Sept tests unitaires couvrent les dates anticipées/tardives, appréciations, reprise, rejeu, connaissances, cycles archivés et reprise React Native. Un test d’interface valide partiellement une séance locale. Résultat de la suite incluant l’éditeur : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37213209168 (en attente).
+Sept tests unitaires couvrent les dates anticipées/tardives, appréciations, reprise, rejeu, connaissances, cycles archivés et reprise React Native. Un test d’interface valide partiellement une séance locale. Résultat de la suite incluant l’éditeur : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37214295583 (réussie : 55 tests unitaires et 10 tests d’interface). La capture confirme le message de succès et 1/7 versets validés.
 
 Cette étape ne génère ni ne fait tourner automatiquement les cycles de révision. La configuration des quantités quotidiennes et les files récentes/prioritaires complètes restent à migrer. Les essais sur iPhone physique et sur un compte Supabase réel restent à effectuer.

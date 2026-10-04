@@ -78,3 +78,9 @@ Ces valeurs sont celles des tests unitaires de cache, pas la mémoire totale du 
 Référence API : [AVPlayer, documentation Apple](https://developer.apple.com/documentation/avfoundation/avplayer).
 
 Validation du complément audio : **21 tests unitaires + 4 tests UI réussis**, archive Release réussie, sur [GitHub Actions 37193061557](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37193061557). Le test UI déplace le curseur vers 30 secondes dans un fichier local de 60 secondes, vérifie le centrage horizontal et le retour à la hauteur initiale après réduction du mini-player.
+
+
+## Correctif de pagination — 4 octobre 2026
+UIKit peut demander un contrôleur de page voisine avant que sa transition mette à jour la fenêtre de trois pages. Le data source crée désormais ce candidat valide au lieu de retourner nil à cause de son absence temporaire dans la fenêtre. Son image est chargée via le cache existant, avec contrôle de la source pour ignorer un résultat devenu obsolète. Les limites 1/604 restent inchangées et la fenêtre du cache décodé reste limitée aux trois pages voisines. Un test unitaire reproduit la demande de page 3 avant la validation de la transition vers la page 2.
+
+Suite finale : 55 tests unitaires et 10 tests d’interface réussis, y compris les 20 pages sur les deux sources et les validations hors ligne. Archive Release non signée générée : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37214295583. Ces résultats sont des essais sur simulateur ; ils ne constituent pas une mesure Instruments sur iPhone physique.
