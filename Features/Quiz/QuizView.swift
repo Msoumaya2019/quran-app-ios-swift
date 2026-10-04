@@ -82,6 +82,7 @@ struct QuizQuestionView: View {
                     ForEach(["explanation", "arabic", "translation", "sourceTitle", "sourceReference"], id: \.self) { key in
                         if let text = question[key].string, !text.isEmpty { Text(text).font(.subheadline) }
                     }
+                    if let source = question["sourceUrl"].string, let url = URL(string: source), url.scheme == "https" { Link("Consulter la source", destination: url).frame(minHeight: 44) }
                 } }
             }
         }

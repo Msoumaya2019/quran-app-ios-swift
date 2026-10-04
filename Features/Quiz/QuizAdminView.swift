@@ -51,7 +51,7 @@ struct QuizQuestionEditor: View {
     private func flag(_ key: String) -> Binding<Bool> { Binding(get: { draft[key].bool ?? false }, set: { draft = draft.setting(key, .bool($0)) }) }
     private func number(_ key: String) -> Binding<String> { Binding(get: { draft[key].string ?? draft[key].int.map(String.init) ?? "" }, set: { draft = draft.setting(key, .string($0)) }) }
     private var valid: Bool {
-        !draft["question"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && answers.filter { !$0["text"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count >= 3 && answers.contains { $0["id"].string == draft["correctAnswerId"].string && !$0["text"].string.orEmpty.isEmpty }
+        !draft["question"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !draft["sourceTitle"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (draft["sourceUrl"].string.orEmpty.isEmpty || draft["sourceUrl"].string.orEmpty.hasPrefix("https://")) && (draft["isDailyQuestion"].bool != true || !draft["publicationDate"].string.orEmpty.isEmpty) && answers.filter { !$0["text"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count >= 3 && answers.contains { $0["id"].string == draft["correctAnswerId"].string && !$0["text"].string.orEmpty.isEmpty }
     }
     var body: some View {
         Form {

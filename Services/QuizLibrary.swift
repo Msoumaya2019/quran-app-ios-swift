@@ -127,7 +127,7 @@ import Supabase
             next.data = data; try save(next); message = nil
         } catch {
             guard token == generation else { return }
-            message = "Quiz hors connexion : les réponses enregistrées seront synchronisées."
+            message = "Actualisation du Quiz indisponible. Tes réponses restent enregistrées et seront réessayées."
         }
     }
 }

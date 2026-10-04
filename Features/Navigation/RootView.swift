@@ -45,7 +45,7 @@ struct RootView: View {
                             .toolbar {
                                 if item != .quran {
                                 ToolbarItem(placement: .topBarLeading) {
-                                    HStack(spacing: 7) { Image(systemName: "book.closed").foregroundStyle(theme.gold); Text("Apprendre le Coran").font(theme.title(.headline)).foregroundStyle(theme.accent) }
+                                    HStack(spacing: 7) { Image(systemName: "book.closed").foregroundStyle(theme.gold); Text("Apprendre le Coran").font(theme.title(.headline)).foregroundStyle(theme.accent).lineLimit(1) }.fixedSize(horizontal: true, vertical: false)
                                 }
                                 ToolbarItem(placement: .topBarTrailing) {
                                     HStack(spacing: 0) {

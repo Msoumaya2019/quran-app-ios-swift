@@ -24,6 +24,9 @@ struct FriendDetailView: View {
                         Label("Envoyer un message", systemImage: "bubble.left.and.bubble.right").frame(maxWidth: .infinity, minHeight: 44)
                     }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("friends.chat.open")
                 }
+                NavigationLink { QuizChallengesView(initialFriend: item.otherID) } label: {
+                    Label("Défier", systemImage: "trophy").frame(maxWidth: .infinity, minHeight: 44)
+                }.buttonStyle(PrimaryButtonStyle())
                 if overview != .null {
                     AppCard {
                         VStack(alignment: .leading, spacing: 10) {

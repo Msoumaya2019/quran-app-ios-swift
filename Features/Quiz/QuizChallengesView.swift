@@ -7,6 +7,7 @@ struct QuizChallengesView: View {
     @State private var friend = ""
     @State private var count = 10
     @State private var set = ""
+    init(initialFriend: String = "") { _friend = State(initialValue: initialFriend) }
     var body: some View {
         List {
             Section("Nouveau défi") {
