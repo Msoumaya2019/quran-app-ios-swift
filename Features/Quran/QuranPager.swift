@@ -87,6 +87,12 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
     private weak var contentGesture: UIGestureRecognizer?
     private weak var previousContentDelegate: UIGestureRecognizerDelegate?
     private var previousContentEnabled = true
+    private lazy var readerBackGesture: UIScreenEdgePanGestureRecognizer = {
+        let gesture = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleReaderBack(_:)))
+        gesture.edges = .left
+        gesture.delegate = self
+        return gesture
+    }()
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         refreshNativeBack()
@@ -103,6 +109,9 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
             return
         }
         navigationOwner = navigation
+        if readerBackGesture.view == nil { view.addGestureRecognizer(readerBackGesture) }
+        readerBackGesture.isEnabled = navigation.viewControllers.count > 1 && !navigation.isNavigationBarHidden
+        edge.require(toFail: readerBackGesture)
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
             if contentGesture == nil { previousContentDelegate = content.delegate; previousContentEnabled = content.isEnabled }
@@ -111,11 +120,20 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         }
         #endif
         for scroll in scrollViews(view) {
+            scroll.panGestureRecognizer.require(toFail: readerBackGesture)
             scroll.panGestureRecognizer.require(toFail: edge)
             if let contentGesture { scroll.panGestureRecognizer.require(toFail: contentGesture) }
         }
         print("[ReaderNavigation] native stack \(navigation.viewControllers.count), edge enabled \(edge.isEnabled)")
         (viewControllers?.first as? PageController)?.debugNavigation("stack \(navigation.viewControllers.count), edge \(edge.isEnabled)")
+    }
+    @objc private func handleReaderBack(_ gesture: UIScreenEdgePanGestureRecognizer) {
+        guard gesture.state == .ended, let navigationOwner else { return }
+        let distance = gesture.translation(in: view).x
+        let speed = gesture.velocity(in: view).x
+        if distance > view.bounds.width * 0.18 || speed > 500 {
+            navigationOwner.popViewController(animated: true)
+        }
     }
     private func scrollViews(_ value: UIView) -> [UIScrollView] {
         value.subviews.flatMap { scrollViews($0) } + ((value as? UIScrollView).map { [$0] } ?? [])
