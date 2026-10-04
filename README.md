@@ -36,6 +36,6 @@ Dans [Supabase Dashboard](https://supabase.com/dashboard/project/npbwnvrqmajwqtn
 
 Dans Xcode → Target CoranNative → Signing & Capabilities : choisir sa Team Apple et vérifier la disponibilité du Bundle ID. Aucun Team ID, certificat, provisioning ou clé APNs n’est committé. Un compte gratuit peut servir à certains tests locaux limités ; TestFlight et la distribution nécessitent Apple Developer et App Store Connect.
 
-Le lecteur classique natif est maintenant intégré : Coran de Médine, Coran 1441 à télécharger à la sélection, cache de trois pages, reprise, marque-pages et audio de base. Voir [rapport du lecteur](Docs/NATIVE_READER_REPORT.md). Les notifications APNs, moteurs de programme, amis et quiz interactifs attendent les phases suivantes. Le backend Expo push actuel reste intact.
+Le lecteur classique natif est maintenant intégré : Coran de Médine, Coran 1441 à télécharger à la sélection, cache de trois pages, reprise, marque-pages et audio de base avec timeline, cache MP3 partagé et réciteur persistant. Voir [rapport du lecteur](Docs/NATIVE_READER_REPORT.md). Les notifications APNs, moteurs de programme, amis et quiz interactifs attendent les phases suivantes. Le backend Expo push actuel reste intact.
 
 Voir [SWIFT_MIGRATION.md](SWIFT_MIGRATION.md), [analyse Supabase](Docs/SUPABASE_ANALYSIS.md) et [rapport phase 1](Docs/PHASE_ONE_REPORT.md).

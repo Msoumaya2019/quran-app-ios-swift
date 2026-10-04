@@ -36,10 +36,10 @@ Xcode GitHub sur iPhone 17 Pro Max : 16 tests unitaires et 3 tests UI réussis, 
 
 Swift ajouté :
 - Models/QuranSource.swift, Models/ReaderOperation.swift
-- Services/QuranResourceService.swift, Services/QuranPageCache.swift, Services/QuranAudioService.swift
+- Services/QuranResourceService.swift, Services/QuranPageCache.swift, Services/QuranAudioService.swift, Services/QuranAudioCache.swift, Services/QuranAudioTimeline.swift
 - Features/Quran/QuranReaderView.swift, Features/Quran/QuranPager.swift
 - Components/QuranMiniPlayer.swift
-- Tests/ReaderTests.swift, UITests/ReaderUITests.swift
+- Tests/ReaderTests.swift, Tests/QuranAudioTests.swift, UITests/ReaderUITests.swift
 
 Swift existant complété : AppStore, HomeSnapshot, HomeRepository, HomeView, RootView, SettingsView et PhaseOneUITests. Le projet Xcode existant et son générateur, le workflow GitHub, la documentation et les règles d’exclusion des ressources de test sont également mis à jour. Les ressources ajoutées sont les 604 PNG Médine et les JSON originaux bounds/markers 1441.
 
@@ -47,7 +47,7 @@ Swift existant complété : AppStore, HomeSnapshot, HomeRepository, HomeView, Ro
 
 - Enregistrer reste une action indiquant la migration future ; aucune fonction RN n’a été supprimée.
 - Le marque-page rapide utilise le premier verset de la page ; la sélection de verset par coordonnées viendra ensuite.
-- L’audio ne suit pas encore visuellement les changements de page. Les changements de réciteur dans ce lecteur ne sont pas encore synchronisés comme préférence.
+- L’audio ne suit pas encore visuellement les changements de page. Le choix du réciteur est maintenant enregistré localement et synchronisé dans audioPreferences.reciterId, sans remplacer les autres préférences.
 - Les modes apprentissage/révision/consolidation sont déclarés dans l’architecture, mais leurs moteurs et annotations ne sont pas encore migrés.
 - Les tests hors ligne utilisent des ressources locales et une session simulée. Le téléchargement complet sur appareil, l’auth réelle et la synchronisation avec un vrai compte demandent une vérification sur iPhone.
 - Le temps de décodage d’une page est mesuré ; le temps total tap → première page, le CPU, le pic mémoire de toute l’app et le FPS réel ne sont pas encore mesurés avec Instruments.
@@ -63,3 +63,18 @@ Exécution du 4 octobre 2026 :
 | Coran 1441 | 112,2 ms | environ 65,4–84,1 ms | 40 089 600 octets (38,23 Mio) |
 
 Ces valeurs sont celles des tests unitaires de cache, pas la mémoire totale du processus ni un benchmark sur iPhone. Elles varient selon la charge du runner. Le parcours conserve trois pages au maximum ; Médine a produit 73 accès servis par le cache pendant le test. Les 19 tests passent. Le geste réservé au bord gauche déclenche une transition de retour native au relâchement ; il ne pilote pas encore une transition interactive de retour suivant le doigt. Les swipes de pages suivent le doigt via UIPageViewController.
+
+## Complément audio — 4 octobre 2026
+
+- `QuranAudioCache` centralise les MP3 locaux, partage les téléchargements simultanés et écrit les fichiers atomiquement. Les fichiers déjà téléchargés sont ouverts sans réseau ; un fichier vide n’est pas considéré comme disponible.
+- Le verset suivant est préparé après le démarrage de la lecture. Une erreur de préchargement n’interrompt pas le verset courant.
+- `QuranAudioTimeline` est observé uniquement par la timeline du mini-player. Les mises à jour temporelles toutes les 250 ms ne sont pas relayées à l’état du lecteur/Mushaf.
+- La timeline affiche durée et position, permet de déplacer la lecture et conserve une zone tactile de 44 pt. Le mini-player peut être réduit et son espace est alors rendu au Mushaf.
+- Les observers AVPlayer sont retirés lors du remplacement du lecteur. Les callbacks d’une ancienne lecture ne doivent pas modifier la lecture actuelle.
+- Le choix du réciteur utilise une nouvelle opération locale `reciter`, dans la file existante. Elle modifie uniquement `audioPreferences.reciterId`, avec conservation des autres champs JSON. Pas de migration Supabase.
+- Tests ajoutés : deux requêtes audio simultanées, réouverture du cache sans réseau, rejet/reprise d’un téléchargement vide, contrat JSON du réciteur, lecture AVFoundation d’un fichier local avec seek/pause/reprise, valeurs temporelles invalides et mini-player dans la zone de lecture.
+- Le fichier audio silencieux des tests est généré uniquement pour les tests DEBUG ; il n’est jamais fourni comme contenu religieux ni inclus dans l’IPA Release.
+
+Référence API : [AVPlayer, documentation Apple](https://developer.apple.com/documentation/avfoundation/avplayer).
+
+Validation du complément audio : **21 tests unitaires + 4 tests UI réussis**, archive Release réussie, sur [GitHub Actions 37193061557](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37193061557). Le test UI déplace le curseur vers 30 secondes dans un fichier local de 60 secondes, vérifie le centrage horizontal et le retour à la hauteur initiale après réduction du mini-player.
