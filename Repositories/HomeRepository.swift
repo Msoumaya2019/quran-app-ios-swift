@@ -21,7 +21,8 @@ extension HomeRemote {
         guard let client, !operations.isEmpty else { return }
         for _ in 0..<4 {
             let rows: [VersionedRow] = try await client.from("user_state").select("data,updated_at").eq("user_id", value: userID.uuidString).limit(1).execute().value
-            guard let row = rows.first, row.data["schema"].int == 1 else { throw URLError(.cannotParseResponse) }
+            guard let row = rows.first, row.data["schema"].int == 1,
+                  row.data["userId"].string.map({ $0.lowercased() == userID.uuidString.lowercased() }) != false else { throw URLError(.cannotParseResponse) }
             var merged = row.data
             for operation in operations { merged = operation.applying(to: merged, catalog: catalog) }
             let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]

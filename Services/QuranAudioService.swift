@@ -17,7 +17,10 @@ import Foundation
     func pause() { request += 1; player?.pause(); playing = false; loading = false }
     func toggle(start: Int) {
         if playing || loading { pause() }
-        else if let player, verseID == start { player.play(); playing = true }
+        else if let player, verseID == start {
+            if let item = player.currentItem { observeEnd(item, token: request) }
+            player.play(); playing = true
+        }
         else { play(start) }
     }
     func play(_ id: Int) {
@@ -41,13 +44,19 @@ import Foundation
                 try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
                 try AVAudioSession.sharedInstance().setActive(true)
                 let item = AVPlayerItem(url: file)
-                if let ended { NotificationCenter.default.removeObserver(ended) }
                 player = AVPlayer(playerItem: item)
-                ended = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
-                    Task { @MainActor [weak self] in guard let self else { return }; if self.verseID < 6236 { self.play(self.verseID + 1) } else { self.pause() } }
-                }
+                observeEnd(item, token: token)
                 player?.play(); loading = false; playing = true
             } catch { guard token == request else { return }; loading = false; playing = false; self.error = "Audio indisponible. Les versets déjà téléchargés peuvent être écoutés hors connexion." }
+        }
+    }
+    private func observeEnd(_ item: AVPlayerItem, token: Int) {
+        if let ended { NotificationCenter.default.removeObserver(ended) }
+        ended = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.request == token, self.playing, self.player?.currentItem === item else { return }
+                if self.verseID < 6236 { self.play(self.verseID + 1) } else { self.pause() }
+            }
         }
     }
     func changeReciter(_ id: String) { pause(); player = nil; reciterID = id }

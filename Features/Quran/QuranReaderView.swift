@@ -58,6 +58,8 @@ struct QuranReaderView: View {
         .statusBarHidden(immersive)
         .onAppear {
             guard !initialized else { return }; initialized = true
+            if let reciter = store.snapshot.state["audioPreferences"]["reciterId"].string,
+               QuranAudioService.Reciter.available.contains(where: { $0.id == reciter }) { audio.changeReciter(reciter) }
             record(.reading)
         }
         .onChange(of: page) { _, _ in if initialized { record(.reading) } }
