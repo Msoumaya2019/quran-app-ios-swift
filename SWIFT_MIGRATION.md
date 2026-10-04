@@ -22,13 +22,13 @@ Le stockage SQLite (`storage.ts`) conserve app_state, account_state et pending_s
 | Rappel/invocation du jour | DailyContentsScreen.tsx, services/dailyContents.ts | contenu admin, sources, images, swipe | daily_content_for_date, daily_contents, schedule | HomeRepository, DailyContentView | 1 affichage lecture seule ; favoris/audio phase 4 |
 | Lecteur et liste Coran | MushafPage.tsx, coranTest/*, ui/ZoomableReader.tsx | sources, pages, coordonnées, gestes, cache | préférence reader / bookmarks dans user_state | QuranService, reader natif UIKit/SwiftUI | 2 lecteur classique + index sourates/Juz’/Hizb intégrés, 39 tests Xcode réussis |
 | Sources et téléchargements | core/quranSources.ts, services/quranDownload.ts, quranSourceReady.ts | lazy ZIP1441, source transition prête avant commit | user_state.reader | source registry, cache fichiers | 2 intégré : téléchargement 1441, cache et source atomique |
-| Annotations marge | core/marginAnnotations.ts, ui/QuranSessionHeader.tsx | overlay indépendant, Mushaf intact | studyProgress | session header / overlay natif | 2/3 à faire |
-| Audio verset/répétitions | PassageAudioPlayer.tsx, services/audioFocus.ts, verseAudioCache.ts, quranAudioTimeline.ts | Expo audio, plage, réciteur, répétition | préférences / fichiers | QuranAudioService AVFoundation | 2 audio de base intégré ; répétitions avancées à migrer |
+| Annotations marge | core/marginAnnotations.ts, ui/QuranSessionHeader.tsx | overlay indépendant, Mushaf intact | studyProgress | session header / overlay natif | 2/3 intégré : repères en marge, difficulté persistante et progression partielle |
+| Audio verset/répétitions | PassageAudioPlayer.tsx, services/audioFocus.ts, verseAudioCache.ts, quranAudioTimeline.ts | Expo audio, plage, réciteur, répétition | préférences / fichiers | QuranAudioService AVFoundation | 2 audio de base, suivi du verset et répétitions chaque verset/passage intégrés |
 | Enregistrement voix | RecitationRecorder.tsx, RecitationsScreen.tsx, services/recitations.ts | microphone, fichiers privés, partage | recitations, storage | recorder AVFoundation | Base intégrée : capture, réécoute, stockage local et sync ; partage/corrections à migrer |
-| Programme / connaissance / objectif | core/program.ts, ui/GoalScreen.tsx, ui/MainScreens.tsx | schema1, knowledge, scheduledDate/completedAt | user_state.data | LearningProgramService | 3 consultation, accès aux passages et validation partielle/complète des séances existantes intégrés ; génération/édition des objectifs à migrer |
-| Révision cycle / quantité | core/review.ts, ReviewDashboard.tsx | 7/14/21/30, Nisf/Hizb/Juz/2Juz, corpus connu | reviewCycle, reviewHistory dans data | RevisionProgramService | 3 à faire |
+| Programme / connaissance / objectif | core/program.ts, ui/GoalScreen.tsx, ui/MainScreens.tsx | schema1, knowledge, scheduledDate/completedAt | user_state.data | LearningProgramService | 3 consultation, édition/génération, accès aux passages et validation partielle/complète intégrés |
+| Révision cycle / quantité | core/review.ts, ReviewDashboard.tsx | 7/14/21/30, Nisf/Hizb/Juz/2Juz, corpus connu | reviewCycle, reviewHistory dans data | RevisionSchedule / RevisionValidation / ReviewQueueProjection | 3 cycles/quantités, révisions habituelles/récentes/prioritaires et historique intégrés |
 | Consolidation | core/review.ts, core/studyProgress.ts | J+1/J+3/J+7, dates et validations séparées | reviewConsolidations, consolidationHistory dans data | ConsolidationService | 3 consultation, ouverture et validation J+1/J+3/J+7 intégrées avec file locale et historique compatible |
-| Difficile | core/review.ts, lecteur actuel | marque utilisateur/admin persistante | difficultyMarkers/history dans data | QuranProgressService | 3 à faire |
+| Difficile | core/review.ts, lecteur actuel | marque utilisateur/admin persistante | difficultyMarkers/history dans data | DifficultyChange / QuranMarginOverlay | 3 intégré : marqueurs personnels/admin, retrait personnel et persistance |
 | Semaine / statistiques | core/weeklyProgress.ts, program.stats | calendrier local, dédoublonnage | sessions/studyProgress/histoires | HomeProjection / WeeklyProgressService | 1 affichage en lecture, 3 moteur complet |
 | Amis / profils / demandes | SocialScreens.tsx, services/social.ts, avatars.ts | RLS, profils, liens et presence | friend_profiles, friend_links et RPC | FriendsService | 4 à faire ; nom lu sur accueil |
 | Messagerie / groupes | SocialScreens.tsx, services/social.ts | Realtime, inbox, messages, read receipts | friend_messages, groups/members et RPC | messaging repository | 4 à faire |
@@ -37,7 +37,7 @@ Le stockage SQLite (`storage.ts`) conserve app_state, account_state et pending_s
 | Notifications | services/notifications.ts, AdminNotifications.tsx | Expo push / rappels locaux | push_devices, prefs, triggers | NotificationService UserNotifications + APNs | 4 à préparer, aucun token natif envoyé au moteur Expo |
 | Administration | AdminAccounts, AdminDailyContents, AdminRecitations, SocialScreens | private.is_app_admin / RPC | migrations admin-* | admin natif | 4/5 à faire |
 | Signalements | ui/ProblemReport.tsx, ui/AdminProblemReports.tsx, services/problemReports.ts | capture privée, outbox UUID | app_problem_reports, storage privé | problem report sheet | 4/5 à faire ; carte future présente |
-| Bookmarks / reprises / traduction | BookmarksScreen.tsx, core/bookmarks.ts, data/translation-fr-rashid.json | local et merge stable | user_state.data | reader repository | 2/3 à faire |
+| Bookmarks / reprises / traduction | BookmarksScreen.tsx, core/bookmarks.ts, data/translation-fr-rashid.json | local et merge stable | user_state.data | reader repository | 2/3 intégré : repères en marge, difficulté persistante et progression partielle |
 | Sync offline complète | services/offlineSync.ts, core/offlineQueue.ts, offlineMerge.ts | snapshots bases, merge, ack, retry | user_state et RPC quiz | OfflineSyncService + queue locale | 5 à faire ; aucune mutation métier en phase1 |
 
 ## Contrat et limites phase 1
@@ -52,7 +52,7 @@ Le stockage SQLite (`storage.ts`) conserve app_state, account_state et pending_s
 
 ## Phases et arrêt
 
-Phase1 : dépôt indépendant, auth/session/cache/thème/navigation/accueil et tests. **Arrêt obligatoire après rapport.** Phase2 autorisée par l’utilisateur : lecteur/cache/audio intégrés, validation Xcode réussie (19 tests). Phase3 : moteurs programme/révision/consolidation. Phase4 : social/quiz/notifications. Phase5 : offline complet, sync et instrumentation appareil.
+Phase1 : dépôt indépendant, auth/session/cache/thème/navigation/accueil et tests. Phase1 terminée ; poursuite des phases suivantes autorisée par l’utilisateur. Phase2 autorisée par l’utilisateur : lecteur/cache/audio intégrés, validation Xcode réussie (19 tests). Phase3 : moteurs programme/révision/consolidation. Phase4 : social/quiz/notifications. Phase5 : offline complet, sync et instrumentation appareil.
 
 ## Sources SDK
 
@@ -84,3 +84,10 @@ La création et la rotation natives des cycles de révision sont disponibles. R�
 Le verset récité est maintenant teinté dans un calque UIKit attaché aux coordonnées originales des deux Mushaf. Les programmes restent indiqués seulement dans la marge. Le suivi audio ouvre automatiquement la page du verset si reader.followAudio est actif. La vérification de ce correctif a réussi : 75 tests unitaires + 13 tests d’interface, archive non signée, captures vérifiées (verset suivant et réglages hors ligne) : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37223089109.
 
 Un complément ajoute les répétitions de chaque verset ou du passage entier, les plages (verset/page/séance/sourate/personnalisée), vitesse, pauses et nombre d’écoutes. Voir [NATIVE_REVISION_SCHEDULE_AUDIO_REPORT.md](Docs/NATIVE_REVISION_SCHEDULE_AUDIO_REPORT.md) pour le fonctionnement et les limites. Répétitions vérifiées : 81 tests unitaires et 13 parcours UI réussis dans la série complète, puis le quatorzième test UI réussi après correction de son ciblage XCTest. Archive Release et IPA non signée : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37225677500. Aucun code produit changé entre ces deux vérifications.
+
+## File des révisions récentes/prioritaires — 4 octobre 2026
+La file commune récente/prioritaire/habituelle est maintenant intégrée, avec reprise partielle et dédoublonnage. Les nouvelles catégories utilisent le lecteur, l’audio, les repères en marge, la validation et la file de synchronisation existants. Les consolidations des anciens comptes sont récupérées à partir des véritables révisions historiques, sans validation fictive. Ces ajouts remplacent les anciennes mentions « files prioritaires/récentes à migrer ». Voir [NATIVE_REVIEW_QUEUE_REPORT.md](Docs/NATIVE_REVIEW_QUEUE_REPORT.md).
+
+La génération d’archive/IPA est désormais optionnelle et désactivée pour les vérifications ordinaires. Elle sera réservée aux jalons où un essai sur appareil nécessite une livraison.
+
+Vérification de cette étape : 91 tests unitaires et 15 parcours UI réussis dans la série complète, puis le dernier parcours audio réussi après correction du geste XCTest. Total : 107 tests distincts vérifiés. Captures contrôlées. Aucun changement du code produit entre les deux vérifications. Rejeu Xcode sans archive/IPA : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37232810658.
