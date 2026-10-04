@@ -25,9 +25,9 @@ Le stockage SQLite (`storage.ts`) conserve app_state, account_state et pending_s
 | Annotations marge | core/marginAnnotations.ts, ui/QuranSessionHeader.tsx | overlay indépendant, Mushaf intact | studyProgress | session header / overlay natif | 2/3 à faire |
 | Audio verset/répétitions | PassageAudioPlayer.tsx, services/audioFocus.ts, verseAudioCache.ts, quranAudioTimeline.ts | Expo audio, plage, réciteur, répétition | préférences / fichiers | QuranAudioService AVFoundation | 2 audio de base intégré ; répétitions avancées à migrer |
 | Enregistrement voix | RecitationRecorder.tsx, RecitationsScreen.tsx, services/recitations.ts | microphone, fichiers privés, partage | recitations, storage | recorder AVFoundation | Base intégrée : capture, réécoute, stockage local et sync ; partage/corrections à migrer |
-| Programme / connaissance / objectif | core/program.ts, ui/GoalScreen.tsx, ui/MainScreens.tsx | schema1, knowledge, scheduledDate/completedAt | user_state.data | LearningProgramService | 3 à faire ; phase1 seulement projection lecture |
+| Programme / connaissance / objectif | core/program.ts, ui/GoalScreen.tsx, ui/MainScreens.tsx | schema1, knowledge, scheduledDate/completedAt | user_state.data | LearningProgramService | 3 consultation du programme et accès aux passages intégrés ; génération/validation à migrer |
 | Révision cycle / quantité | core/review.ts, ReviewDashboard.tsx | 7/14/21/30, Nisf/Hizb/Juz/2Juz, corpus connu | reviewCycle, reviewHistory dans data | RevisionProgramService | 3 à faire |
-| Consolidation | core/review.ts, core/studyProgress.ts | J+1/J+3/J+7, dates et validations séparées | reviewConsolidations, consolidationHistory dans data | ConsolidationService | 3 à faire |
+| Consolidation | core/review.ts, core/studyProgress.ts | J+1/J+3/J+7, dates et validations séparées | reviewConsolidations, consolidationHistory dans data | ConsolidationService | 3 consultation J+1/J+3/J+7 et ouverture du lecteur intégrées ; validation à migrer |
 | Difficile | core/review.ts, lecteur actuel | marque utilisateur/admin persistante | difficultyMarkers/history dans data | QuranProgressService | 3 à faire |
 | Semaine / statistiques | core/weeklyProgress.ts, program.stats | calendrier local, dédoublonnage | sessions/studyProgress/histoires | HomeProjection / WeeklyProgressService | 1 affichage en lecture, 3 moteur complet |
 | Amis / profils / demandes | SocialScreens.tsx, services/social.ts, avatars.ts | RLS, profils, liens et presence | friend_profiles, friend_links et RPC | FriendsService | 4 à faire ; nom lu sur accueil |
@@ -46,7 +46,7 @@ Le stockage SQLite (`storage.ts`) conserve app_state, account_state et pending_s
 - JSON conservé entier en cache. Aucun défaut Swift ne remplace les données serveur et aucune mutation de progression n’est envoyée.
 - HomeProjection calcule les informations d’affichage (semaine / activité / reprise), ne crée ni ne valide de séances. La carte Révision lit le cycle déjà enregistré : le calcul complet récent/prioritaire/habituel attend la phase 3, donc elle peut rester à jour alors qu’un nouveau cycle doit être généré.
 - La semaine suit actuellement le comportement RN : lundi 00:00 local. L’exigence historique évoque 00:01 ; vérifier cette minute de transition lors de la phase3, sans modifier RN ni effacer l’historique.
-- Le lecteur classique est intégré. Les routes quiz/programme/amis restent des espaces réservés pour les fonctionnalités non migrées.
+- Le lecteur classique et l’écran Programme en consultation sont intégrés. Les routes quiz/objectif/amis restent des espaces réservés pour les fonctionnalités non migrées.
 - Les anciens ZIP test ont été retirés de la version actuelle et remplacés par1441. La nouvelle demande les mentionne à nouveau ; confirmer les versions à exposer en phase2 avant d’intégrer des ressources supplémentaires.
 - Analyse des tables, fonctions, triggers et policies dans [Docs/SUPABASE_ANALYSIS.md](Docs/SUPABASE_ANALYSIS.md), inventaire détaillé [Docs/backend-inventory.json](Docs/backend-inventory.json). Les catalogues de production et configurations Auth/Storage/Edge Functions privées restent à vérifier avec accès propriétaire.
 

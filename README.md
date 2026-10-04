@@ -41,3 +41,5 @@ Le lecteur classique natif est maintenant intégré : Coran de Médine, Coran 14
 Voir [SWIFT_MIGRATION.md](SWIFT_MIGRATION.md), [analyse Supabase](Docs/SUPABASE_ANALYSIS.md) et [rapport phase 1](Docs/PHASE_ONE_REPORT.md).
 
 L’index natif est accessible dans **Plus → Sourates, Juz’ et Hizb**. [Rapport et état de validation](Docs/NATIVE_INDEX_REPORT.md).
+
+Programme affiche désormais les séances locales, les consolidations et une fenêtre À venir jusqu’à J+10, avec accès direct aux passages dans le lecteur. La validation et la génération native des séances restent à migrer. [Rapport Programme](Docs/NATIVE_PROGRAM_REPORT.md).
