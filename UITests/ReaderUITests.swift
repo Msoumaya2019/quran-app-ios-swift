@@ -195,7 +195,10 @@ final class ReaderUITests: XCTestCase {
         let open = app.buttons["quran.audio.repeat.open"]
         XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
         let count = app.buttons["quran.audio.repeat.count"]
-        XCTAssertTrue(count.waitForExistence(timeout: 5)); count.tap(); app.buttons["3 fois"].tap()
+        XCTAssertTrue(count.waitForExistence(timeout: 5))
+        let increment = app.buttons["Increment"]
+        XCTAssertTrue(increment.isHittable); increment.tap(); increment.tap()
+        XCTAssertTrue(count.label.contains("3 fois"))
         attach(app, name: "Audio natif — réglages des répétitions")
         let start = app.buttons["quran.audio.repeat.start"]
         for _ in 0..<4 where !start.isHittable { app.swipeUp() }

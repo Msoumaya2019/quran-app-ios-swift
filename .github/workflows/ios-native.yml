@@ -3,6 +3,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      test_filter:
+        description: 'Optional XCTest identifier to rerun a specific failed test; empty runs all tests'
+        required: false
+        default: ''
+        type: string
 permissions:
   contents: read
 jobs:
@@ -53,9 +59,18 @@ jobs:
           print(phone['name'])
           PY
       - name: Build and run XCTest / UI tests
+        env:
+          TEST_FILTER: ${{ inputs.test_filter }}
         run: |
           set -o pipefail
-          xcodebuild test -project CoranNative.xcodeproj -scheme CoranNative -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -derivedDataPath DerivedData -resultBundlePath artifacts/PhaseOne.xcresult CODE_SIGNING_ALLOWED=NO | tee xcode-tests.log
+          test_options=()
+          if [ -n "$TEST_FILTER" ]; then
+            case "$TEST_FILTER" in
+              CoranNativeTests/*|CoranNativeUITests/*) test_options+=("-only-testing:$TEST_FILTER") ;;
+              *) echo 'Invalid XCTest identifier'; exit 1 ;;
+            esac
+          fi
+          xcodebuild test "${test_options[@]}" -project CoranNative.xcodeproj -scheme CoranNative -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -derivedDataPath DerivedData -resultBundlePath artifacts/PhaseOne.xcresult CODE_SIGNING_ALLOWED=NO | tee xcode-tests.log
       - name: Archive unsigned iPhone application
         run: |
           set -o pipefail
