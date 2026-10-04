@@ -10,10 +10,12 @@ import Supabase
     @Published private(set) var adminQuestions: [JSONValue] = []
     @Published private(set) var adminSets: [JSONValue] = []
     private let client: SupabaseClient?
+    private let dailyRemote: DailyQuizRemote?
     private let directory: URL
     private var generation = UUID()
-    init(client: SupabaseClient?, directory: URL? = nil) {
+    init(client: SupabaseClient?, directory: URL? = nil, dailyRemote: DailyQuizRemote? = nil) {
         self.client = client
+        self.dailyRemote = dailyRemote ?? client.map { QuizRepository(client: $0) }
         self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("CoranNative/Quiz")
     }
     private func file(_ owner: UUID) -> URL { directory.appendingPathComponent(owner.uuidString.lowercased() + ".json") }
@@ -34,8 +36,6 @@ import Supabase
         do { try next.answer(question, answerID: answerID, day: LocalCalendar.key(.now)); try save(next); message = nil }
         catch { message = "La réponse n’a pas pu être enregistrée." }
     }
-    private struct DayArgs: Encodable { let p_day: String }
-    private struct AnswerArgs: Encodable { let p_question: String; let p_answer: String; let p_day: String; let p_answered_at: String }
     private struct ChallengeArgs: Encodable { let p_opponent: String; let p_count: Int; let p_set: String? }
     private struct ChallengeAnswerArgs: Encodable { let p_challenge: String; let p_question: String; let p_answer: String }
     func checkAdmin() async {
@@ -107,22 +107,21 @@ import Supabase
         } catch { if token == generation { message = "Réponse non confirmée. Reconnecte-toi pour vérifier le défi avant de continuer." } }
     }
     func refresh() async {
-        guard !loading, let initial = cache, let client else { return }
+        guard !loading, let initial = cache, let remote = dailyRemote else { return }
         let token = generation; loading = true
         defer { if token == generation { loading = false } }
         do {
-            guard try await client.auth.session.user.id == initial.owner else { throw URLError(.userAuthenticationRequired) }
             guard token == generation else { return }
             while let pending = cache?.pending.first {
-                guard let questionID = pending.question["id"].string, UUID(uuidString: questionID) != nil else { throw URLError(.badServerResponse) }
-                try await client.rpc("quiz_answer_daily", params: AnswerArgs(p_question: questionID, p_answer: pending.answerID, p_day: pending.day, p_answered_at: pending.answeredAt)).execute()
+                try await remote.answer(owner: initial.owner, value: pending)
+                guard token == generation else { return }
                 // Keep the durable operation until the authoritative snapshot confirms it.
-                let data: JSONValue = try await client.rpc("quiz_snapshot", params: DayArgs(p_day: LocalCalendar.key(.now))).execute().value
+                let data = try await remote.snapshot(owner: initial.owner, day: LocalCalendar.key(.now))
                 guard token == generation, var next = cache else { return }
                 guard data["responses"].array.contains(where: { $0["day"].string == pending.day }) else { throw URLError(.badServerResponse) }
                 next.data = data; next.pending.removeAll { $0.day == pending.day }; try save(next)
             }
-            let data: JSONValue = try await client.rpc("quiz_snapshot", params: DayArgs(p_day: LocalCalendar.key(.now))).execute().value
+            let data = try await remote.snapshot(owner: initial.owner, day: LocalCalendar.key(.now))
             guard token == generation, var next = cache else { return }
             next.data = data; try save(next); message = nil
         } catch {

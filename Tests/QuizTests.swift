@@ -44,4 +44,35 @@ final class QuizTests: XCTestCase {
         value["status"] = .string("completed")
         XCTAssertEqual(QuizChallengeProjection(value: .object(value), owner: owner).score(user: owner.uuidString), 1)
     }
+    @MainActor func testLostServerConfirmationRetriesOnceWithoutLosingLocalAnswer() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let owner = UUID(), day = LocalCalendar.key(.now), q = question(day: LocalCalendar.key(.now))
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(QuizCache(owner: owner, data: .object(["day": .string(day), "daily": q]))).write(to: directory.appendingPathComponent(owner.uuidString.lowercased() + ".json"))
+        let remote = FakeDailyQuizRemote(question: q)
+        let library = QuizLibrary(client: nil, directory: directory, dailyRemote: remote)
+        library.select(owner); library.answer(q, answerID: "a"); await library.refresh()
+        XCTAssertEqual(library.cache?.pending.count, 1)
+        let reopened = QuizLibrary(client: nil, directory: directory, dailyRemote: remote)
+        reopened.select(owner); await reopened.refresh(); await reopened.refresh()
+        XCTAssertEqual(reopened.cache?.pending.count, 0); XCTAssertEqual(remote.inserts, 1)
+        XCTAssertEqual(reopened.cache?.response(day: day)?["isCorrect"].bool, true)
+        reopened.select(UUID()); XCTAssertEqual(reopened.cache?.data, .null)
+        reopened.select(owner); XCTAssertEqual(reopened.cache?.response(day: day)?["selectedAnswerId"].string, "a")
+    }
+}
+
+@MainActor private final class FakeDailyQuizRemote: DailyQuizRemote {
+    let question: JSONValue
+    var saved: QuizPendingAnswer?
+    var inserts = 0
+    init(question: JSONValue) { self.question = question }
+    func answer(owner: UUID, value: QuizPendingAnswer) async throws {
+        if saved == nil { saved = value; inserts += 1; throw URLError(.networkConnectionLost) }
+    }
+    func snapshot(owner: UUID, day: String) async throws -> JSONValue {
+        let responses: [JSONValue] = saved.map { [.object(["day": .string($0.day), "selectedAnswerId": .string($0.answerID), "isCorrect": .bool(true), "question": question.setting("correctAnswerId", .string("a"))])] } ?? []
+        return .object(["day": .string(day), "daily": question, "responses": .array(responses)])
+    }
 }
