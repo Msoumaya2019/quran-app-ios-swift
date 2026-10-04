@@ -36,15 +36,9 @@ struct FriendsView: View {
                 ForEach(items) { item in
                     AppCard {
                         VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 12) {
-                                Text(String(item.name.prefix(1))).font(.headline).foregroundStyle(theme.accent).frame(width: 44, height: 44).background(theme.accent.opacity(0.08), in: Circle())
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(item.name).font(theme.title(.headline)).foregroundStyle(theme.text)
-                                    Text(item.status == "pending" ? (item.incoming ? "Demande reçue" : "En attente de sa réponse") : item.online && !network.isOffline ? "En ligne" : "Ami").font(.caption).foregroundStyle(theme.muted)
-                                }
-                                Spacer()
-                                if item.online && !network.isOffline { Circle().fill(theme.review).frame(width: 8, height: 8).accessibilityLabel("En ligne") }
-                            }
+                            if item.status == "accepted" {
+                                NavigationLink { FriendDetailView(item: item) } label: { identity(item) }.buttonStyle(.plain)
+                            } else { identity(item) }
                             if item.incoming && item.status == "pending" {
                                 HStack {
                                     Button("Accepter") { respond(item, accept: true) }.buttonStyle(PrimaryButtonStyle())
@@ -75,5 +69,17 @@ struct FriendsView: View {
     }
     private func respond(_ item: FriendItem, accept: Bool) {
         sending = true; Task { _ = await library.respond(item, accept: accept); sending = false }
+    }
+    private func identity(_ item: FriendItem) -> some View {
+        HStack(spacing: 12) {
+            Text(String(item.name.prefix(1))).font(.headline).foregroundStyle(theme.accent).frame(width: 44, height: 44).background(theme.accent.opacity(0.08), in: Circle())
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.name).font(theme.title(.headline)).foregroundStyle(theme.text)
+                Text(item.status == "pending" ? (item.incoming ? "Demande reçue" : "En attente de sa réponse") : item.online && !network.isOffline ? "En ligne" : "Ami").font(.caption).foregroundStyle(theme.muted)
+            }
+            Spacer()
+            if item.online && !network.isOffline { Circle().fill(theme.review).frame(width: 8, height: 8).accessibilityLabel("En ligne") }
+            if item.status == "accepted" { Image(systemName: "chevron.right").font(.caption).foregroundStyle(theme.muted) }
+        }.contentShape(Rectangle()).frame(minHeight: 44)
     }
 }

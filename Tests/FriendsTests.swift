@@ -2,6 +2,24 @@ import XCTest
 @testable import CoranNative
 
 final class FriendsTests: XCTestCase {
+    func testOverviewRequiresAcceptedRelationAndExplicitSharing() throws {
+        var snapshot = try fixture()
+        snapshot.overviews = ["two": .object(["weekly_verses": .number(28)])]
+        XCTAssertEqual(snapshot.overview(for: "two"), .null)
+        snapshot.profiles = .array([.object(["id": .string("two"), "share_progress": .bool(true)])])
+        XCTAssertEqual(snapshot.overview(for: "two")["weekly_verses"].int, 28)
+        snapshot.links = .array([])
+        XCTAssertEqual(snapshot.overview(for: "two"), .null)
+    }
+    func testOlderCacheWithoutOverviewRemainsReadable() throws {
+        let snapshot = try fixture()
+        let data = try JSONEncoder().encode(snapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "overviews")
+        let decoded = try JSONDecoder().decode(FriendsSnapshot.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(decoded.items().map(\.id), ["a"])
+        XCTAssertNil(decoded.overviews)
+    }
     private let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     private func fixture() throws -> FriendsSnapshot {
         let links = try JSONDecoder().decode(JSONValue.self, from: Data(#"[{"id":"a","requester_id":"00000000-0000-0000-0000-000000000001","recipient_id":"two","status":"accepted"},{"id":"b","requester_id":"three","recipient_id":"00000000-0000-0000-0000-000000000001","status":"pending"},{"id":"c","requester_id":"four","recipient_id":"00000000-0000-0000-0000-000000000001","status":"blocked"},{"id":"foreign","requester_id":"foreign","recipient_id":"two","status":"accepted"}]"#.utf8))

@@ -14,6 +14,13 @@ struct FriendsSnapshot: Codable, Equatable {
     var links: JSONValue = .array([])
     var profiles: JSONValue = .array([])
     var inbox: JSONValue = .array([])
+    var overviews: [String: JSONValue]? = nil
+    func overview(for id: String) -> JSONValue {
+        guard items().contains(where: { $0.otherID == id.lowercased() }),
+              let profile = profiles.array.first(where: { $0["id"].string?.lowercased() == id.lowercased() }),
+              profile["share_progress"].bool == true else { return .null }
+        return overviews?[id.lowercased()] ?? .null
+    }
     func items(search: String = "", filter: String = "all") -> [FriendItem] {
         let user = owner.uuidString.lowercased()
         let byID = Dictionary(profiles.array.compactMap { row -> (String, JSONValue)? in

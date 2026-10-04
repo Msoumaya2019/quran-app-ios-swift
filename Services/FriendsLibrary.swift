@@ -34,11 +34,15 @@ import Supabase
                 guard requester == user || recipient == user else { return nil }
                 return requester == user ? recipient : requester
             })
-            if !ids.isEmpty { next.profiles = try await client.from("friend_profiles").select("id,display_name,avatar_path,share_online").in("id", values: Array(ids)).execute().value }
+            if !ids.isEmpty { next.profiles = try await client.from("friend_profiles").select("id,display_name,avatar_path,share_online,share_progress").in("id", values: Array(ids)).execute().value }
             else { next.profiles = .array([]) }
             // Presence is optional on older backends. Never reuse stale online indicators.
             next.inbox = (try? await inbox) ?? .array([])
             guard token == generation else { return }
+            let accepted = Set(next.items().map(\.otherID))
+            next.overviews = snapshot?.overviews?.filter { entry in
+                accepted.contains(entry.key) && next.profiles.array.contains { row in row["id"].string?.lowercased() == entry.key && row["share_progress"].bool == true }
+            }
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try JSONEncoder().encode(next).write(to: file(next.owner), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
             snapshot = next; message = nil
@@ -49,6 +53,23 @@ import Supabase
     }
     struct CodeArgs: Encodable { let p_code: String }
     struct LinkArgs: Encodable { let p_link: String }
+    struct OtherArgs: Encodable { let p_other: String }
+    func refreshOverview(_ id: String) async -> String? {
+        guard let client, snapshot?.items().contains(where: { $0.otherID == id }) == true else { return "Profil non disponible en ligne." }
+        let token = generation
+        do {
+            let rows: JSONValue = try await client.rpc("friend_overview", params: OtherArgs(p_other: id)).execute().value
+            guard token == generation, var next = snapshot, next.items().contains(where: { $0.otherID == id }) else { return nil }
+            guard let row = rows.array.first, row["id"].string?.lowercased() == id else { throw URLError(.cannotParseResponse) }
+            var values = next.overviews ?? [:]; values[id] = row; next.overviews = values
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try JSONEncoder().encode(next).write(to: file(next.owner), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            snapshot = next; return nil
+        } catch {
+            guard token == generation else { return nil }
+            return "Actualisation indisponible. Les informations déjà synchronisées restent affichées."
+        }
+    }
     func request(code: String) async -> Bool {
         let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }

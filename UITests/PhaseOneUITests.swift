@@ -1,6 +1,16 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testCachedFriendProfileShowsSharedProgress() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-friends"]; app.launch()
+        app.tabBars.buttons["Amis"].tap()
+        let friend = app.staticTexts["Yassine"]
+        XCTAssertTrue(friend.waitForExistence(timeout: 10)); friend.tap()
+        XCTAssertTrue(app.staticTexts["28 versets · 5 séances"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Coran mémorisé : 33 %"].exists)
+        XCTAssertTrue(app.staticTexts["Finir le Hizb 42"].exists)
+        attach(app, name: "Profil ami natif — progression partagée en cache")
+    }
     func testFriendsScreenOpensOfflineAndRequestRequiresCode() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
         app.tabBars.buttons["Amis"].tap()

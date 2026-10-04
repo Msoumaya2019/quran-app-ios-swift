@@ -19,7 +19,17 @@ import SwiftUI
                 _store = StateObject(wrappedValue: AppStore(auth: PreviewAuth(), remote: PreviewRemote(), cache: PreviewCache()))
             }
             _recitations = StateObject(wrappedValue: RecitationLibrary(storage: RecitationStorage(directory: FileManager.default.temporaryDirectory.appendingPathComponent("PreviewRecitations-\(UUID().uuidString)")), remote: RecitationRepository(client: nil)))
-            _friends = StateObject(wrappedValue: FriendsLibrary(client: nil))
+            let friendsDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("PreviewFriends-\(UUID().uuidString)")
+            if ProcessInfo.processInfo.arguments.contains("--ui-test-friends") {
+                let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, other = "00000000-0000-0000-0000-000000000002"
+                let friend = FriendsSnapshot(owner: owner,
+                    links: .array([.object(["id": .string("preview-friend"), "requester_id": .string(owner.uuidString), "recipient_id": .string(other), "status": .string("accepted")])]),
+                    profiles: .array([.object(["id": .string(other), "display_name": .string("Yassine"), "share_progress": .bool(true)])]),
+                    overviews: [other: .object(["id": .string(other), "weekly_verses": .number(28), "weekly_sessions": .number(5), "quran_percent": .number(33), "goal_label": .string("Finir le Hizb 42"), "goal_percent": .number(58)])])
+                try? FileManager.default.createDirectory(at: friendsDirectory, withIntermediateDirectories: true)
+                if let data = try? JSONEncoder().encode(friend) { try? data.write(to: friendsDirectory.appendingPathComponent(owner.uuidString.lowercased() + ".json")) }
+            }
+            _friends = StateObject(wrappedValue: FriendsLibrary(client: nil, directory: friendsDirectory))
             return
         }
         #endif
@@ -31,7 +41,7 @@ import SwiftUI
         WindowGroup {
             RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends)
                 .onOpenURL { url in Task { await store.receive(url) } }
-                .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize() } } }
+                .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in Task { await recitations.select(user); await recitations.synchronize() } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in friends.select(user) }
         }
