@@ -7,6 +7,8 @@ struct QuranSessionContext: Identifiable, Hashable, Sendable {
     let scheduledDate: String
     var consolidationDay: Int? = nil
     var learnedAt: String? = nil
+    var revisionCycleIndex: Int? = nil
+    var revisionCycleStart: String? = nil
     var title: String {
         switch mode {
         case .classic: return "Lecture"
@@ -50,7 +52,42 @@ struct ProgramProjection {
         return learning.filter { $0.scheduledDate >= today && $0.scheduledDate <= end }
     }
     var revision: QuranSessionContext? {
-        home.revision.map { QuranSessionContext(id: "revision-\(today)-\($0.start)-\($0.end)", mode: .revision, range: $0, scheduledDate: today) }
+        let state = snapshot.state, cycle = state["reviewCycle"]
+        guard state["reviewSettings"]["enabled"].bool != false, let index = cycle["index"].int,
+              let startDate = cycle["startDate"].string else { return nil }
+        // A native task is scoped to its cycle: identical ranges in later cycles remain playable.
+        let prefix = "native-revision-\(index)-\(startDate)-"
+        if let entry = state["studyProgress"].object.sorted(by: { $0.key < $1.key }).first(where: {
+            let row = $0.value
+            guard row["mode"].string == "revision", row["status"].string == "partial", (row["id"].string ?? "").hasPrefix(prefix),
+                  let range = VerseRange(json: row), let through = row["through"].int, through >= range.start - 1, through < range.end else { return false }
+            let corpus = Set(cycle["corpus"].array.compactMap(\.int))
+            return ((through + 1)...range.end).allSatisfy { corpus.contains($0) && ["perfect", "review"].contains(state["knowledge"][String($0)].string ?? "") }
+        }), let range = VerseRange(json: entry.value) {
+            return QuranSessionContext(id: entry.value["id"].string ?? "", mode: .revision, range: range,
+                scheduledDate: entry.value["scheduledDate"].string ?? today, revisionCycleIndex: index, revisionCycleStart: startDate)
+        }
+        guard let assigned = cycle["assignments"][today].int, assigned >= 0,
+              cycle["days"].array.indices.contains(assigned),
+              let due = Self.addingDays(assigned, to: startDate, timeZone: timeZone) else { return nil }
+        var reviewed = Set<Int>()
+        for event in state["reviewHistory"].array where event["date"].string == today {
+            if let range = VerseRange(json: event) { reviewed.formUnion(range.start...range.end) }
+        }
+        let completed = Set(cycle["completed"].array.compactMap(\.int))
+        let ids = cycle["days"].array[assigned].array.compactMap(\.int).filter {
+            (1...6236).contains($0) && !completed.contains($0) && !reviewed.contains($0) && ["perfect", "review"].contains(state["knowledge"][String($0)].string ?? "")
+        }.sorted()
+        guard let first = ids.first else { return nil }
+        let catalog = QuranCatalog()
+        var end = first
+        for id in ids.dropFirst() {
+            guard id == end + 1, catalog.surah(for: first)?.number == catalog.surah(for: id)?.number else { break }
+            end = id
+        }
+        guard let range = VerseRange(json: .object(["start": .number(Double(first)), "end": .number(Double(end))])) else { return nil }
+        return QuranSessionContext(id: "\(prefix)\(first)-\(end)", mode: .revision, range: range, scheduledDate: due,
+            revisionCycleIndex: index, revisionCycleStart: startDate)
     }
     var consolidations: [QuranSessionContext] {
         let state = snapshot.state

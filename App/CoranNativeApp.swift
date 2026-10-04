@@ -49,6 +49,14 @@ private struct PreviewCache: HomeCache {
             let task: JSONValue = .object(["id": .string("preview-learning"), "start": .number(1), "end": .number(7), "status": .string("todo"), "scheduledDate": .string(LocalCalendar.key(.now))])
             var value = snapshot; value.state = snapshot.state.setting("sessions", .array([task])); return value
         }
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-revision") {
+            let ids: [JSONValue] = (1...7).map { .number(Double($0)) }
+            let today = LocalCalendar.key(.now)
+            var value = snapshot
+            value.state = snapshot.state.setting("knowledge", .object(Dictionary(uniqueKeysWithValues: (1...7).map { (String($0), JSONValue.string("perfect")) })))
+                .setting("reviewCycle", .object(["index": .number(1), "startDate": .string(today), "lengthDays": .number(7), "corpus": .array(ids), "days": .array([.array(ids)]), "completed": .array([]), "assignments": .object([today: .number(0)])]))
+            return value
+        }
         return snapshot
     }
     func save(_ snapshot: HomeSnapshot, userID: UUID) throws {}

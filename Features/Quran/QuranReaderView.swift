@@ -24,6 +24,7 @@ struct QuranReaderView: View {
     @State private var page = 1
     @State private var immersive = false
     @State private var options = false
+    @State private var optionsDetent = PresentationDetent.medium
     @State private var loading = false
     @State private var error: String?
     @State private var initialized = false
@@ -39,7 +40,7 @@ struct QuranReaderView: View {
     private func record(_ kind: ReaderOperation.Kind) { store.readerChange(ReaderOperation(kind: kind, verseID: verseID, page: page, source: source.id)) }
     var body: some View {
         VStack(spacing: 0) {
-            if let session { QuranSessionHeader(context: session, source: source, catalog: store.catalog, completedCount: session.mode == .learning ? LearningValidation.completedCount(context: session, state: store.snapshot.state) : nil) }
+            if let session { QuranSessionHeader(context: session, source: source, catalog: store.catalog, completedCount: session.mode == .learning ? LearningValidation.completedCount(context: session, state: store.snapshot.state) : session.mode == .revision ? RevisionValidation.completedCount(context: session, state: store.snapshot.state) : nil) }
             if loading { HStack { ProgressView(); Text("Chargement du Coran…").font(.caption) }.padding(8) }
             QuranPager(source: source, page: $page, onTap: { withAnimation(.easeInOut(duration: 0.18)) { immersive.toggle() } })
                 .accessibilityIdentifier("quran.viewport")
@@ -65,8 +66,9 @@ struct QuranReaderView: View {
             guard !initialized else { return }; initialized = true
             if let reciter = store.snapshot.state["audioPreferences"]["reciterId"].string,
                QuranAudioService.Reciter.available.contains(where: { $0.id == reciter }) { audio.changeReciter(reciter) }
-            if let session, session.mode == .learning {
-                let pending = session.range.start + LearningValidation.completedCount(context: session, state: store.snapshot.state)
+            if let session, session.mode == .learning || session.mode == .revision {
+                let count = session.mode == .learning ? LearningValidation.completedCount(context: session, state: store.snapshot.state) : RevisionValidation.completedCount(context: session, state: store.snapshot.state)
+                let pending = session.range.start + count
                 if pending <= session.range.end { page = QuranSourceMapping.page(source: source, verseID: pending, catalog: store.catalog) }
             }
             record(.reading)
@@ -81,7 +83,16 @@ struct QuranReaderView: View {
                         Section("Apprentissage") {
                             NavigationLink("J’ai appris jusqu’ici") {
                                 LearningValidationView(context: session, source: source, firstPending: session.range.start + LearningValidation.completedCount(context: session, state: store.snapshot.state))
+                                    .onAppear { optionsDetent = .large }
                             }.accessibilityIdentifier("learning.open")
+                        }
+                    }
+                    if let session, session.mode == .revision {
+                        Section("Révision") {
+                            NavigationLink("Valider ma révision") {
+                                RevisionValidationView(context: session, source: source, firstPending: session.range.start + RevisionValidation.completedCount(context: session, state: store.snapshot.state))
+                                    .onAppear { optionsDetent = .large }
+                            }.accessibilityIdentifier("revision.open")
                         }
                     }
                     if let session, session.mode == .consolidation {
@@ -140,7 +151,7 @@ struct QuranReaderView: View {
             }
             Button("Annuler", role: .cancel) { }
         } message: { Text("La date prévue reste inchangée. Cette validation est conservée sur l’appareil et synchronisée lorsque la connexion est disponible.") }
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.medium, .large], selection: $optionsDetent)
         }
         .sheet(isPresented: $recording) {
             if let user = store.identity?.id {

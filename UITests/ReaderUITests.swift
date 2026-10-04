@@ -30,6 +30,27 @@ final class ReaderUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["1 / 7 versets validés"].exists)
         attach(app, name: "Apprentissage natif — validation partielle hors ligne")
     }
+    func testRevisionCanBePartiallyValidatedOffline() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-revision"]
+        app.launch(); app.tabBars.buttons["Programme"].tap()
+        let task = app.buttons["program.task.native-revision-1-\(dayKey())-1-7"].firstMatch
+        guard task.waitForExistence(timeout: 10) else { XCTFail("Revision task unavailable: \(app.debugDescription)"); return }
+        task.tap(); app.buttons["quran.action.Plus"].tap()
+        let open = app.buttons["revision.open"]
+        guard open.waitForExistence(timeout: 10) else { XCTFail("Revision validation unavailable"); return }
+        open.tap()
+        let validate = app.buttons["revision.validate"]
+        if !validate.isHittable { app.swipeUp() }
+        validate.tap(); app.buttons["J’ai révisé jusqu’ici"].tap()
+        XCTAssertTrue(app.staticTexts["revision.result"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["1 / 7 versets validés"].exists)
+        attach(app, name: "Révision native — validation partielle hors ligne")
+    }
+    private func dayKey() -> String {
+        let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: .now)
+    }
     func testNativeIndexSearchAndDivisionNavigation() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures"]
