@@ -37,6 +37,7 @@ struct RootView: View {
                                 else { PhasePlaceholder(title: item.rawValue) }
                             }
                             .toolbar {
+                                if item != .quran {
                                 ToolbarItem(placement: .topBarLeading) {
                                     HStack(spacing: 7) { Image(systemName: "book.closed").foregroundStyle(theme.gold); Text("Apprendre le Coran").font(theme.title(.headline)).foregroundStyle(theme.accent) }
                                 }
@@ -45,6 +46,7 @@ struct RootView: View {
                                         Button { settings = true } label: { Text(String(HomeProjection(snapshot: store.snapshot).name.prefix(1))).font(.headline).frame(width: 32, height: 32).background(theme.accent, in: Circle()).foregroundStyle(.white) }.frame(width: 44, height: 44).accessibilityLabel("Mon compte")
                                         Button { settings = true } label: { Image(systemName: "gearshape").frame(width: 44, height: 44) }.accessibilityLabel("Réglages").accessibilityIdentifier("settings.open")
                                     }
+                                }
                                 }
                             }
                             .toolbarBackground(theme.surface, for: .navigationBar)
