@@ -68,6 +68,7 @@ struct QuranReaderView: View {
         .sheet(isPresented: $options) {
             NavigationStack {
                 Form {
+                    Section("Navigation") { NavigationLink("Sourates, Juz’ et Hizb") { QuranIndexView(source: source) { target in page = source.validPage(target); options = false } }.accessibilityIdentifier("quran.index.open") }
                     Section("Ma voix") { NavigationLink("Mes récitations") { RecitationsView().onAppear { audio.pause() } }.accessibilityIdentifier("recitations.open") }
                     Section("Affichage du Coran") {
                         if loading { HStack { ProgressView(); Text("Téléchargement et préparation du Coran…").font(.caption) } }

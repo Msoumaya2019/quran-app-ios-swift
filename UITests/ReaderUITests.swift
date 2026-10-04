@@ -1,6 +1,28 @@
 import XCTest
 
 final class ReaderUITests: XCTestCase {
+    func testNativeIndexSearchAndDivisionNavigation() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures"]
+        app.launch(); app.tabBars.buttons["Coran"].tap()
+        app.buttons["quran.action.Plus"].tap()
+        XCTAssertTrue(app.buttons["quran.index.open"].waitForExistence(timeout: 5))
+        app.buttons["quran.index.open"].tap()
+        XCTAssertTrue(app.buttons["quran.index.surah.1"].waitForExistence(timeout: 5))
+        attach(app, name: "Index natif — sourates")
+        app.segmentedControls.buttons["Juz’"].tap()
+        XCTAssertTrue(app.buttons["quran.index.juz.1"].exists)
+        app.segmentedControls.buttons["Hizb"].tap()
+        XCTAssertTrue(app.buttons["quran.index.hizb.1"].exists)
+        app.segmentedControls.buttons["Liste"].tap()
+        let search = app.searchFields.firstMatch
+        search.tap(); search.typeText("Fatiha")
+        XCTAssertTrue(app.buttons["quran.index.surah.1"].exists)
+        XCTAssertFalse(app.buttons["quran.index.surah.2"].exists)
+        app.buttons["quran.index.surah.1"].tap()
+        XCTAssertTrue(app.images["quran.page.1"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["quran.action.Plus"].exists)
+    }
     func testRecordingCanBeSavedAndFoundOffline() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-recording"]

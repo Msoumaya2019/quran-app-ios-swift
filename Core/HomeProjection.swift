@@ -7,9 +7,19 @@ struct Surah: Codable, Sendable {
     let start: Int
     let end: Int
     let count: Int
+    let meaning: String
+    let isMeccan: Bool
 }
 struct QuranMetadata: Codable {
     let surahs: [Surah]
+    let juzs: [QuranDivision]
+    let quarters: [QuranDivision]
+}
+struct QuranDivision: Codable, Identifiable, Sendable {
+    let number: Int
+    let start: Int
+    let end: Int
+    var id: Int { number }
 }
 struct QuranPage: Codable {
     let page: Int
@@ -18,11 +28,20 @@ struct QuranPage: Codable {
 }
 struct QuranCatalog: Sendable {
     let surahs: [Surah]
+    let juzs: [QuranDivision]
+    let hizbs: [QuranDivision]
     let pageStarts: [(Int, Int)]
     init(bundle: Bundle = .main) {
         let meta = bundle.url(forResource: "quran-meta", withExtension: "json")
-        let surahs = meta.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode(QuranMetadata.self, from: $0) }?.surahs ?? []
+        let metadata = meta.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode(QuranMetadata.self, from: $0) }
+        let surahs = metadata?.surahs ?? []
         self.surahs = surahs
+        juzs = metadata?.juzs ?? []
+        let quarters = metadata?.quarters ?? []
+        hizbs = stride(from: 0, to: quarters.count, by: 4).compactMap { offset in
+            guard offset + 3 < quarters.count else { return nil }
+            return QuranDivision(number: offset / 4 + 1, start: quarters[offset].start, end: quarters[offset + 3].end)
+        }
         let pages = bundle.url(forResource: "quran-pages", withExtension: "json").flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode([QuranPage].self, from: $0) } ?? []
         pageStarts = pages.compactMap { p in
             guard p.first.count == 2, let s = surahs.first(where: { $0.number == p.first[0] }) else { return nil }
