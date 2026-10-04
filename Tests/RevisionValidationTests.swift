@@ -78,4 +78,14 @@ final class RevisionValidationTests: XCTestCase {
         XCTAssertEqual(next["reviewHistory"].array.count, 1)
         XCTAssertEqual(op.applying(to: next, catalog: QuranCatalog()), next)
     }
+    func testExistingReactNativePartialCanResumeSameTaskAndOriginalDate() throws {
+        let original = try state()
+        let record: JSONValue = .object(["id": .string("habitual-1-3"), "mode": .string("revision"), "category": .string("habitual"), "start": .number(1), "end": .number(3), "through": .number(1), "status": .string("partial"), "updatedAt": .string("2026-10-05T12:00:00Z")])
+        let shared = original.setting("studyProgress", .object(["revision:habitual-1-3": record]))
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-06T12:00:00Z"))
+        let resumed = try XCTUnwrap(ProgramProjection(snapshot: HomeSnapshot(state: shared), now: now).revision)
+        XCTAssertEqual(resumed.id, "habitual-1-3")
+        XCTAssertEqual(resumed.scheduledDate, "2026-10-05")
+        XCTAssertEqual(RevisionValidation.completedCount(context: resumed, state: shared), 1)
+    }
 }

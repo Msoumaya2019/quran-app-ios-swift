@@ -59,13 +59,20 @@ struct ProgramProjection {
         let prefix = "native-revision-\(index)-\(startDate)-"
         if let entry = state["studyProgress"].object.sorted(by: { $0.key < $1.key }).first(where: {
             let row = $0.value
-            guard row["mode"].string == "revision", row["status"].string == "partial", (row["id"].string ?? "").hasPrefix(prefix),
+            guard row["mode"].string == "revision", row["status"].string == "partial",
                   let range = VerseRange(json: row), let through = row["through"].int, through >= range.start - 1, through < range.end else { return false }
+            let id = row["id"].string ?? ""
+            let belongs = id.hasPrefix(prefix) || (!id.hasPrefix("native-revision-") && (row["category"].string ?? "habitual") == "habitual"
+                && String((row["updatedAt"].string ?? "").prefix(10)) >= startDate
+                && cycle["days"].array.contains { Set($0.array.compactMap(\.int)).isSuperset(of: Set(range.start...range.end)) })
+            guard belongs else { return false }
             let corpus = Set(cycle["corpus"].array.compactMap(\.int))
             return ((through + 1)...range.end).allSatisfy { corpus.contains($0) && ["perfect", "review"].contains(state["knowledge"][String($0)].string ?? "") }
         }), let range = VerseRange(json: entry.value) {
+            let originalDay = cycle["days"].array.firstIndex { Set($0.array.compactMap(\.int)).isSuperset(of: Set(range.start...range.end)) }
+            let planned = entry.value["scheduledDate"].string ?? originalDay.flatMap { Self.addingDays($0, to: startDate, timeZone: timeZone) } ?? today
             return QuranSessionContext(id: entry.value["id"].string ?? "", mode: .revision, range: range,
-                scheduledDate: entry.value["scheduledDate"].string ?? today, revisionCycleIndex: index, revisionCycleStart: startDate)
+                scheduledDate: planned, revisionCycleIndex: index, revisionCycleStart: startDate)
         }
         guard let assigned = cycle["assignments"][today].int, assigned >= 0,
               cycle["days"].array.indices.contains(assigned),
