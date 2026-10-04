@@ -24,7 +24,7 @@ Les changements sont enregistrés atomiquement dans le cache du compte avec une 
 
 ## Audio
 
-AVFoundation : lecture, pause, précédent, suivant, enchaînement verset par verset et choix Husary / Alafasy / Minshawi / Ash-Shatri. Les URL et identifiants de versets correspondent aux sources existantes. Les MP3 téléchargés sont conservés dans le cache natif et peuvent être réécoutés hors connexion. Le mini-player observe son service audio séparément : il ne pilote pas le rendu des images. Répétitions avancées, sélection d’une plage, surlignage audio et enregistrement vocal restent à migrer.
+AVFoundation : lecture, pause, précédent, suivant, enchaînement verset par verset et choix Husary / Alafasy / Minshawi / Ash-Shatri. Les URL et identifiants de versets correspondent aux sources existantes. Les MP3 téléchargés sont conservés dans le cache natif et peuvent être réécoutés hors connexion. Le mini-player observe son service audio séparément : il ne pilote pas le rendu des images. Répétitions avancées, sélection d’une plage, surlignage audio restent à migrer. L’enregistrement vocal de base est intégré ; voir [rapport dédié](NATIVE_RECORDING_REPORT.md).
 
 ## Vérification
 
