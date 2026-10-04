@@ -18,6 +18,8 @@ Contrôle local des JSON : 114 sourates, 30 Juz’, 60 Hizb et couverture contin
 
 Deux tests unitaires ajoutés : continuité des divisions et mapping des deux sources. Un parcours UI ajouté : ouverture de l’index, segments Juz’/Hizb, recherche Fatiha, retour au lecteur.
 
-**Ces nouveaux tests et la compilation Swift ne sont pas encore validés.** Le [run GitHub 37196706091](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37196706091) a été refusé avant démarrage du runner : GitHub signale un paiement récent échoué ou un plafond de dépenses à augmenter dans Billing & plans. Ce run n’a exécuté aucune étape Xcode et ne produit pas d’IPA. Les 36 tests réussis précédemment concernent la version précédente, avant l’ajout de cet index.
+Validation complète réussie sur [GitHub Actions 37197302297](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37197302297) : **33 tests unitaires + 6 tests UI, zéro échec**, sur simulateur iPhone 17 Pro Max. Compilation, archive Release non signée et export des captures réussis. Le parcours de recherche Fatiha et les sélecteurs Juz’/Hizb passent, ainsi que les régressions audio, récitations hors ligne et vingt pages des deux sources.
 
-Après résolution du blocage, relancer ce workflow et inspecter la capture Index natif — sourates. Le lecteur reste accessible directement depuis l’onglet Coran ; cette étape ajoute son index au menu existant.
+Le premier run avait été refusé avant démarrage pour un problème de paiement/plafond GitHub. Sur autorisation explicite de l’utilisateur, le dépôt Swift est passé en public après contrôle de l’historique pour les formats de clés privées et configurations confidentielles. Le passage en public a débloqué l’exécution du workflow. Le dépôt React Native n’a pas changé de visibilité et reste intact.
+
+Le lecteur reste accessible directement depuis l’onglet Coran ; cette étape ajoute son index au menu existant. Les mesures sur iPhone physique et la signature Apple restent séparées des tests simulateur.
