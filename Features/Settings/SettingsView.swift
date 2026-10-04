@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var store: AppStore
     @EnvironmentObject var theme: ThemeManager
+    @EnvironmentObject var quiz: QuizLibrary
     @Environment(\.dismiss) var dismiss
     @State private var error: String?
     @State private var signingOut = false
@@ -34,9 +35,10 @@ struct SettingsView: View {
                     Text("Lecteur natif • SwiftUI et UIKit • iOS 17 et versions ultérieures")
                     Text("Coran de Médine, Coran 1441, apprentissage et révisions sont disponibles. Les amis et le quiz seront migrés progressivement.").font(.caption).foregroundStyle(theme.muted)
                 }
+                if quiz.isAdmin { Section("Administration") { NavigationLink("Quiz · Questions et thèmes") { QuizAdminView() } } }
                 if let error { Text(error).foregroundStyle(.red) }
                 Section { Button("Se déconnecter", role: .destructive) { Task { signingOut = true; defer { signingOut = false }; do { try await store.signOut(); dismiss() } catch { self.error = error.localizedDescription } } }.disabled(signingOut) }
             }.navigationTitle("Réglages").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() }.frame(minHeight: 44) } }
-        }.presentationDragIndicator(.visible)
+        }.presentationDragIndicator(.visible).task { await quiz.checkAdmin() }
     }
 }

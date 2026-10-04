@@ -6,6 +6,9 @@ import Supabase
     @Published private(set) var loading = false
     @Published private(set) var message: String?
     @Published private(set) var actionBusy = false
+    @Published private(set) var isAdmin = false
+    @Published private(set) var adminQuestions: [JSONValue] = []
+    @Published private(set) var adminSets: [JSONValue] = []
     private let client: SupabaseClient?
     private let directory: URL
     private var generation = UUID()
@@ -22,6 +25,7 @@ import Supabase
     func select(_ owner: UUID?) {
         guard cache?.owner != owner else { return }
         generation = UUID(); loading = false; actionBusy = false; message = nil
+        isAdmin = false; adminQuestions = []; adminSets = []
         cache = owner.map { QuizCache(owner: $0) }
         if let owner, let bytes = try? Data(contentsOf: file(owner)), let stored = try? JSONDecoder().decode(QuizCache.self, from: bytes), stored.owner == owner { cache = stored }
     }
@@ -34,6 +38,52 @@ import Supabase
     private struct AnswerArgs: Encodable { let p_question: String; let p_answer: String; let p_day: String; let p_answered_at: String }
     private struct ChallengeArgs: Encodable { let p_opponent: String; let p_count: Int; let p_set: String? }
     private struct ChallengeAnswerArgs: Encodable { let p_challenge: String; let p_question: String; let p_answer: String }
+    func checkAdmin() async {
+        guard let owner = cache?.owner, let client else { return }
+        let token = generation
+        do {
+            guard try await client.auth.session.user.id == owner else { return }
+            struct Row: Decodable { let user_id: UUID }
+            let rows: [Row] = try await client.from("app_admins").select("user_id").eq("user_id", value: owner.uuidString).limit(1).execute().value
+            guard token == generation else { return }; isAdmin = rows.contains { $0.user_id == owner }
+        } catch { if token == generation { isAdmin = false } }
+    }
+    func refreshAdmin() async {
+        guard isAdmin, let client, let owner = cache?.owner else { return }
+        let token = generation
+        do {
+            guard try await client.auth.session.user.id == owner, token == generation else { return }
+            async let questions: JSONValue = client.rpc("quiz_admin_list").execute().value
+            async let sets: JSONValue = client.rpc("quiz_admin_sets").execute().value
+            let result = try await (questions, sets)
+            guard token == generation else { return }
+            adminQuestions = result.0.array; adminSets = result.1.array; message = nil
+        } catch { if token == generation { message = "Administration indisponible. Vérifie la connexion et les droits de ton compte." } }
+    }
+    private struct QuestionArgs: Encodable { let p_question: JSONValue }
+    private struct SetArgs: Encodable { let p_set: JSONValue }
+    private struct DeleteArgs: Encodable { let p_id: String }
+    func adminSave(_ value: JSONValue, isSet: Bool = false) async -> Bool {
+        guard !actionBusy, isAdmin, let client, let owner = cache?.owner else { return false }
+        let token = generation; actionBusy = true
+        defer { if token == generation { actionBusy = false } }
+        do {
+            guard try await client.auth.session.user.id == owner, token == generation else { return false }
+            if isSet { let _: UUID = try await client.rpc("quiz_admin_save_set", params: SetArgs(p_set: value)).execute().value }
+            else { let _: UUID = try await client.rpc("quiz_admin_save", params: QuestionArgs(p_question: value)).execute().value }
+            guard token == generation else { return false }; await refreshAdmin(); return true
+        } catch { if token == generation { message = "Enregistrement refusé. Vérifie les champs obligatoires, la date et la connexion." }; return false }
+    }
+    func adminDelete(_ id: String, isSet: Bool) async {
+        guard !actionBusy, isAdmin, let client, let owner = cache?.owner else { return }
+        let token = generation; actionBusy = true
+        defer { if token == generation { actionBusy = false } }
+        do {
+            guard try await client.auth.session.user.id == owner, token == generation else { return }
+            try await client.rpc(isSet ? "quiz_admin_delete_set" : "quiz_admin_delete", params: DeleteArgs(p_id: id)).execute()
+            guard token == generation else { return }; await refreshAdmin()
+        } catch { if token == generation { message = "La suppression n’a pas été confirmée." } }
+    }
     func createChallenge(friend: String, count: Int, set: String?) async {
         guard !actionBusy, let owner = cache?.owner, let client, UUID(uuidString: friend) != nil, [5, 10].contains(count) else { message = "Connexion nécessaire pour lancer ce défi."; return }
         let token = generation; actionBusy = true
