@@ -87,9 +87,8 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
     private weak var contentGesture: UIGestureRecognizer?
     private weak var previousContentDelegate: UIGestureRecognizerDelegate?
     private var previousContentEnabled = true
-    private lazy var readerBackGesture: UIScreenEdgePanGestureRecognizer = {
-        let gesture = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleReaderBack(_:)))
-        gesture.edges = .left
+    private lazy var readerBackGesture: UIPanGestureRecognizer = {
+        let gesture = UIPanGestureRecognizer(target: self, action: #selector(handleReaderBack(_:)))
         gesture.delegate = self
         return gesture
     }()
@@ -127,7 +126,7 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         print("[ReaderNavigation] native stack \(navigation.viewControllers.count), edge enabled \(edge.isEnabled)")
         (viewControllers?.first as? PageController)?.debugNavigation("stack \(navigation.viewControllers.count), edge \(edge.isEnabled)")
     }
-    @objc private func handleReaderBack(_ gesture: UIScreenEdgePanGestureRecognizer) {
+    @objc private func handleReaderBack(_ gesture: UIPanGestureRecognizer) {
         guard gesture.state == .ended, let navigationOwner else { return }
         let distance = gesture.translation(in: view).x
         let speed = gesture.velocity(in: view).x
@@ -140,7 +139,11 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
     }
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         guard let navigationOwner, navigationOwner.viewControllers.count > 1 else { return false }
-        if gestureRecognizer === readerBackGesture { return true }
+        if gestureRecognizer === readerBackGesture {
+            let translation = readerBackGesture.translation(in: view)
+            let start = readerBackGesture.location(in: view).x - translation.x
+            return start <= 24 && translation.x > abs(translation.y)
+        }
         guard !navigationOwner.isNavigationBarHidden else { return false }
         let location = gestureRecognizer.location(in: navigationOwner.view)
         let translation = (gestureRecognizer as? UIPanGestureRecognizer)?.translation(in: navigationOwner.view) ?? .zero
