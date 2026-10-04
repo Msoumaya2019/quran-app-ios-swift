@@ -1,6 +1,6 @@
 # Coran natif — SwiftUI
 
-Deuxième application iPhone indépendante de [coran-memoire](https://github.com/Msoumaya2019/coran-memoire). Phase 1 et lecteur classique natif (phase 2). Aucun React Native, Expo, WebView ni dépendance JavaScript.
+Deuxième application iPhone indépendante de [coran-memoire](https://github.com/Msoumaya2019/coran-memoire). Authentification, lecteur natif, audio et répétitions, apprentissage/révision/consolidation intégrés ; migration sociale en cours. Aucun React Native, Expo, WebView ni dépendance JavaScript.
 
 ## Ouvrir et lancer
 
@@ -14,7 +14,7 @@ Le projet est déjà généré et partage un schéma Xcode. Si les fichiers sour
 
 ## Tests sur GitHub
 
-Le workflow `ios-native.yml` exécute XCTest et UI Tests sur un Mac GitHub avec simulateur iPhone, puis archive une IPA non signée. Il utilise le secret de dépôt `SUPABASE_PUBLIC_KEY` (configuration publique de client, jamais service role). Les artefacts contiennent les rapports `.xcresult`, captures UI et logs. L’IPA non signée n’est pas directement installable sur un iPhone standard.
+Le workflow `ios-native.yml` exécute XCTest et UI Tests sur un Mac GitHub avec simulateur iPhone. L’archive et l’IPA sont désactivées par défaut ; le lancement manuel avec `build_ipa=true` les génère lorsqu’un essai sur appareil est demandé. Il utilise le secret de dépôt `SUPABASE_PUBLIC_KEY` (configuration publique de client, jamais service role). Les artefacts contiennent les rapports `.xcresult`, captures UI et logs. L’IPA non signée doit être signée avant installation sur iPhone.
 
 Les tests d’interface utilisent un compte fictif **local au simulateur**, uniquement dans DEBUG. Ils n’envoient aucun faux utilisateur ou programme à Supabase. Une connexion réelle au compte existant reste à valider sur simulateur/appareil par son propriétaire.
 
@@ -22,7 +22,7 @@ Les tests d’interface utilisent un compte fictif **local au simulateur**, uniq
 
 Bundle ID distinct : `com.coranmemoire.native.ios`. Nom installé : **Coran natif**. Schéma de lien distinct : `corannative://auth`. Keychain distinct et tokens protégés `AfterFirstUnlockThisDeviceOnly`. La déconnexion est limitée à la session Swift et ne révoque pas la session React Native.
 
-Aucune migration Supabase. Le lecteur synchronise uniquement reprise, pages lues, source et marque-pages dans le JSON existant, avec contrôle de concurrence. Les champs non migrés sont préservés ; aucun programme n’est reconstruit. Les préférences d’apparence sont locales à la version Swift.
+Aucune migration Supabase. Le lecteur et les moteurs du programme synchronisent les mutations ciblées dans le JSON existant, avec contrôle de concurrence, dates prévues conservées et historique préservé. Les champs non migrés sont conservés. Les préférences d’apparence sont locales à la version Swift. Amis réutilise les tables et fonctions sociales existantes. Voir [SWIFT_MIGRATION.md](SWIFT_MIGRATION.md) et les rapports dans Docs pour les fonctionnalités vérifiées et les limites restantes.
 
 ## iOS minimum
 
