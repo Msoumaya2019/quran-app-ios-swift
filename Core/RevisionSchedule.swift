@@ -78,6 +78,7 @@ struct RevisionScheduleChange: Codable, Sendable {
                 if result["reviewModelStartedAt"] == .null { result = result.setting("reviewModelStartedAt", .string(day)) }
             }
         }
+        if settings.enabled { result = ConsolidationRecovery.applying(to: result) }
         return result == state ? state : result.setting("updatedAt", .string(max(state["updatedAt"].string ?? "", at)))
     }
 }
