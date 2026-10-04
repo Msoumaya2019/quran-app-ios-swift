@@ -29,4 +29,19 @@ final class QuizTests: XCTestCase {
         cache.data = .object(["responses": .array([.object(["day": .string("2026-10-05"), "selectedAnswerId": .string("c"), "isCorrect": .bool(false)])])])
         XCTAssertEqual(cache.response(day: "2026-10-05")?["selectedAnswerId"].string, "c")
     }
+    func testChallengeDoesNotExposeScoreUntilBothPlayersFinishAndExpiryHasNoWinner() {
+        let owner = UUID(), other = UUID(), questionID = UUID().uuidString
+        let question: JSONValue = .object(["id": .string(questionID)])
+        let answers: JSONValue = .array([.object(["userId": .string(owner.uuidString), "questionId": .string(questionID), "isCorrect": .bool(true)])])
+        let base: [String: JSONValue] = ["creatorId": .string(owner.uuidString), "opponentId": .string(other.uuidString), "opponentName": .string("Ami"), "questions": .array([question]), "answers": answers, "expiresAt": .string("2099-01-01T00:00:00Z")]
+        var value = base; value["status"] = .string("pending")
+        let pending = QuizChallengeProjection(value: .object(value), owner: owner)
+        XCTAssertNil(pending.score(user: owner.uuidString)); XCTAssertNil(pending.next)
+        XCTAssertEqual(pending.status, "En attente de l’ami")
+        value["status"] = .string("expired")
+        let expired = QuizChallengeProjection(value: .object(value), owner: owner)
+        XCTAssertTrue(expired.expired); XCTAssertNil(expired.score(user: owner.uuidString))
+        value["status"] = .string("completed")
+        XCTAssertEqual(QuizChallengeProjection(value: .object(value), owner: owner).score(user: owner.uuidString), 1)
+    }
 }

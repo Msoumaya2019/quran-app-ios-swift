@@ -17,6 +17,12 @@ struct QuizView: View {
                         Text(quiz.cache?.response(day: today) != nil ? "✓ Terminée aujourd’hui" : quiz.cache?.data["day"].string == today && quiz.cache?.data["daily"] != .null ? "Disponible aujourd’hui" : "À actualiser").font(.caption).foregroundStyle(theme.review)
                     }.frame(maxWidth: .infinity, alignment: .leading) }
                 }.buttonStyle(.plain).accessibilityIdentifier("quiz.daily")
+                NavigationLink { QuizChallengesView() } label: {
+                    AppCard { VStack(alignment: .leading, spacing: 8) {
+                        Label("Défis entre amis", systemImage: "person.2.fill").font(theme.title())
+                        Text("Affronte tes amis sur 5 ou 10 questions").font(.subheadline)
+                    }.foregroundStyle(theme.accent).frame(maxWidth: .infinity, alignment: .leading) }
+                }.buttonStyle(.plain)
                 NavigationLink("Historique") { QuizHistoryView() }.buttonStyle(PrimaryButtonStyle())
                 if let message = quiz.message { Text(message).font(.caption).foregroundStyle(theme.muted) }
             }.padding(18)

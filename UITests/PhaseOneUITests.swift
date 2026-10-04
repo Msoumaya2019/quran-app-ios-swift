@@ -111,4 +111,17 @@ final class PhaseOneUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Aucune question du jour disponible. Connecte-toi pour actualiser le Quiz."].exists)
         attach(app, name: "Question du jour sans réseau")
     }
+    func testCachedDailyQuizLocksOfflineAnswerAfterReopening() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-quiz"]; app.launch()
+        XCTAssertTrue(app.buttons["home.Quiz"].waitForExistence(timeout: 10)); app.buttons["home.Quiz"].tap()
+        app.buttons["quiz.daily"].tap()
+        XCTAssertTrue(app.buttons["quiz.answer.A"].waitForExistence(timeout: 5))
+        app.buttons["quiz.answer.A"].tap()
+        XCTAssertFalse(app.buttons["quiz.answer.B"].isEnabled)
+        XCTAssertTrue(app.staticTexts["Réponse enregistrée — correction après synchronisation"].exists)
+        attach(app, name: "Question du jour — réponse conservée sans réseau")
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["quiz.daily"].tap()
+        XCTAssertFalse(app.buttons["quiz.answer.C"].isEnabled)
+    }
 }

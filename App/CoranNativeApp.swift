@@ -31,6 +31,14 @@ import SwiftUI
                 if let data = try? JSONEncoder().encode(friend) { try? data.write(to: friendsDirectory.appendingPathComponent(owner.uuidString.lowercased() + ".json")) }
             }
             _friends = StateObject(wrappedValue: FriendsLibrary(client: nil, directory: friendsDirectory))
+            if ProcessInfo.processInfo.arguments.contains("--ui-test-quiz") {
+                let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, day = LocalCalendar.key(.now)
+                let question: JSONValue = .object(["id": .string("00000000-0000-0000-0000-000000000004"), "category": .string("Test technique"), "question": .string("Question de test de l’interface"), "publicationDate": .string(day), "answers": .array(["A", "B", "C"].map { .object(["id": .string($0), "text": .string("Choix " + $0)]) })])
+                let cached = QuizCache(owner: owner, data: .object(["day": .string(day), "daily": question, "responses": .array([])]))
+                let directory = friendsDirectory.appendingPathComponent("Quiz")
+                try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                if let bytes = try? JSONEncoder().encode(cached) { try? bytes.write(to: directory.appendingPathComponent(owner.uuidString.lowercased() + ".json")) }
+            }
             _quiz = StateObject(wrappedValue: QuizLibrary(client: nil, directory: friendsDirectory.appendingPathComponent("Quiz")))
             return
         }
