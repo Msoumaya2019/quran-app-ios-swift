@@ -55,10 +55,13 @@ struct QuranReaderView: View {
             QuranPager(source: source, page: $page, onTap: { withAnimation(.easeInOut(duration: 0.18)) { immersive.toggle() } }, annotations: pageAnnotations)
                 .accessibilityIdentifier("quran.viewport")
             if !immersive {
-                if showAudio { QuranMiniPlayer(audio: audio, catalog: store.catalog, close: { showAudio = false }) }
+                if showAudio { QuranMiniPlayer(audio: audio, catalog: store.catalog, close: { showAudio = false }, pageRange: verseID...max(verseID, page < source.pageCount ? QuranSourceMapping.firstVerse(source: source, page: page + 1, catalog: store.catalog) - 1 : 6236), sessionRange: session.map { $0.range.start...$0.range.end }, saveRepeat: { settings in
+                    var operation = ReaderOperation(kind: .audioRepeat, verseID: audio.verseID, page: page, source: source.id)
+                    operation.audioRepeat = settings; store.readerChange(operation)
+                }) }
                 HStack(spacing: 0) {
                     action("Accueil", "house.fill") { if let onHome { onHome() } else { dismiss() } }
-                    action("Écouter", "play.fill") { showAudio = true; audio.toggle(start: verseID) }
+                    action("Écouter", "play.fill") { showAudio = true; audio.toggle(start: audio.timeline.duration > 0 ? audio.verseID : verseID) }
                     action("Enregistrer", "mic.fill") { audio.pause(); recording = true }
                     action("Marque-page", bookmarked ? "bookmark.fill" : "bookmark") { record(bookmarked ? .removeBookmark : .bookmark) }
                     action("Plus", "ellipsis") { jumpPage = page; options = true }
@@ -74,6 +77,7 @@ struct QuranReaderView: View {
         .statusBarHidden(immersive)
         .onAppear {
             guard !initialized else { return }; initialized = true
+            audio.configure(AudioRepeatSettings.load(store.snapshot.state))
             if let reciter = store.snapshot.state["audioPreferences"]["reciterId"].string,
                QuranAudioService.Reciter.available.contains(where: { $0.id == reciter }) { audio.changeReciter(reciter) }
             if let session, session.mode == .learning || session.mode == .revision {

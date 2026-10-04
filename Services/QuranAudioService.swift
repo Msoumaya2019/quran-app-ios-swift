@@ -11,6 +11,12 @@ import Foundation
     @Published private(set) var playing = false
     @Published private(set) var loading = false
     @Published private(set) var error: String?
+    @Published private(set) var repeatSettings = AudioRepeatSettings()
+    @Published private(set) var repetition = 1
+    private(set) var playbackRange = 1...6236
+    private var transition: Task<Void, Never>?
+    private var pendingRepeat: AudioRepeatSettings.Position?
+    private var pendingDelay: Double = 0
     let timeline = QuranAudioTimeline()
     private let cache: QuranAudioCache
     private var player: AVPlayer?
@@ -30,21 +36,34 @@ import Foundation
         #endif
         self.cache = cache ?? .shared
     }
-    func pause() { request += 1; player?.pause(); playing = false; loading = false; prefetch?.cancel() }
+    func pause() { request += 1; player?.pause(); playing = false; loading = false; prefetch?.cancel(); transition?.cancel(); transition = nil }
     func toggle(start: Int) {
         if playing || loading { pause() }
+        else if pendingRepeat != nil, verseID == start {
+            playing = true; scheduleTransition(token: request)
+        }
         else if let player, verseID == start, player.currentItem?.status != .failed {
             if let item = player.currentItem { observeEnd(item, token: request) }
             if timeline.duration > 0 && timeline.elapsed >= timeline.duration - 0.1 { seek(to: 0) }
-            player.play(); playing = true
+            player.playImmediately(atRate: Float(repeatSettings.speed)); playing = true
         }
         else { play(start) }
     }
-    func play(_ id: Int) {
+    func configure(_ settings: AudioRepeatSettings) {
+        guard settings.valid else { return }
+        repeatSettings = settings
+        if playing && transition == nil { player?.rate = Float(settings.speed) }
+    }
+    func start(range: ClosedRange<Int>, settings: AudioRepeatSettings) {
+        guard range.lowerBound >= 1, range.upperBound <= 6236, settings.valid else { return }
+        playbackRange = range; configure(settings); play(range.lowerBound)
+    }
+    func play(_ id: Int) { load(id, repetition: 1) }
+    private func load(_ id: Int, repetition nextRepetition: Int) {
         guard (1...6236).contains(id) else { return }
         request += 1; let token = request
-        releasePlayer(); prefetch?.cancel()
-        playing = false; loading = true; verseID = id; error = nil
+        releasePlayer(); prefetch?.cancel(); transition?.cancel(); transition = nil; pendingRepeat = nil
+        playing = false; loading = true; verseID = id; repetition = nextRepetition; error = nil
         timeline.update(elapsed: 0, duration: 0)
         let reciter = Reciter.available.first { $0.id == reciterID } ?? Reciter.available[0]
         Task {
@@ -58,7 +77,7 @@ import Foundation
                 player = nextPlayer
                 observeProgress(nextPlayer, item: item)
                 observeEnd(item, token: token)
-                player?.play(); loading = false; playing = true
+                player?.playImmediately(atRate: Float(repeatSettings.speed)); loading = false; playing = true
                 if id < 6236 {
                     let cache = cache
                     prefetch = Task { _ = try? await cache.file(reciterID: reciter.id, verseID: id + 1) }
@@ -102,18 +121,39 @@ import Foundation
         ended = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, self.request == token, self.playing, self.player?.currentItem === item else { return }
-                if self.verseID < 6236 { self.play(self.verseID + 1) } else { self.pause() }
+                guard let next = self.repeatSettings.next(range: self.playbackRange, current: .init(verse: self.verseID, repetition: self.repetition)) else { self.pause(); return }
+                let isRepeat = self.repeatSettings.mode == .eachVerse ? next.verse == self.verseID : next.repetition > self.repetition
+                let delay = isRepeat ? Double(self.repeatSettings.gap) : 0.2
+                self.pendingRepeat = next; self.pendingDelay = delay
+                self.scheduleTransition(token: token)
             }
+        }
+    }
+    private func scheduleTransition(token: Int) {
+        guard let next = pendingRepeat else { return }
+        let delay = pendingDelay
+        transition = Task { @MainActor [weak self] in
+            do { try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) } catch { return }
+            guard let self, self.request == token, self.playing else { return }
+            self.transition = nil
+            if next.verse == self.verseID, let player = self.player {
+                await player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
+                guard self.request == token, self.playing else { return }
+                self.pendingRepeat = nil; self.repetition = next.repetition
+                self.timeline.update(elapsed: 0, duration: self.timeline.duration)
+                if let item = player.currentItem { self.observeEnd(item, token: token) }
+                player.playImmediately(atRate: Float(self.repeatSettings.speed))
+            } else { self.pendingRepeat = nil; self.load(next.verse, repetition: next.repetition) }
         }
     }
     func changeReciter(_ id: String) {
         guard Reciter.available.contains(where: { $0.id == id }), id != reciterID else { return }
         let resume = playing
-        pause(); releasePlayer(); timeline.update(elapsed: 0, duration: 0); reciterID = id
+        pause(); pendingRepeat = nil; releasePlayer(); timeline.update(elapsed: 0, duration: 0); reciterID = id
         if resume { play(verseID) }
     }
     deinit {
-        prefetch?.cancel()
+        prefetch?.cancel(); transition?.cancel()
         if let timeObserver { player?.removeTimeObserver(timeObserver) }
         if let ended { NotificationCenter.default.removeObserver(ended) }
     }

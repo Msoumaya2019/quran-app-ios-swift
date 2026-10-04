@@ -186,6 +186,29 @@ final class ReaderUITests: XCTestCase {
         XCTAssertEqual(image.frame.height, original.height, accuracy: 1)
         XCTAssertTrue(app.buttons["quran.action.Plus"].exists)
     }
+    func testNativeAudioRepeatControlsKeepCurrentAyahHighlighted() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-audio"]
+        app.launch(); app.tabBars.buttons["Coran"].tap()
+        XCTAssertTrue(app.images["quran.page.1"].waitForExistence(timeout: 10))
+        app.buttons["quran.action.Écouter"].tap()
+        let open = app.buttons["quran.audio.repeat.open"]
+        XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
+        let count = app.buttons["quran.audio.repeat.count"]
+        XCTAssertTrue(count.waitForExistence(timeout: 5)); count.tap(); app.buttons["3 fois"].tap()
+        attach(app, name: "Audio natif — réglages des répétitions")
+        let start = app.buttons["quran.audio.repeat.start"]
+        for _ in 0..<4 where !start.isHittable { app.swipeUp() }
+        start.tap()
+        let slider = app.sliders["quran.audio.timeline"]
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: slider)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 20), .completed)
+        slider.adjust(toNormalizedSliderPosition: 1)
+        let repeated = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "2 / 3"), object: app.staticTexts["quran.audio.repeat.progress"])
+        XCTAssertEqual(XCTWaiter.wait(for: [repeated], timeout: 12), .completed)
+        XCTAssertEqual(app.otherElements["quran.audio.highlight"].value as? String, "1")
+        attach(app, name: "Audio natif — deuxième écoute du même verset")
+    }
     func testTwentyPagesBothSourcesOfflineFixtures() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures"]
