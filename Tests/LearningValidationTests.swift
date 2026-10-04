@@ -47,6 +47,19 @@ final class LearningValidationTests: XCTestCase {
         XCTAssertEqual(completed["reviewConsolidations"]["4"]["scheduledDates"]["7"].string, "2026-10-13")
         XCTAssertEqual(first.applying(to: completed, catalog: catalog), completed)
         XCTAssertEqual(restored.applying(to: completed, catalog: catalog), completed)
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-06T12:00:00Z"))
+        let home = HomeProjection(snapshot: HomeSnapshot(state: completed), now: now, timeZone: TimeZone(identifier: "Europe/Paris")!)
+        XCTAssertEqual(home.weeklyVerseCounts, [3, 4, 0, 0, 0, 0, 0])
+        XCTAssertEqual(home.week.done, 1)
+        XCTAssertEqual(home.week.total, 2)
+    }
+    func testConcurrentPrefixNeverCreditsSameVersesTwice() throws {
+        let newer = try operation(through: 5), older = try operation(through: 3)
+        let shared = newer.applying(to: try state(), catalog: QuranCatalog())
+        XCTAssertEqual(older.applying(to: shared, catalog: QuranCatalog()), shared)
+        let final = try operation().applying(to: shared, catalog: QuranCatalog())
+        XCTAssertEqual(final["studyProgress"]["learning:monday"]["validations"].array.map { $0["start"].int }, [1, 6])
+        XCTAssertEqual(final["revisions"].array.count, 2)
     }
     func testChangedOrMissingSessionCannotReceiveOldValidation() throws {
         let original = try state(), op = try operation()
