@@ -115,13 +115,7 @@ struct QuranReaderView: View {
                     }
                 }.navigationTitle("Le Coran").navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { options = false } } }
-            }.presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $recording) {
-            if let user = store.identity?.id {
-                VoiceRecorderView(user: user, catalog: store.catalog, firstVerse: verseID, lastVerse: page < 604 ? max(verseID, QuranSourceMapping.firstVerse(source: source, page: page + 1, catalog: store.catalog) - 1) : 6236)
             }
-        }
         .confirmationDialog("Valider tout le passage de consolidation ?", isPresented: $confirmConsolidation, titleVisibility: .visible) {
             Button("J’ai consolidé") {
                 if let session, let validation = ConsolidationValidation(context: session) {
@@ -135,6 +129,13 @@ struct QuranReaderView: View {
             }
             Button("Annuler", role: .cancel) { }
         } message: { Text("La date prévue reste inchangée. Cette validation est conservée sur l’appareil et synchronisée lorsque la connexion est disponible.") }
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $recording) {
+            if let user = store.identity?.id {
+                VoiceRecorderView(user: user, catalog: store.catalog, firstVerse: verseID, lastVerse: page < 604 ? max(verseID, QuranSourceMapping.firstVerse(source: source, page: page + 1, catalog: store.catalog) - 1) : 6236)
+            }
+        }
         .alert("Le Coran", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
     }
     private func canConsolidate(_ context: QuranSessionContext) -> Bool {
