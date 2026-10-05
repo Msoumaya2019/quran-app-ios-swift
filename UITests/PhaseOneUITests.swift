@@ -4,7 +4,7 @@ final class PhaseOneUITests: XCTestCase {
     func testAdminCanListenToRecitationAndSendFeedback() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-moderation"]; app.launch()
         app.buttons["settings.open"].tap()
-        let open = app.buttons["settings.admin.recitations"]; XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
+        let open = app.buttons["settings.admin.recitations"]; for _ in 0..<6 { if open.exists && open.isHittable { break }; app.swipeUp() }; XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
         let user = app.staticTexts["Yassine"]; XCTAssertTrue(user.waitForExistence(timeout: 5)); user.tap()
         let listen = app.buttons["moderation.listen"]; XCTAssertTrue(listen.waitForExistence(timeout: 5)); listen.tap()
         XCTAssertTrue(app.staticTexts["Arrêter l’écoute"].waitForExistence(timeout: 5))
@@ -17,7 +17,7 @@ final class PhaseOneUITests: XCTestCase {
     func testAdminDeletesMessageOnlyAfterConfirmation() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-moderation"]; app.launch()
         app.buttons["settings.open"].tap()
-        let open = app.buttons["settings.admin.messages"]; XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
+        let open = app.buttons["settings.admin.messages"]; for _ in 0..<6 { if open.exists && open.isHittable { break }; app.swipeUp() }; XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
         let user = app.staticTexts["Yassine"]; XCTAssertTrue(user.waitForExistence(timeout: 5)); user.tap()
         XCTAssertTrue(app.staticTexts["Message de test à modérer"].exists)
         app.buttons["moderation.delete"].tap()
