@@ -11,3 +11,6 @@ Livraison : https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/tes
 Limites : actualisation toutes les 15 secondes lorsque la conversation est visible ; reprise des envois en rouvrant la conversation. Groupes, notifications et lecture des récitations partagées restent à migrer. Les échanges réels entre deux comptes sur iPhone ne sont pas encore mesurés.
 
 Fichiers ajoutés : Models/ChatSnapshot.swift, Repositories/ChatRepository.swift, Services/ConversationLibrary.swift, Features/Friends/ConversationView.swift, Tests/ChatTests.swift. Intégration dans FriendsLibrary, FriendDetailView, App, projet Xcode et tests UI.
+
+## Correction de réouverture — 5 octobre 2026
+Une exécution UI a mis en évidence une conversation vide à la réouverture malgré le message précédemment enregistré. La destination reçoit désormais uniquement sa configuration ; son StateObject initialise le cache lors du montage réel de la vue, plutôt qu’un modèle préparé pendant le rendu du profil ami. Le parcours de réouverture est réussi dans la validation 37279933046, commit 8297703. Les données et le contrat Supabase restent inchangés.
