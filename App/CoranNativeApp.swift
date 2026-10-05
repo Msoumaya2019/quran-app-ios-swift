@@ -6,6 +6,7 @@ import SwiftUI
     @StateObject private var friends: FriendsLibrary
     @StateObject private var quiz: QuizLibrary
     @StateObject private var reports: ProblemReportLibrary
+    @StateObject private var moderation: ModerationLibrary
     @StateObject private var theme = ThemeManager()
     @StateObject private var network = ConnectivityService()
     @Environment(\.scenePhase) private var scenePhase
@@ -50,6 +51,7 @@ import SwiftUI
             }
             _quiz = StateObject(wrappedValue: QuizLibrary(client: nil, directory: friendsDirectory.appendingPathComponent("Quiz")))
             _reports = StateObject(wrappedValue: ProblemReportLibrary(directory: friendsDirectory.appendingPathComponent("Reports")))
+            _moderation = StateObject(wrappedValue: ModerationLibrary(remote: ProcessInfo.processInfo.arguments.contains("--ui-test-moderation") ? PreviewModeration() : ModerationRepository(client: nil)))
             return
         }
         #endif
@@ -58,21 +60,40 @@ import SwiftUI
         _friends = StateObject(wrappedValue: FriendsLibrary(client: client))
         _quiz = StateObject(wrappedValue: QuizLibrary(client: client))
         _reports = StateObject(wrappedValue: ProblemReportLibrary(client: client))
+        _moderation = StateObject(wrappedValue: ModerationLibrary(remote: ModerationRepository(client: client)))
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports)
+            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation)
                 .onOpenURL { url in Task { await store.receive(url) } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh(); await quiz.refresh() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in Task { await recitations.select(user); await recitations.synchronize() } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await reports.synchronize() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in reports.select(user); Task { await reports.synchronize() } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in friends.select(user) }
+                .onChange(of: store.identity?.id, initial: true) { _, user in moderation.select(user) }
                 .onChange(of: store.identity?.id, initial: true) { _, user in quiz.select(user); Task { await quiz.refresh() } }
         }
     }
 }
 #if DEBUG
+@MainActor private final class PreviewModeration: ModerationRemote {
+    private var deleted = false
+    private var reviewed = false
+    private var heard = false
+    private let user = "00000000-0000-0000-0000-000000000002"
+    private var recitation: JSONValue { .object(["id": .string("rec-test"), "user_id": .string(user), "recording_type": .string("quran"), "start_verse_id": .number(1), "end_verse_id": .number(7), "duration_ms": .number(60000), "storage_path": .string(user + "/rec-test.m4a"), "created_at": .string("2026-10-05T10:00:00Z"), "listened_at": heard ? .string("2026-10-05T10:01:00Z") : .null]) }
+    private var message: JSONValue { .object(["id": .string("00000000-0000-0000-0000-000000000007"), "sender_id": .string(user), "body": .string("Message de test à modérer"), "kind": .string("text"), "created_at": .string("2026-10-05T10:00:00Z"), "deleted_at": deleted ? .string("2026-10-05T10:01:00Z") : .null]) }
+    private var report: JSONValue { .object(["id": .string("00000000-0000-0000-0000-000000000008"), "reporter_id": .string(user), "reason": .string("Signalement de test"), "excerpt": .string("Message de test à modérer"), "status": .string(reviewed ? "reviewed" : "open"), "created_at": .string("2026-10-05T10:00:00Z")]) }
+    func rows(owner: UUID, section: ModerationSection, offset: Int) async throws -> [JSONValue] { offset > 0 ? [] : [section == .recitations ? recitation : section == .messages ? message : report] }
+    func profiles(owner: UUID, ids: [String]) async throws -> [JSONValue] { [.object(["id": .string(user), "display_name": .string("Yassine")])] }
+    func recording(owner: UUID, id: String) async throws -> JSONValue { recitation }
+    func audio(owner: UUID, row: JSONValue) async throws -> Data { try Data(contentsOf: Bundle.main.resourceURL!.appendingPathComponent("ReaderTestFixtures/audio.wav")) }
+    func deleteMessage(owner: UUID, id: String) async throws -> JSONValue { deleted = true; return message }
+    func resolveReport(owner: UUID, id: String) async throws -> JSONValue { reviewed = true; return report }
+    func listened(owner: UUID, id: String) async throws -> JSONValue { heard = true; return recitation }
+    func feedback(owner: UUID, recitation: String, id: UUID, comment: String) async throws {}
+}
 @MainActor private final class PreviewAuth: AuthGateway {
     let cachedIdentity: AccountIdentity? = AccountIdentity(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, email: "preview@example.invalid")
     func signIn(email: String, password: String) async throws -> AccountIdentity { cachedIdentity! }

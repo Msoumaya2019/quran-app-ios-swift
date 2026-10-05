@@ -37,6 +37,8 @@ struct SettingsView: View {
                     Text("Coran de Médine, Coran 1441, apprentissage, révisions, amis, messagerie et Quiz natif.").font(.caption).foregroundStyle(theme.muted)
                 }
                 if quiz.isAdmin { Section("Administration") {
+                    NavigationLink("Récitations à écouter") { ModerationView(section: .recitations) }.accessibilityIdentifier("settings.admin.recitations")
+                    NavigationLink("Modération des messages") { ModerationView(section: .messages) }.accessibilityIdentifier("settings.admin.messages")
                     NavigationLink("Quiz · Questions et thèmes") { QuizAdminView() }
                     NavigationLink("Signalements") { ProblemReportsAdminView() }
                 } }

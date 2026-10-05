@@ -39,6 +39,9 @@ import Supabase
     private struct ChallengeArgs: Encodable { let p_opponent: String; let p_count: Int; let p_set: String? }
     private struct ChallengeAnswerArgs: Encodable { let p_challenge: String; let p_question: String; let p_answer: String }
     func checkAdmin() async {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-moderation") { isAdmin = true; return }
+        #endif
         guard let owner = cache?.owner, let client else { return }
         let token = generation
         do {

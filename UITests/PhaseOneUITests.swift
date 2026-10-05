@@ -1,6 +1,31 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testAdminCanListenToRecitationAndSendFeedback() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-moderation"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let open = app.buttons["settings.admin.recitations"]; XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
+        let user = app.staticTexts["Yassine"]; XCTAssertTrue(user.waitForExistence(timeout: 5)); user.tap()
+        let listen = app.buttons["moderation.listen"]; XCTAssertTrue(listen.waitForExistence(timeout: 5)); listen.tap()
+        XCTAssertTrue(app.staticTexts["Arrêter l’écoute"].waitForExistence(timeout: 5))
+        listen.tap(); app.buttons["Marquer comme écoutée"].tap()
+        XCTAssertTrue(app.buttons["Écoutée"].waitForExistence(timeout: 5))
+        let field = app.textViews["moderation.feedback"]; field.tap(); field.typeText("Retour technique de test")
+        app.buttons["Envoyer le retour"].tap(); XCTAssertTrue(app.staticTexts["Retour envoyé"].waitForExistence(timeout: 5))
+        attach(app, name: "Administration — écoute et retour sur une récitation")
+    }
+    func testAdminDeletesMessageOnlyAfterConfirmation() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-moderation"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let open = app.buttons["settings.admin.messages"]; XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
+        let user = app.staticTexts["Yassine"]; XCTAssertTrue(user.waitForExistence(timeout: 5)); user.tap()
+        XCTAssertTrue(app.staticTexts["Message de test à modérer"].exists)
+        app.buttons["moderation.delete"].tap()
+        app.buttons["Supprimer le message"].lastMatch.tap()
+        XCTAssertTrue(app.staticTexts["Message supprimé"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["moderation.delete"].isEnabled)
+        attach(app, name: "Administration — message supprimé après confirmation")
+    }
     func testSocialPreferencesStayEditableAndDoNotClaimOfflineSave() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
         app.buttons["settings.open"].tap()

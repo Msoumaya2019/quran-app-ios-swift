@@ -10,6 +10,15 @@ import Combine
         try AVAudioSession.sharedInstance().setCategory(.playback)
         try AVAudioSession.sharedInstance().setActive(true)
         let value = try AVAudioPlayer(contentsOf: file)
+        try begin(value, id: id)
+    }
+    func play(data: Data, id: String) throws {
+        stop()
+        try AVAudioSession.sharedInstance().setCategory(.playback)
+        try AVAudioSession.sharedInstance().setActive(true)
+        try begin(AVAudioPlayer(data: data), id: id)
+    }
+    private func begin(_ value: AVAudioPlayer, id: String) throws {
         value.delegate = self
         guard value.play() else { throw URLError(.cannotDecodeContentData) }
         player = value; activeID = id
