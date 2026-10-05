@@ -14,6 +14,7 @@ struct SettingsView: View {
                     Text(store.identity?.email ?? "Compte connecté")
                     if let id = store.identity?.id { Text(id.uuidString).font(.caption).textSelection(.enabled) }
                     Button("Actualiser mes données") { Task { await store.refresh() } }.disabled(store.isRefreshing)
+                    NavigationLink("Profil ami et confidentialité") { SocialProfileSettingsView() }.accessibilityIdentifier("settings.social.open")
                 }
                 Section("Mon programme") {
                     NavigationLink { ProgramEditorView(state: store.snapshot.state) } label: {

@@ -147,10 +147,28 @@ import Supabase
         guard item.incoming, item.status == "pending" else { return false }
         return await action { client in _ = try await client.rpc(accept ? "accept_friend" : "decline_friend", params: LinkArgs(p_link: item.id)).execute() }
     }
+    func saveSocialProfile(name: String, online: Bool, progress: Bool) async -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (2...40).contains(trimmed.unicodeScalars.count), let owner = snapshot?.owner else {
+            message = "Le nom doit contenir entre 2 et 40 caractères."; return false
+        }
+        struct Values: Encodable { let display_name: String; let share_online: Bool; let share_progress: Bool }
+        // Update only edited fields; preserve avatar, location and future preferences.
+        return await action { client in
+            _ = try await client.rpc("ensure_social_profile").execute()
+            let confirmed: JSONValue = try await client.from("friend_profiles")
+                .update(Values(display_name: trimmed, share_online: online, share_progress: progress))
+                .eq("id", value: owner.uuidString).select().single().execute().value
+            guard confirmed["id"].string?.lowercased() == owner.uuidString.lowercased(),
+                  confirmed["display_name"].string == trimmed,
+                  confirmed["share_online"].bool == online, confirmed["share_progress"].bool == progress else { throw URLError(.cannotParseResponse) }
+        }
+    }
     private func action(_ operation: (SupabaseClient) async throws -> Void) async -> Bool {
-        guard !actionBusy, snapshot != nil, let client else { message = "Connexion nécessaire pour cette action."; return false }
+        guard !actionBusy, let owner = snapshot?.owner, let client else { message = "Connexion nécessaire pour cette action."; return false }
         let token = generation; actionBusy = true; defer { actionBusy = false }
         do {
+            guard try await client.auth.session.user.id == owner, token == generation else { return false }
             try await operation(client)
             guard token == generation else { return false }
             await refresh(); return true

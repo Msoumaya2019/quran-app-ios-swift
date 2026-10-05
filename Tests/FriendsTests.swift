@@ -2,6 +2,20 @@ import XCTest
 @testable import CoranNative
 
 final class FriendsTests: XCTestCase {
+    @MainActor func testProfilePreferencesCannotClaimOfflineSuccessOrChangeCachedProfile() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = FriendsLibrary(client: nil, directory: directory)
+        library.select(owner)
+        let before = library.snapshot
+        let invalid = await library.saveSocialProfile(name: "A", online: true, progress: true)
+        XCTAssertFalse(invalid)
+        let offline = await library.saveSocialProfile(name: "Mohamed", online: true, progress: true)
+        XCTAssertFalse(offline)
+        XCTAssertEqual(library.snapshot, before)
+        XCTAssertEqual(library.message, "Connexion nécessaire pour cette action.")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+    }
     func testOverviewRequiresAcceptedRelationAndExplicitSharing() throws {
         var snapshot = try fixture()
         snapshot.overviews = ["two": .object(["weekly_verses": .number(28)])]

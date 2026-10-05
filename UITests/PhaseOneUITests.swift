@@ -1,6 +1,18 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testSocialPreferencesStayEditableAndDoNotClaimOfflineSave() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let open = app.buttons["settings.social.open"]; XCTAssertTrue(open.waitForExistence(timeout: 5)); open.tap()
+        let save = app.buttons["social.profile.save"]; XCTAssertTrue(save.waitForExistence(timeout: 5)); XCTAssertFalse(save.isEnabled)
+        let field = app.textFields["social.profile.name"]; field.tap(); field.typeText("Mohamed")
+        save.tap()
+        XCTAssertTrue(app.staticTexts["Connexion nécessaire pour cette action."].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Préférences enregistrées"].exists)
+        XCTAssertEqual(field.value as? String, "Mohamed")
+        attach(app, name: "Profil ami — préférences conservées sans faux succès hors ligne")
+    }
     func testGroupConversationOpensOfflineAndKeepsItsPendingMessage() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-friends", "--ui-test-groups"]; app.launch()
         app.tabBars.buttons["Amis"].tap(); app.buttons["Mes groupes"].tap()
