@@ -98,3 +98,7 @@ Le profil d’un ami accepté est maintenant consultable, avec statistiques/obje
 Liste, filtres, recherche, code partageable et demandes par les RPC existants sont intégrés, avec cache isolé par compte. 94 tests unitaires et 17 tests d’interface réussis, sans archive. Voir [NATIVE_FRIENDS_REPORT.md](Docs/NATIVE_FRIENDS_REPORT.md). La migration sociale complète et le Quiz restent en cours. Estimation indicative de la migration finale : environ 65 %, incluant le travail restant sur appareil réel ; ce pourcentage n’est pas une mesure automatique de couverture.
 
 Vérification de cette étape : 91 tests unitaires et 15 parcours UI réussis dans la série complète, puis le dernier parcours audio réussi après correction du geste XCTest. Total : 107 tests distincts vérifiés. Captures contrôlées. Aucun changement du code produit entre les deux vérifications. Rejeu Xcode sans archive/IPA : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37232810658.
+
+## Groupes — 5 octobre 2026
+Liste, création, invitations, rôles et conversations de groupe intégrés. Caches distincts et messages hors connexion durables. Aucune migration SQL. 114 tests unitaires et 12 parcours PhaseOne réussis ; vérification supplémentaire de timeline audio en échec à diagnostiquer. Voir [NATIVE_GROUPS_REPORT.md](Docs/NATIVE_GROUPS_REPORT.md). IPA non signée : https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-groupes-2026-10-05.
+

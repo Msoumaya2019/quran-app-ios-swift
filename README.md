@@ -36,7 +36,7 @@ Dans [Supabase Dashboard](https://supabase.com/dashboard/project/npbwnvrqmajwqtn
 
 Dans Xcode → Target CoranNative → Signing & Capabilities : choisir sa Team Apple et vérifier la disponibilité du Bundle ID. Aucun Team ID, certificat, provisioning ou clé APNs n’est committé. Un compte gratuit peut servir à certains tests locaux limités ; TestFlight et la distribution nécessitent Apple Developer et App Store Connect.
 
-Le lecteur classique natif est intégré : Coran de Médine, Coran 1441 à télécharger à la sélection, cache de trois pages, reprise, marque-pages et audio AVFoundation avec timeline, répétitions et suivi du verset. L’enregistrement vocal, la réécoute et la synchronisation vers les récitations Supabase existantes sont disponibles. Programme, apprentissage, révisions et consolidation réutilisent les données existantes. Amis, progression partagée, messagerie, Question du jour, historique, défis et administration des quiz thématiques sont intégrés. Voir les rapports du lecteur, des récitations, de la messagerie et du Quiz dans Docs. Les signalements avec capture privée et file hors connexion sont intégrés. Les notifications APNs et groupes restent à migrer ; le backend Expo push reste intact.
+Le lecteur classique natif est intégré : Coran de Médine, Coran 1441 à télécharger à la sélection, cache de trois pages, reprise, marque-pages et audio AVFoundation avec timeline, répétitions et suivi du verset. L’enregistrement vocal, la réécoute et la synchronisation vers les récitations Supabase existantes sont disponibles. Programme, apprentissage, révisions et consolidation réutilisent les données existantes. Amis, progression partagée, messagerie, Question du jour, historique, défis et administration des quiz thématiques sont intégrés. Voir les rapports du lecteur, des récitations, de la messagerie et du Quiz dans Docs. Les signalements avec capture privée et file hors connexion sont intégrés. Les notifications APNs restent à migrer ; le backend Expo push reste intact.
 
 Voir [SWIFT_MIGRATION.md](SWIFT_MIGRATION.md), [analyse Supabase](Docs/SUPABASE_ANALYSIS.md) et [rapport phase 1](Docs/PHASE_ONE_REPORT.md).
 
@@ -47,3 +47,6 @@ Programme affiche les séances locales, les consolidations et une fenêtre À ve
 Signalements depuis Accueil et traitement administrateur : [rapport natif](Docs/NATIVE_REPORTS_REPORT.md).
 
 Dernière IPA de test : [Signalements — 5 octobre 2026](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-signalements-2026-10-05), incluant Quiz et la correction de réouverture des conversations. Non signée.
+
+Groupes d’amis, invitations, rôles et conversations : [rapport natif](Docs/NATIVE_GROUPS_REPORT.md). IPA de cette étape : [Groupes — 5 octobre 2026](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-groupes-2026-10-05), non signée.
+
