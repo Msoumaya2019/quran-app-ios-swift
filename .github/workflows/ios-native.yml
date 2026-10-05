@@ -71,7 +71,7 @@ jobs:
           test_options=()
           if [ -n "$TEST_FILTER" ]; then
             case "$TEST_FILTER" in
-              CoranNativeTests/*|CoranNativeUITests/*) test_options+=("-only-testing:$TEST_FILTER") ;;
+              CoranNativeTests|CoranNativeUITests|CoranNativeTests/*|CoranNativeUITests/*) test_options+=("-only-testing:$TEST_FILTER") ;;
               *) echo 'Invalid XCTest identifier'; exit 1 ;;
             esac
           fi
