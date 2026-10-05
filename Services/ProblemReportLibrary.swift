@@ -5,11 +5,16 @@ import Supabase
     @Published private(set) var pending: [ProblemReport] = []
     @Published private(set) var sending = false
     @Published private(set) var notice: String?
+    @Published private(set) var adminReports: [ProblemReport] = []
+    @Published private(set) var adminLoading = false
+    @Published private(set) var adminError: String?
     private(set) var owner: UUID?
     private let remote: ProblemReportRemote?
+    private let repository: ProblemReportRepository?
     private let directory: URL
     private var generation = UUID()
     init(client: SupabaseClient? = nil, directory: URL? = nil, remote: ProblemReportRemote? = nil) {
+        repository = client.map { ProblemReportRepository(client: $0) }
         self.remote = remote ?? client.map { ProblemReportRepository(client: $0) }
         self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("CoranNative/ProblemReports")
     }
@@ -22,10 +27,31 @@ import Supabase
     func select(_ user: UUID?) {
         guard user != owner else { return }
         generation = UUID(); owner = user; pending = []; sending = false; notice = nil
+        adminReports = []; adminLoading = false; adminError = nil
         if let user, let bytes = try? Data(contentsOf: folder(user).appendingPathComponent("pending.json")),
            let rows = try? JSONDecoder().decode([ProblemReport].self, from: bytes) {
             pending = rows.filter { $0.user_id == user && $0.valid }
         }
+    }
+    func refreshAdmin() async {
+        guard !adminLoading, let owner, let repository else { return }
+        let token = generation; adminLoading = true
+        defer { if token == generation { adminLoading = false } }
+        do {
+            let values = try await repository.list(owner: owner)
+            guard token == generation else { return }; adminReports = values; adminError = nil
+        } catch { if token == generation { adminError = "Les signalements n’ont pas pu être chargés. Vérifie la connexion et les droits administrateur." } }
+    }
+    func resolve(_ report: ProblemReport) async {
+        guard let owner, let repository else { return }
+        let token = generation
+        do { try await repository.resolve(report, owner: owner); guard token == generation else { return }; await refreshAdmin() }
+        catch { if token == generation { adminError = "La modification n’a pas été confirmée." } }
+    }
+    func adminScreenshot(_ report: ProblemReport) async -> URL? {
+        guard let owner, let repository else { return nil }; let token = generation
+        do { let url = try await repository.screenshot(report, owner: owner); return token == generation ? url : nil }
+        catch { if token == generation { adminError = "La capture n’est pas disponible." }; return nil }
     }
     @discardableResult func enqueue(type: ProblemType, description: String, screenshot: Data?, version: String) throws -> UUID {
         guard let owner else { throw URLError(.userAuthenticationRequired) }

@@ -35,7 +35,10 @@ struct SettingsView: View {
                     Text("Lecteur natif • SwiftUI et UIKit • iOS 17 et versions ultérieures")
                     Text("Coran de Médine, Coran 1441, apprentissage, révisions, amis, messagerie et Quiz natif.").font(.caption).foregroundStyle(theme.muted)
                 }
-                if quiz.isAdmin { Section("Administration") { NavigationLink("Quiz · Questions et thèmes") { QuizAdminView() } } }
+                if quiz.isAdmin { Section("Administration") {
+                    NavigationLink("Quiz · Questions et thèmes") { QuizAdminView() }
+                    NavigationLink("Signalements") { ProblemReportsAdminView() }
+                } }
                 if let error { Text(error).foregroundStyle(.red) }
                 Section { Button("Se déconnecter", role: .destructive) { Task { signingOut = true; defer { signingOut = false }; do { try await store.signOut(); dismiss() } catch { self.error = error.localizedDescription } } }.disabled(signingOut) }
             }.navigationTitle("Réglages").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() }.frame(minHeight: 44) } }

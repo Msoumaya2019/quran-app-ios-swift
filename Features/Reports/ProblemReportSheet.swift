@@ -54,7 +54,7 @@ struct ProblemReportSheet: View {
                         }.buttonStyle(PrimaryButtonStyle()).disabled(count == 0 || count > 500 || preparing || reports.owner == nil).accessibilityIdentifier("report.send")
                     }
                 }.padding(20)
-            }.background(theme.background).foregroundStyle(theme.text)
+            }.scrollDismissesKeyboard(.interactively).background(theme.background).foregroundStyle(theme.text)
                 .navigationTitle("Signaler un problème").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }.accessibilityLabel("Fermer") } }
         }.presentationDetents([.large]).presentationDragIndicator(.visible).presentationCornerRadius(28)
