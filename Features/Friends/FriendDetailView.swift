@@ -19,8 +19,8 @@ struct FriendDetailView: View {
                         }
                     }
                 }
-                if let conversation = library.conversation(for: item) {
-                    NavigationLink { ConversationView(name: item.name, library: conversation) } label: {
+                if let conversation = library.conversationConfiguration(for: item) {
+                    NavigationLink { ConversationView(name: item.name, owner: conversation.owner, link: conversation.link, remote: conversation.remote) } label: {
                         Label("Envoyer un message", systemImage: "bubble.left.and.bubble.right").frame(maxWidth: .infinity, minHeight: 44)
                     }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("friends.chat.open")
                 }

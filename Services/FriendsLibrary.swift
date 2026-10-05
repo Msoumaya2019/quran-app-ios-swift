@@ -54,9 +54,9 @@ import Supabase
     struct CodeArgs: Encodable { let p_code: String }
     struct LinkArgs: Encodable { let p_link: String }
     struct OtherArgs: Encodable { let p_other: String }
-    func conversation(for item: FriendItem) -> ConversationLibrary? {
+    func conversationConfiguration(for item: FriendItem) -> (owner: UUID, link: UUID, remote: ChatRemote)? {
         guard let owner = snapshot?.owner, let link = UUID(uuidString: item.id), snapshot?.items().contains(where: { $0.id == item.id }) == true else { return nil }
-        return ConversationLibrary(owner: owner, link: link, remote: ChatRepository(client: client))
+        return (owner, link, ChatRepository(client: client))
     }
     func refreshOverview(_ id: String) async -> String? {
         guard let client, snapshot?.items().contains(where: { $0.otherID == id }) == true else { return "Profil non disponible en ligne." }
