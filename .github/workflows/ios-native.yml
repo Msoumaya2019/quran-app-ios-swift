@@ -74,6 +74,13 @@ jobs:
               CoranNativeTests|CoranNativeUITests|CoranNativeTests/*|CoranNativeUITests/*) test_options+=("-only-testing:$TEST_FILTER") ;;
               *) echo 'Invalid XCTest identifier'; exit 1 ;;
             esac
+            case "$TEST_FILTER" in
+              CoranNativeUITests*)
+                xcrun simctl boot "$SIMULATOR_ID" || true
+                xcrun simctl bootstatus "$SIMULATOR_ID" -b
+                test_options+=("-parallel-testing-enabled" "NO")
+                ;;
+            esac
           fi
           xcodebuild test "${test_options[@]}" -project CoranNative.xcodeproj -scheme CoranNative -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -derivedDataPath DerivedData -resultBundlePath artifacts/PhaseOne.xcresult CODE_SIGNING_ALLOWED=NO | tee xcode-tests.log
       - name: Archive unsigned iPhone application
