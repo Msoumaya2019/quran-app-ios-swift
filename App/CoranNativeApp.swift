@@ -31,6 +31,14 @@ import SwiftUI
                 try? FileManager.default.createDirectory(at: friendsDirectory, withIntermediateDirectories: true)
                 if let data = try? JSONEncoder().encode(friend) { try? data.write(to: friendsDirectory.appendingPathComponent(owner.uuidString.lowercased() + ".json")) }
             }
+            if ProcessInfo.processInfo.arguments.contains("--ui-test-groups") {
+                let owner = "00000000-0000-0000-0000-000000000001", group = "00000000-0000-0000-0000-000000000005", other = "00000000-0000-0000-0000-000000000002"
+                let rows: [JSONValue] = [.object(["id": .string(group), "name": .string("Groupe de test"), "owner_id": .string(owner)])]
+                let members: [JSONValue] = [(owner, "Moi", "owner"), (other, "Yassine", "member")].map { user, name, role in .object(["group_id": .string(group), "user_id": .string(user), "name": .string(name), "role": .string(role), "accepted_at": .string(ISO8601DateFormatter().string(from: .now))]) }
+                try? FileManager.default.createDirectory(at: friendsDirectory, withIntermediateDirectories: true)
+                if let data = try? JSONEncoder().encode(rows) { try? data.write(to: friendsDirectory.appendingPathComponent(owner + "-groups.json")) }
+                if let data = try? JSONEncoder().encode(members) { try? data.write(to: friendsDirectory.appendingPathComponent(owner + "-group-" + group + ".json")) }
+            }
             _friends = StateObject(wrappedValue: FriendsLibrary(client: nil, directory: friendsDirectory))
             if ProcessInfo.processInfo.arguments.contains("--ui-test-quiz") {
                 let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, day = LocalCalendar.key(.now)

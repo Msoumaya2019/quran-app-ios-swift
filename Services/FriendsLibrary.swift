@@ -82,6 +82,11 @@ import Supabase
             try JSONEncoder().encode(rows).write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]); return rows
         } catch { guard token == generation else { return [] }; message = "Membres disponibles hors connexion selon la dernière synchronisation."; return stored }
     }
+    func cachedGroupMembers(_ id: String) -> [JSONValue] {
+        guard let owner = snapshot?.owner, UUID(uuidString: id) != nil else { return [] }
+        let file = directory.appendingPathComponent(owner.uuidString.lowercased() + "-group-" + id.lowercased() + ".json")
+        return (try? Data(contentsOf: file)).flatMap { try? JSONDecoder().decode([JSONValue].self, from: $0) } ?? []
+    }
     func createGroup(_ name: String) async -> Bool {
         let text = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard text.count >= 2, text.count <= 80 else { return false }

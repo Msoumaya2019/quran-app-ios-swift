@@ -2,13 +2,15 @@ import SwiftUI
 
 struct ConversationView: View {
     let name: String
+    private let senderNames: [UUID: String]
     @StateObject private var library: ConversationLibrary
     @EnvironmentObject var theme: ThemeManager
     @EnvironmentObject var store: AppStore
     @Environment(\.scenePhase) private var phase
     @State private var draft = ""
-    init(name: String, owner: UUID, link: UUID, remote: ChatRemote, group: Bool = false) {
+    init(name: String, owner: UUID, link: UUID, remote: ChatRemote, group: Bool = false, senderNames: [UUID: String] = [:]) {
         self.name = name
+        self.senderNames = senderNames
         // StateObject's autoclosure reads the cache when this destination mounts,
         // rather than capturing a library prepared before messages were saved.
         _library = StateObject(wrappedValue: ConversationLibrary(owner: owner, link: link, remote: remote, group: group))
@@ -25,6 +27,7 @@ struct ConversationView: View {
                         HStack {
                             if own { Spacer(minLength: 32) }
                             VStack(alignment: .leading, spacing: 5) {
+                                if library.snapshot.groupRoom == true && !own { Text(senderNames[message.senderID] ?? "Membre").font(.caption.weight(.semibold)).foregroundStyle(theme.accent) }
                                 if message.kind == "recitation", message.deletedAt == nil { Label("Récitation partagée", systemImage: "waveform").font(.caption) }
                                 Text(message.displayBody).font(.subheadline).textSelection(.enabled)
                                 HStack(spacing: 6) {

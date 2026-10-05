@@ -1,6 +1,27 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testGroupConversationOpensOfflineAndKeepsItsPendingMessage() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-friends", "--ui-test-groups"]; app.launch()
+        app.tabBars.buttons["Amis"].tap(); app.buttons["Mes groupes"].tap()
+        let group = app.staticTexts["Groupe de test"]; XCTAssertTrue(group.waitForExistence(timeout: 5)); group.tap()
+        let chat = app.buttons["groups.chat"]; XCTAssertTrue(chat.waitForExistence(timeout: 5)); chat.tap()
+        let field = app.descendants(matching: .any)["chat.composer"].firstMatch; XCTAssertTrue(field.waitForExistence(timeout: 5)); field.tap()
+        let body = "Message de groupe \(UUID().uuidString.prefix(6))"; field.typeText(body); app.buttons["chat.send"].tap()
+        XCTAssertTrue(app.staticTexts[body].waitForExistence(timeout: 5)); XCTAssertTrue(app.staticTexts["À synchroniser"].firstMatch.exists)
+        attach(app, name: "Conversation de groupe — message hors connexion")
+        app.navigationBars.buttons.firstMatch.tap(); app.buttons["groups.chat"].tap()
+        XCTAssertTrue(app.staticTexts[body].waitForExistence(timeout: 5)); XCTAssertEqual(app.tabBars.buttons.count, 5)
+    }
+    func testCreatingGroupRequiresConnectionAndDoesNotInventLocalGroup() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
+        app.tabBars.buttons["Amis"].tap(); app.buttons["Mes groupes"].tap()
+        let create = app.buttons["groups.create"]; XCTAssertTrue(create.waitForExistence(timeout: 5)); XCTAssertFalse(create.isEnabled)
+        let field = app.textFields["groups.name"]; field.tap(); field.typeText("Nouveau groupe")
+        create.tap(); XCTAssertTrue(app.staticTexts["Connexion nécessaire pour cette action."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Aucun groupe synchronisé"].exists)
+        attach(app, name: "Groupes — création nécessite une connexion")
+    }
     func testProblemReportSheetSavesOfflineWithoutChangingTabs() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
         let open = app.buttons["home.report"]
