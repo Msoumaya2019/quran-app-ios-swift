@@ -5,6 +5,7 @@ import Supabase
     @Published private(set) var snapshot: FriendsSnapshot?
     @Published private(set) var loading = false
     @Published private(set) var message: String?
+    @Published private(set) var groups: [JSONValue] = []
     private let client: SupabaseClient?
     private var generation = UUID()
     private var actionBusy = false
@@ -17,6 +18,8 @@ import Supabase
     func select(_ user: UUID?) {
         guard snapshot?.owner != user else { return }
         generation = UUID(); loading = false; message = nil; snapshot = user.map { FriendsSnapshot(owner: $0) }
+        groups = []
+        if let user, let data = try? Data(contentsOf: groupFile(user)), let values = try? JSONDecoder().decode([JSONValue].self, from: data) { groups = values }
         if let user, let data = try? Data(contentsOf: file(user)), let cache = try? JSONDecoder().decode(FriendsSnapshot.self, from: data), cache.owner == user { snapshot = cache }
     }
     func refresh() async {
@@ -52,6 +55,47 @@ import Supabase
         }
     }
     struct CodeArgs: Encodable { let p_code: String }
+    private func groupFile(_ owner: UUID) -> URL { directory.appendingPathComponent(owner.uuidString.lowercased() + "-groups.json") }
+    func refreshGroups() async {
+        guard let owner = snapshot?.owner, let client else { return }; let token = generation
+        do {
+            guard try await client.auth.session.user.id == owner else { return }
+            let values: [JSONValue] = try await client.from("friend_groups").select().order("created_at", ascending: false).execute().value
+            guard token == generation else { return }
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try JSONEncoder().encode(values).write(to: groupFile(owner), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]); groups = values
+        } catch { if token == generation { message = "Groupes indisponibles. Les données déjà synchronisées restent accessibles." } }
+    }
+    func groupMembers(_ id: String) async -> [JSONValue] {
+        guard let owner = snapshot?.owner, UUID(uuidString: id) != nil else { return [] }
+        let file = directory.appendingPathComponent(owner.uuidString.lowercased() + "-group-" + id.lowercased() + ".json"), token = generation
+        let stored = (try? Data(contentsOf: file)).flatMap { try? JSONDecoder().decode([JSONValue].self, from: $0) } ?? []
+        guard let client else { return stored }
+        do {
+            guard try await client.auth.session.user.id == owner else { return [] }
+            let members: [JSONValue] = try await client.from("friend_group_members").select().eq("group_id", value: id).execute().value
+            let ids = members.compactMap { $0["user_id"].string }
+            let profiles: [JSONValue] = ids.isEmpty ? [] : try await client.from("friend_profiles").select("id,display_name").in("id", values: ids).execute().value
+            let rows = members.map { member in member.setting("name", profiles.first { $0["id"].string?.lowercased() == member["user_id"].string?.lowercased() }?["display_name"] ?? .string("Membre")) }
+            guard token == generation else { return [] }
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try JSONEncoder().encode(rows).write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]); return rows
+        } catch { guard token == generation else { return [] }; message = "Membres disponibles hors connexion selon la dernière synchronisation."; return stored }
+    }
+    func createGroup(_ name: String) async -> Bool {
+        let text = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.count >= 2, text.count <= 80 else { return false }
+        struct Args: Encodable { let p_name: String }
+        let result = await action { client in let _: UUID = try await client.rpc("create_friend_group", params: Args(p_name: text)).execute().value }
+        if result { await refreshGroups() }; return result
+    }
+    func groupAction(_ name: String, id: String, friend: String?) async -> Bool {
+        guard ["accept_group_invite", "decline_group_invite", "invite_group_member"].contains(name), UUID(uuidString: id) != nil else { return false }
+        var args: [String: String] = ["p_group": id]
+        if name == "invite_group_member" { guard let friend, snapshot?.items().contains(where: { $0.otherID == friend && $0.status == "accepted" }) == true else { return false }; args["p_friend"] = friend }
+        let result = await action { client in try await client.rpc(name, params: args).execute() }
+        if result { await refreshGroups() }; return result
+    }
     struct LinkArgs: Encodable { let p_link: String }
     struct OtherArgs: Encodable { let p_other: String }
     func conversationConfiguration(for item: FriendItem) -> (owner: UUID, link: UUID, remote: ChatRemote)? {

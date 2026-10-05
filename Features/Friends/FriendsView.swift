@@ -15,6 +15,7 @@ struct FriendsView: View {
             LazyVStack(alignment: .leading, spacing: 14) {
                 Text("Mes amis").font(theme.title(.title)).foregroundStyle(theme.accent)
                 Text("Apprenez et progressez ensemble").font(.subheadline).foregroundStyle(theme.muted)
+                NavigationLink { GroupsView() } label: { Label("Mes groupes", systemImage: "person.3").frame(minHeight: 44) }
                 AppCard {
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundStyle(theme.muted)
