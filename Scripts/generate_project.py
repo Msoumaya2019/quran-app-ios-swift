@@ -16,7 +16,8 @@ zipProduct=add('ZIPFoundationProduct','XCSwiftPackageProductDependency',package=
 for name,kind,folders in [('CoranNative','application',['App','Core','Models','Features','Components','Services','Repositories','Networking','Storage']),('CoranNativeTests','bundle.unit-test',['Tests']),('CoranNativeUITests','bundle.ui-testing',['UITests'])]:
  buildfiles=[]
  for folder in folders:
-  for file in sorted((root/folder).rglob('*.swift')):
+  # Path ordering is case-insensitive on Windows but case-sensitive on macOS.
+  for file in sorted((root/folder).rglob('*.swift'), key=lambda path: path.as_posix()):
    path=file.relative_to(root).as_posix();ref=add('file:'+path,'PBXFileReference',lastKnownFileType='sourcecode.swift',path=path,sourceTree='<group>');refs.append(ref);buildfiles.append(add('build:'+path,'PBXBuildFile',fileRef=ref))
  source=add('sources:'+name,'PBXSourcesBuildPhase',buildActionMask='2147483647',files=buildfiles,runOnlyForDeploymentPostprocessing='0')
  frameworks=[];resourcefiles=[];dependencies=[];phases=[source]
