@@ -102,3 +102,7 @@ Vérification de cette étape : 91 tests unitaires et 15 parcours UI réussis da
 ## Groupes — 5 octobre 2026
 Liste, création, invitations, rôles et conversations de groupe intégrés. Caches distincts et messages hors connexion durables. Aucune migration SQL. 114 tests unitaires et 12 parcours PhaseOne réussis ; vérification supplémentaire de timeline audio en échec à diagnostiquer. Voir [NATIVE_GROUPS_REPORT.md](Docs/NATIVE_GROUPS_REPORT.md). IPA non signée : https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-groupes-2026-10-05.
 
+
+## Audio et confidentialité — 5 octobre 2026
+Observation de la durée audio différée et protection du seek intégrées. Réglages → Profil ami et confidentialité permet la modification directe du nom et des consentements existants. 115 tests unitaires et deux parcours UI ciblés réussis, sans archive. Voir [NATIVE_AUDIO_PRIVACY_REPORT.md](Docs/NATIVE_AUDIO_PRIVACY_REPORT.md).
+

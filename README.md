@@ -50,3 +50,6 @@ Dernière IPA de test : [Signalements — 5 octobre 2026](https://github.com/Mso
 
 Groupes d’amis, invitations, rôles et conversations : [rapport natif](Docs/NATIVE_GROUPS_REPORT.md). IPA de cette étape : [Groupes — 5 octobre 2026](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-groupes-2026-10-05), non signée.
 
+
+Profil ami et confidentialité dans Réglages, et stabilisation de la timeline audio : [rapport et validations](Docs/NATIVE_AUDIO_PRIVACY_REPORT.md). Pas de nouvelle IPA pour ce complément.
+
