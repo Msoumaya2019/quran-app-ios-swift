@@ -1,6 +1,20 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testProblemReportSheetSavesOfflineWithoutChangingTabs() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
+        let open = app.buttons["home.report"]
+        for _ in 0..<4 { if open.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(open.waitForExistence(timeout: 5)); open.tap()
+        let send = app.buttons["report.send"]; XCTAssertTrue(send.waitForExistence(timeout: 5)); XCTAssertFalse(send.isEnabled)
+        app.buttons["report.type.Audio"].tap()
+        let field = app.textViews["report.description"]; field.tap(); field.typeText("Signalement de test hors connexion")
+        app.swipeUp(); XCTAssertTrue(send.isEnabled); send.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["report.saved"].firstMatch.waitForExistence(timeout: 5))
+        attach(app, name: "Signalement natif — enregistré hors connexion")
+        app.buttons["Fermer"].firstMatch.tap()
+        XCTAssertEqual(app.tabBars.buttons.count, 5)
+    }
     func testMessageSavedOfflineSurvivesConversationReopening() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-friends"]; app.launch()
         app.tabBars.buttons["Amis"].tap()

@@ -7,6 +7,7 @@ struct HomeView: View {
     @Binding var tab: MainTab
     @State private var route: HomeRoute?
     @State private var content: DailyContent?
+    @State private var reporting = false
     private var projection: HomeProjection { HomeProjection(snapshot: store.snapshot) }
     private var today: String { projection.today }
     var body: some View {
@@ -27,9 +28,9 @@ struct HomeView: View {
                 Button { route = .objective } label: {
                     AppCard { HStack(spacing: 12) { Image(systemName: "target").foregroundStyle(theme.accent); VStack(alignment: .leading, spacing: 4) { Text("Mon objectif").font(theme.title(.subheadline)); Text(projection.state["goal"]["label"].string ?? "Définir mon programme").font(.caption).foregroundStyle(theme.muted) }; Spacer(); Image(systemName: "chevron.right").font(.caption) } }
                 }.buttonStyle(.plain)
-                Button { route = .report } label: {
+                Button { reporting = true } label: {
                     AppCard { HStack(spacing: 12) { Image(systemName: "questionmark.circle.fill").foregroundStyle(theme.review).font(.title2); VStack(alignment: .leading, spacing: 5) { Text("Un problème avec l’application ?").font(theme.title(.subheadline)); Text("Signaler une erreur, un bug ou un dysfonctionnement à l’administrateur").font(.caption).foregroundStyle(theme.muted) }; Spacer(); Image(systemName: "chevron.right").font(.caption) } }
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain).accessibilityIdentifier("home.report")
                 if let message = store.message { Text(message).font(.caption).foregroundStyle(theme.muted).accessibilityIdentifier("sync.notice") }
             }.padding(.horizontal, 18).padding(.bottom, 18)
         }
@@ -44,8 +45,10 @@ struct HomeView: View {
                 } else { ProgramView() }
             }
             else if item == .quiz { QuizView() }
+            else if item == .objective { ProgramEditorView(state: store.snapshot.state) }
             else { PhasePlaceholder(title: item.rawValue) }
         }
+        .sheet(isPresented: $reporting) { ProblemReportSheet() }
         .sheet(item: $content) { value in DailyContentView(content: value) }
         .accessibilityIdentifier("home.screen")
     }
