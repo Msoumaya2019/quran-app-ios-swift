@@ -8,9 +8,9 @@ import Foundation
     private let remote: ChatRemote
     private let cache: ChatCache
     private var generation = UUID()
-    init(owner: UUID, link: UUID, remote: ChatRemote, cache: ChatCache = ChatCache()) {
+    init(owner: UUID, link: UUID, remote: ChatRemote, cache: ChatCache = ChatCache(), group: Bool = false) {
         self.remote = remote; self.cache = cache
-        snapshot = (try? cache.load(owner: owner, link: link)) ?? ChatSnapshot(owner: owner, linkID: link)
+        snapshot = (try? cache.load(owner: owner, link: link, group: group)) ?? ChatSnapshot(owner: owner, linkID: link, groupRoom: group ? true : nil)
     }
     func enqueue(_ body: String) -> Bool {
         do { var next = snapshot; _ = try next.enqueue(body); try cache.save(next); snapshot = next; message = nil; return true }

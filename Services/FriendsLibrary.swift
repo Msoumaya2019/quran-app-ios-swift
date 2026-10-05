@@ -89,6 +89,21 @@ import Supabase
         let result = await action { client in let _: UUID = try await client.rpc("create_friend_group", params: Args(p_name: text)).execute().value }
         if result { await refreshGroups() }; return result
     }
+    func groupConversation(_ id: String) -> (owner: UUID, link: UUID, remote: ChatRemote)? {
+        guard let owner = snapshot?.owner, let group = UUID(uuidString: id) else { return nil }
+        return (owner, group, ChatRepository(client: client, group: true))
+    }
+    func groupMemberAction(_ actionName: String, group: String, member: String?, enabled: Bool = false) async -> Bool {
+        guard UUID(uuidString: group) != nil else { return false }
+        struct Args: Encodable { let p_group: String; let p_member: String; let p_enabled: Bool }
+        if actionName == "set_group_moderator", let member, UUID(uuidString: member) != nil {
+            return await action { client in try await client.rpc(actionName, params: Args(p_group: group, p_member: member, p_enabled: enabled)).execute() }
+        }
+        guard ["remove_group_member", "delete_friend_group"].contains(actionName) else { return false }
+        var args = ["p_group": group]
+        if actionName == "remove_group_member" { guard let member, UUID(uuidString: member) != nil else { return false }; args["p_member"] = member }
+        return await action { client in try await client.rpc(actionName, params: args).execute() }
+    }
     func groupAction(_ name: String, id: String, friend: String?) async -> Bool {
         guard ["accept_group_invite", "decline_group_invite", "invite_group_member"].contains(name), UUID(uuidString: id) != nil else { return false }
         var args: [String: String] = ["p_group": id]

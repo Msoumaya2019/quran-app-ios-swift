@@ -2,6 +2,22 @@ import XCTest
 @testable import CoranNative
 
 final class ChatTests: XCTestCase {
+    func testGroupMessagesAndDirectMessagesUseSeparateRoomsAndCaches() throws {
+        let owner = UUID(), room = UUID()
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var group = ChatSnapshot(owner: owner, linkID: room, groupRoom: true)
+        let pending = try group.enqueue("Message du groupe")
+        XCTAssertNil(pending.linkID); XCTAssertEqual(pending.groupID, room)
+        var direct = ChatSnapshot(owner: owner, linkID: room)
+        let personal = try direct.enqueue("Message privé")
+        group.merge([personal]); XCTAssertEqual(group.pending.count, 1); XCTAssertEqual(group.visible.count, 1)
+        direct.merge([pending]); XCTAssertEqual(direct.visible.first?.body, "Message privé")
+        let cache = ChatCache(directory: directory); try cache.save(group); try cache.save(direct)
+        XCTAssertEqual(try cache.load(owner: owner, link: room, group: true)?.pending, [pending])
+        XCTAssertEqual(try cache.load(owner: owner, link: room)?.pending, [personal])
+        XCTAssertEqual(try JSONDecoder().decode(ChatSnapshot.self, from: JSONEncoder().encode(direct)).groupRoom, nil)
+    }
     let owner = UUID(), link = UUID()
     func testQueueKeepsStableIdentityAndRejectsInvalidBodies() throws {
         var snapshot = ChatSnapshot(owner: owner, linkID: link)

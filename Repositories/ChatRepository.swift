@@ -9,13 +9,14 @@ struct ChatPage { let messages: [ChatMessage]; let hidden: Set<UUID> }
 }
 @MainActor final class ChatRepository: ChatRemote {
     let client: SupabaseClient?
-    init(client: SupabaseClient?) { self.client = client }
+    private let group: Bool
+    init(client: SupabaseClient?, group: Bool = false) { self.client = client; self.group = group }
     private func authorized(_ owner: UUID) async throws -> SupabaseClient {
         guard let client, try await client.auth.session.user.id == owner else { throw URLError(.userAuthenticationRequired) }; return client
     }
     func load(owner: UUID, link: UUID, before: ChatMessage?) async throws -> ChatPage {
         let client = try await authorized(owner)
-        var query = client.from("friend_messages").select().eq("link_id", value: link.uuidString)
+        var query = client.from("friend_messages").select().eq(group ? "group_id" : "link_id", value: link.uuidString)
         if let before, ChatMessage.date(before.createdAt) != nil {
             query = query.or("created_at.lt.\(before.createdAt),and(created_at.eq.\(before.createdAt),id.lt.\(before.id.uuidString))")
         }
@@ -26,14 +27,15 @@ struct ChatPage { let messages: [ChatMessage]; let hidden: Set<UUID> }
     }
     func send(owner: UUID, message: ChatMessage) async throws -> ChatMessage {
         let client = try await authorized(owner)
-        guard message.senderID == owner, message.linkID != nil, message.groupID == nil else { throw ChatError.mismatch }
+        guard message.senderID == owner, (group ? message.groupID != nil && message.linkID == nil : message.linkID != nil && message.groupID == nil) else { throw ChatError.mismatch }
         let existing: [ChatMessage] = try await client.from("friend_messages").select().eq("id", value: message.id.uuidString).limit(1).execute().value
         if let row = existing.first { guard row.acknowledges(message) else { throw ChatError.mismatch }; return row }
-        struct Insert: Encodable { let id: UUID; let link_id: UUID?; let sender_id: UUID; let body: String; let kind: String }
-        let rows: [ChatMessage] = try await client.from("friend_messages").insert(Insert(id: message.id, link_id: message.linkID, sender_id: owner, body: message.body, kind: message.kind)).select().execute().value
+        struct Insert: Encodable { let id: UUID; let link_id: UUID?; let group_id: UUID?; let sender_id: UUID; let body: String; let kind: String }
+        let rows: [ChatMessage] = try await client.from("friend_messages").insert(Insert(id: message.id, link_id: message.linkID, group_id: message.groupID, sender_id: owner, body: message.body, kind: message.kind)).select().execute().value
         guard let row = rows.first, row.acknowledges(message) else { throw ChatError.mismatch }; return row
     }
     func markRead(owner: UUID, link: UUID, through: String) async throws {
+        guard !group else { return }
         let client = try await authorized(owner)
         struct Read: Codable { let link_id: UUID; let user_id: UUID; let last_read_at: String }
         let rows: [Read] = try await client.from("friend_message_reads").select().eq("link_id", value: link.uuidString).eq("user_id", value: owner.uuidString).limit(1).execute().value

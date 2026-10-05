@@ -27,18 +27,20 @@ struct ChatMessage: Codable, Equatable, Identifiable, Sendable {
 struct ChatSnapshot: Codable, Equatable {
     let owner: UUID
     let linkID: UUID
+    var groupRoom: Bool? = nil
+    private func belongs(_ row: ChatMessage) -> Bool { groupRoom == true ? row.groupID == linkID && row.linkID == nil : row.linkID == linkID && row.groupID == nil }
     var messages: [ChatMessage] = []
     var pending: [ChatMessage] = []
     var hidden: Set<UUID> = []
     var visible: [ChatMessage] {
         var values = Dictionary(messages.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
         for message in pending where values[message.id] == nil { values[message.id] = message }
-        return values.values.filter { $0.linkID == linkID && $0.groupID == nil && !hidden.contains($0.id) }.sorted {
+        return values.values.filter { belongs($0) && !hidden.contains($0.id) }.sorted {
             $0.timestamp == $1.timestamp ? $0.id.uuidString < $1.id.uuidString : $0.timestamp < $1.timestamp
         }
     }
     mutating func merge(_ rows: [ChatMessage], hiddenIDs: Set<UUID> = []) {
-        let rows = rows.filter { $0.linkID == linkID && $0.groupID == nil }
+        let rows = rows.filter { belongs($0) }
         var values = Dictionary(messages.map { ($0.id, $0) }, uniquingKeysWith: { _, last in last })
         for row in rows {
             if values[row.id]?.deletedAt != nil && row.deletedAt == nil { continue }
@@ -52,7 +54,7 @@ struct ChatSnapshot: Codable, Equatable {
         let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.unicodeScalars.count <= 2000 else { throw ChatError.invalidBody }
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let message = ChatMessage(id: id, linkID: linkID, groupID: nil, senderID: owner, kind: "text", body: trimmed, createdAt: formatter.string(from: now), deletedAt: nil, recitationID: nil)
+        let message = ChatMessage(id: id, linkID: groupRoom == true ? nil : linkID, groupID: groupRoom == true ? linkID : nil, senderID: owner, kind: "text", body: trimmed, createdAt: formatter.string(from: now), deletedAt: nil, recitationID: nil)
         guard !pending.contains(where: { $0.id == id }), !messages.contains(where: { $0.id == id }) else { throw ChatError.duplicate }
         pending.append(message); return message
     }
@@ -66,15 +68,15 @@ enum ChatError: LocalizedError {
 struct ChatCache {
     let directory: URL
     init(directory: URL? = nil) { self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("CoranNative/Conversations") }
-    private func file(owner: UUID, link: UUID) -> URL { directory.appendingPathComponent(owner.uuidString.lowercased()).appendingPathComponent(link.uuidString.lowercased() + ".json") }
-    func load(owner: UUID, link: UUID) throws -> ChatSnapshot? {
-        let file = file(owner: owner, link: link)
+    private func file(owner: UUID, link: UUID, group: Bool = false) -> URL { directory.appendingPathComponent(owner.uuidString.lowercased()).appendingPathComponent((group ? "group-" : "") + link.uuidString.lowercased() + ".json") }
+    func load(owner: UUID, link: UUID, group: Bool = false) throws -> ChatSnapshot? {
+        let file = file(owner: owner, link: link, group: group)
         guard FileManager.default.fileExists(atPath: file.path) else { return nil }
         let value = try JSONDecoder().decode(ChatSnapshot.self, from: Data(contentsOf: file))
-        guard value.owner == owner, value.linkID == link else { throw ChatError.mismatch }; return value
+        guard value.owner == owner, value.linkID == link, (value.groupRoom == true) == group else { throw ChatError.mismatch }; return value
     }
     func save(_ value: ChatSnapshot) throws {
-        let file = file(owner: value.owner, link: value.linkID)
+        let file = file(owner: value.owner, link: value.linkID, group: value.groupRoom == true)
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(value).write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }

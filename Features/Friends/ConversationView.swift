@@ -7,11 +7,11 @@ struct ConversationView: View {
     @EnvironmentObject var store: AppStore
     @Environment(\.scenePhase) private var phase
     @State private var draft = ""
-    init(name: String, owner: UUID, link: UUID, remote: ChatRemote) {
+    init(name: String, owner: UUID, link: UUID, remote: ChatRemote, group: Bool = false) {
         self.name = name
         // StateObject's autoclosure reads the cache when this destination mounts,
         // rather than capturing a library prepared before messages were saved.
-        _library = StateObject(wrappedValue: ConversationLibrary(owner: owner, link: link, remote: remote))
+        _library = StateObject(wrappedValue: ConversationLibrary(owner: owner, link: link, remote: remote, group: group))
     }
     var body: some View {
         ScrollViewReader { reader in
