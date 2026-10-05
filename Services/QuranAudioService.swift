@@ -23,6 +23,8 @@ import Foundation
     private var ended: NSObjectProtocol?
     private var timeObserver: Any?
     private var itemObserver: NSKeyValueObservation?
+    private var durationObserver: NSKeyValueObservation?
+    private var pendingSeek: UUID?
     private var prefetch: Task<Void, Never>?
     private var request = 0
     init(cache: QuranAudioCache? = nil) {
@@ -88,31 +90,49 @@ import Foundation
     func seek(to seconds: Double) {
         guard seconds.isFinite, timeline.duration > 0, let player else { return }
         let value = min(max(0, seconds), timeline.duration)
-        player.seek(to: CMTime(seconds: value, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        let operation = UUID(); pendingSeek = operation
+        player.seek(to: CMTime(seconds: value, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self, weak player] finished in
+            Task { @MainActor [weak self, weak player] in
+                guard let self, let player, self.player === player, self.pendingSeek == operation else { return }
+                self.pendingSeek = nil
+                self.timeline.update(elapsed: finished ? value : player.currentTime().seconds, duration: self.timeline.duration)
+            }
+        }
         timeline.update(elapsed: value, duration: timeline.duration)
     }
     private func observeProgress(_ observedPlayer: AVPlayer, item: AVPlayerItem) {
         timeObserver = observedPlayer.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.25, preferredTimescale: 600), queue: .main) { [weak self, weak observedPlayer] time in
             Task { @MainActor [weak self, weak observedPlayer] in
-                guard let self, let observedPlayer, self.player === observedPlayer else { return }
-                self.timeline.update(elapsed: time.seconds, duration: observedPlayer.currentItem?.duration.seconds ?? 0)
+                guard let self, let observedPlayer, self.player === observedPlayer, self.pendingSeek == nil else { return }
+                self.updateProgress(elapsed: time.seconds, duration: observedPlayer.currentItem?.duration.seconds ?? 0)
             }
         }
         itemObserver = item.observe(\.status, options: [.initial, .new]) { [weak self] observed, _ in
             Task { @MainActor [weak self] in
                 guard let self, self.player?.currentItem === observed else { return }
                 if observed.status == .readyToPlay {
-                    self.timeline.update(elapsed: self.player?.currentTime().seconds ?? 0, duration: observed.duration.seconds)
+                    self.updateProgress(elapsed: self.player?.currentTime().seconds ?? 0, duration: observed.duration.seconds)
                 } else if observed.status == .failed {
                     self.pause(); self.error = "Ce fichier audio n’a pas pu être lu. Réessaie avec un autre réciteur."
                 }
             }
         }
+        durationObserver = item.observe(\.duration, options: [.initial, .new]) { [weak self] observed, _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.player?.currentItem === observed, self.pendingSeek == nil else { return }
+                self.updateProgress(elapsed: self.player?.currentTime().seconds ?? 0, duration: observed.duration.seconds)
+            }
+        }
+    }
+    private func updateProgress(elapsed: Double, duration: Double) {
+        // An indefinite duration during preparation must not erase known metadata.
+        timeline.update(elapsed: elapsed, duration: duration.isFinite && duration > 0 ? duration : timeline.duration)
     }
     private func releasePlayer() {
         player?.pause()
         if let timeObserver { player?.removeTimeObserver(timeObserver) }
         timeObserver = nil; itemObserver?.invalidate(); itemObserver = nil
+        durationObserver?.invalidate(); durationObserver = nil; pendingSeek = nil
         if let ended { NotificationCenter.default.removeObserver(ended) }
         ended = nil; player = nil
     }
