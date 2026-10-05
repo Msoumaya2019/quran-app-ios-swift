@@ -56,11 +56,26 @@ final class ProblemReportTests: XCTestCase {
         XCTAssertEqual(library.owner, second); XCTAssertEqual(library.pending.map(\.id), [secondID])
         library.select(first); XCTAssertEqual(library.pending.map(\.id), [firstID])
     }
+    @MainActor func testNewReportQueuedDuringUploadIsDrainedInSameSynchronization() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let owner = UUID(), remote = SuspendedReportRemote()
+        let library = ProblemReportLibrary(directory: directory, remote: remote); library.select(owner)
+        let first = try library.enqueue(type: .bug, description: "Premier", screenshot: nil, version: "1")
+        let sync = Task { await library.synchronize() }
+        while remote.confirmation == nil { await Task.yield() }
+        let second = try library.enqueue(type: .audio, description: "Deuxième", screenshot: nil, version: "1")
+        remote.confirmation?.resume(); remote.confirmation = nil
+        await sync.value
+        XCTAssertEqual(remote.sent, [first, second]); XCTAssertTrue(library.pending.isEmpty)
+    }
 }
 @MainActor private final class SuspendedReportRemote: ProblemReportRemote {
     var confirmation: CheckedContinuation<Void, Never>?
+    var sent: [UUID] = []
     func send(_ report: ProblemReport, screenshot: URL?) async throws {
-        await withCheckedContinuation { confirmation = $0 }
+        sent.append(report.id)
+        if sent.count == 1 { await withCheckedContinuation { confirmation = $0 } }
     }
 }
 @MainActor private final class ReportRemoteFixture: ProblemReportRemote {

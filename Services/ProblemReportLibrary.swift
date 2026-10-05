@@ -65,11 +65,13 @@ import Supabase
     }
     func synchronize() async {
         guard !sending, let owner, let remote, !pending.isEmpty else { return }
-        let token = generation, batch = pending
+        let token = generation
+        var attempted: Set<UUID> = []
         sending = true
         defer { if token == generation { sending = false } }
-        for report in batch {
+        while let report = pending.first(where: { !attempted.contains($0.id) }) {
             guard token == generation else { return }
+            attempted.insert(report.id)
             let photo = report.screenshot_path == nil ? nil : folder(owner).appendingPathComponent(report.id.uuidString.lowercased() + ".jpg")
             do {
                 try await remote.send(report, screenshot: photo)
