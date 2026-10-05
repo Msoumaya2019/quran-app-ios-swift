@@ -21,7 +21,8 @@ final class PhaseOneUITests: XCTestCase {
         let user = app.staticTexts["Yassine"]; XCTAssertTrue(user.waitForExistence(timeout: 5)); user.tap()
         XCTAssertTrue(app.staticTexts["Message de test à modérer"].exists)
         app.buttons["moderation.delete"].tap()
-        app.buttons["Supprimer le message"].lastMatch.tap()
+        let confirmations = app.buttons.matching(identifier: "Supprimer le message").allElementsBoundByIndex
+        XCTAssertFalse(confirmations.isEmpty); confirmations.last?.tap()
         XCTAssertTrue(app.staticTexts["Message supprimé"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["moderation.delete"].isEnabled)
         attach(app, name: "Administration — message supprimé après confirmation")

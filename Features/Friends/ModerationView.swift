@@ -40,6 +40,7 @@ private struct ModerationDetail: View {
     let section: ModerationSection
     @EnvironmentObject private var library: ModerationLibrary
     @EnvironmentObject private var theme: ThemeManager
+    @EnvironmentObject private var store: AppStore
     @State private var confirming = false
     @State private var comment = ""
     @State private var feedbackID = UUID()
@@ -48,6 +49,13 @@ private struct ModerationDetail: View {
     @State private var openingOwner: UUID?
     @State private var attemptedComment: String?
     private var current: JSONValue { library.items.first { $0["id"] == row["id"] } ?? row }
+    private var passage: String {
+        guard row["recording_type"].string != "invocation" else { return "Invocation" }
+        guard let start = row["start_verse_id"].int, let end = row["end_verse_id"].int,
+              let first = store.catalog.surah(for: start), let last = store.catalog.surah(for: end) else { return "Récitation du Coran" }
+        if first.start == last.start { return "\(first.name) · versets \(start - first.start + 1) → \(end - first.start + 1)" }
+        return "\(first.name) \(start - first.start + 1) → \(last.name) \(end - last.start + 1)"
+    }
     var body: some View {
         Group {
         if openingOwner != nil && openingOwner == library.account { Form {
@@ -55,7 +63,7 @@ private struct ModerationDetail: View {
                 Text(library.name(row[section == .messages ? "sender_id" : section == .reports ? "reporter_id" : "user_id"].string)).font(.headline)
                 Text(row["created_at"].string ?? "").font(.caption)
                 if section == .recitations {
-                    Text(row["recording_type"].string == "invocation" ? "Invocation" : "Versets \(row["start_verse_id"].int ?? 0) → \(row["end_verse_id"].int ?? 0)")
+                    Text(passage)
                     AdminRecitationPlayer(row: row)
                     Button(current["listened_at"] == .null ? "Marquer comme écoutée" : "Écoutée") { Task { await library.moderate(row, section: .recitations) } }
                         .disabled(library.busy || current["listened_at"] != .null)
