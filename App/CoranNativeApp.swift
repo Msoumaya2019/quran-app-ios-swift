@@ -9,6 +9,7 @@ import SwiftUI
     @StateObject private var moderation: ModerationLibrary
     @StateObject private var theme = ThemeManager()
     @StateObject private var network = ConnectivityService()
+    @StateObject private var reminders = LocalReminderService()
     @Environment(\.scenePhase) private var scenePhase
     init() {
         let client = try? BackendConfiguration.load().client()
@@ -64,11 +65,12 @@ import SwiftUI
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation)
+            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation).environmentObject(reminders)
                 .onOpenURL { url in Task { await store.receive(url) } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh(); await quiz.refresh() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in Task { await recitations.select(user); await recitations.synchronize() } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await reports.synchronize() } } }
+                .onChange(of: scenePhase) { _, phase in if phase == .active { reminders.update(owner: store.identity?.id, settings: ReminderSettings.load(store.snapshot.state), force: true) } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in reports.select(user); Task { await reports.synchronize() } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in friends.select(user) }
                 .onChange(of: store.identity?.id, initial: true) { _, user in moderation.select(user) }

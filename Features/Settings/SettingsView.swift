@@ -36,6 +36,9 @@ struct SettingsView: View {
                     Text("Lecteur natif • SwiftUI et UIKit • iOS 17 et versions ultérieures")
                     Text("Coran de Médine, Coran 1441, apprentissage, révisions, amis, messagerie et Quiz natif.").font(.caption).foregroundStyle(theme.muted)
                 }
+                Section("Notifications") {
+                    NavigationLink("Notifications et rappels") { ReminderSettingsView() }.accessibilityIdentifier("settings.reminders.open")
+                }
                 if quiz.isAdmin { Section("Administration") {
                     NavigationLink("Récitations à écouter") { ModerationView(section: .recitations) }.accessibilityIdentifier("settings.admin.recitations")
                     NavigationLink("Modération des messages") { ModerationView(section: .messages) }.accessibilityIdentifier("settings.admin.messages")

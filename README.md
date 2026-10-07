@@ -57,3 +57,5 @@ Administration : écoute des récitations, retours écrits, suppression confirm�
 
 Actions natives sur les versets, progression réelle du téléchargement et réglages audio instantanés : [rapport](Docs/NATIVE_VERSE_AUDIO_DOWNLOAD_REPORT.md). 126 tests unitaires, 28 parcours UI et revalidation audio finale réussis. [IPA Lecteur et audio — 7 octobre 2026](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-lecteur-audio-2026-10-07), non signée.
 
+Correction de préparation Coran 1441 : index ZIP unique et progression des pages, extraction complète vérifiée en 20,23 secondes sur simulateur. Retours de récitation utilisateur avec textes et voix en cache : [rapport](Docs/NATIVE_RECITATION_FEEDBACK_REPORT.md). 130 tests unitaires et parcours UI de correction réussis. [Dernière IPA — Préparation 1441](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-preparation1441-2026-10-07), non signée.
+

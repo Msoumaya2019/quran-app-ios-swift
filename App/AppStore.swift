@@ -17,7 +17,7 @@ import SwiftUI
         guard let userID = identity?.id else { return false }
         var next = snapshot
         next.state = operation.applying(to: next.state, catalog: catalog)
-        if [.program, .reviewSchedule, .verseStudy].contains(operation.kind), next.state == snapshot.state { return false }
+        if [.program, .reviewSchedule, .verseStudy, .reminders].contains(operation.kind), next.state == snapshot.state { return false }
         var queue = next.readerOperations ?? []
         // Keep the latest resume/source operation; bookmark tombstones retain their order.
         if operation.kind == .reading { queue.removeAll { $0.kind == .reading && $0.page == operation.page && $0.source == operation.source } }

@@ -26,6 +26,7 @@ struct RootView: View {
     @EnvironmentObject var network: ConnectivityService
     @EnvironmentObject var recitations: RecitationLibrary
     @EnvironmentObject var friends: FriendsLibrary
+    @EnvironmentObject var reminders: LocalReminderService
     @State private var tab: MainTab = .home
     @State private var settings = false
     var body: some View {
@@ -71,8 +72,18 @@ struct RootView: View {
         .tint(theme.accent)
         .sheet(isPresented: $store.passwordRecovery) { PasswordRecoveryView() }
         .task { network.onAvailable = { Task { await reports.synchronize() }; Task { await store.refresh(); await recitations.synchronize(); await friends.refresh(); await quiz.refresh() } }; await store.start() }
-        .onChange(of: store.identity?.id) { _, id in if let id { theme.importPreferences(state: store.snapshot.state, userID: id) } }
-        .onChange(of: store.snapshot.state) { _, state in if let id = store.identity?.id { theme.importPreferences(state: state, userID: id) } }
-        .onAppear { if let id = store.identity?.id { theme.importPreferences(state: store.snapshot.state, userID: id) } }
+        .onChange(of: store.identity?.id) { _, id in
+            if let id { theme.importPreferences(state: store.snapshot.state, userID: id) }
+            reminders.update(owner: id, settings: ReminderSettings.load(store.snapshot.state), force: true)
+        }
+        .onChange(of: store.snapshot.state) { _, state in
+            if let id = store.identity?.id { theme.importPreferences(state: state, userID: id) }
+            reminders.update(owner: store.identity?.id, settings: ReminderSettings.load(state))
+        }
+        .onChange(of: reminders.programRequest) { _, request in if request != nil { settings = false; tab = .program; reminders.programRequest = nil } }
+        .onAppear {
+            if let id = store.identity?.id { theme.importPreferences(state: store.snapshot.state, userID: id) }
+            reminders.update(owner: store.identity?.id, settings: ReminderSettings.load(store.snapshot.state), force: true)
+        }
     }
 }

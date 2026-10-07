@@ -41,6 +41,14 @@ Modifiés : `App/AppStore.swift`, `Models/ReaderOperation.swift`, `Core/AudioRep
 
 Un premier test audio a échoué sur le démarrage à froid du codec du simulateur ; le délai de disponibilité initial a été adapté. Deux vérifications UI ont échoué sur l’identifiant puis la géométrie d’accessibilité du Stepper natif. Le test vérifie désormais les appuis, la valeur obtenue et la lecture effective. La capture confirme le contrôle visible et le compteur à trois. Le [rejeu final et l’archive](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37602547752) ont réussi sur `e6b3b5d`. Aucun résultat de mesure Instruments sur appareil réel n’est revendiqué.
 
+## Correction de la préparation signalée sur iPhone
+
+La recherche `archive[path]` utilisait un parcours depuis le début du ZIP pour chaque image : [source ZIPFoundation 0.9.19](https://github.com/weichsel/ZIPFoundation/blob/0.9.19/Sources/ZIPFoundation/Archive.swift). L’extraction utilise désormais un index construit une seule fois. Les 9 060 chemins attendus sont vérifiés avant extraction ; les doublons ou fichiers absents échouent explicitement.
+
+La préparation affiche son propre pourcentage et le nombre de pages réellement extraites sur 604. Le checksum retourné par chaque extraction est explicitement comparé à celui de l’entrée ZIP avant de compter la page. Le marqueur d’installation est écrit uniquement à la fin. Le test natif télécharge le ZIP réel puis prépare et contrôle les 9 060 images, avec 604 incréments de progression : **20,23 secondes sur le simulateur Xcode**, dans la [série de 130 tests unitaires réussis](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37606348848). Cela ne mesure pas la durée sur un iPhone réel. Le test de ZIP incomplet a aussi réussi.
+
 ## Livraison
+
+Correction de préparation et retours de récitation : [IPA Préparation 1441](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-preparation1441-2026-10-07), source `d364127`, archive et parcours UI réussis. Arm64 non signée, 131 848 662 octets, SHA-256 `f6a2f6472e4700e2345913186188534e7c22d86bdebc68c86659fcca972983d3` vérifié et comparé au digest GitHub. Cette version remplace la livraison précédente pour tester le téléchargement complet.
 
 [IPA Lecteur et audio](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-lecteur-audio-2026-10-07), arm64 non signée, 131 803 528 octets. SHA-256 vérifié localement et comparé au digest GitHub : `9d29f5384f0ef050ded21842f7931fd9d04ed294a2c2521e70343336c8ddc158`. Les 604 pages Médine sont incluses ; Coran 1441 reste téléchargé à la sélection. Aucun asset de test du simulateur dans l’archive.

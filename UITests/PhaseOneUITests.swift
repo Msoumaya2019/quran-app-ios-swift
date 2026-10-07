@@ -1,6 +1,20 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testReminderPreferencesSaveImmediatelyAndRemainWhenReopened() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let open = app.buttons["settings.reminders.open"]
+        for _ in 0..<6 { if open.exists && open.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(open.waitForExistence(timeout: 5)); open.tap()
+        let learning = app.switches["reminders.learning"]
+        XCTAssertTrue(learning.waitForExistence(timeout: 5)); XCTAssertEqual(learning.value as? String, "0")
+        learning.tap(); XCTAssertEqual(learning.value as? String, "1")
+        attach(app, name: "Rappels locaux — réglage immédiat et autorisation iOS explicite")
+        app.navigationBars["Notifications et rappels"].buttons.element(boundBy: 0).tap()
+        open.tap(); XCTAssertTrue(learning.waitForExistence(timeout: 5)); XCTAssertEqual(learning.value as? String, "1")
+        learning.tap(); XCTAssertEqual(learning.value as? String, "0")
+    }
     func testUserCanReadAndListenToRecitationFeedbackWithoutLeavingLibrary() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-recitation-feedback"]; app.launch()
         app.tabBars.buttons["Coran"].tap()
