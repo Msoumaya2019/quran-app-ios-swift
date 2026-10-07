@@ -5,6 +5,7 @@ struct QuranPager: UIViewControllerRepresentable {
     let source: QuranSource
     @Binding var page: Int
     let onTap: () -> Void
+    var onVerse: (Int) -> Void = { _ in }
     var annotations = QuranPageAnnotations()
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIViewController(context: Context) -> UIPageViewController {
@@ -41,7 +42,7 @@ struct QuranPager: UIViewControllerRepresentable {
         }
         private func pageController(_ page: Int) -> PageController {
             if let existing = pages[page] { return existing }
-            let value = PageController(page: page, source: source ?? parent.source, onTap: { [weak self] in self?.parent.onTap() })
+            let value = PageController(page: page, source: source ?? parent.source, onTap: { [weak self] in self?.parent.onTap() }, onVerse: { [weak self] id in self?.parent.onVerse(id) })
             value.set(annotations: parent.annotations)
             pages[page] = value
             // UIKit may ask for the next candidate before didFinishAnimating
@@ -188,6 +189,7 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
 final class PageController: UIViewController {
     let page: Int
     private let onTap: () -> Void
+    private let onVerse: (Int) -> Void
     private let imageView = UIImageView()
     private let spinner = UIActivityIndicatorView(style: .medium)
     private let errorLabel = UILabel()
@@ -196,8 +198,8 @@ final class PageController: UIViewController {
     private let regions: [QuranVerseRegion]
     private var annotations = QuranPageAnnotations()
     private static let catalog = QuranCatalog()
-    init(page: Int, source: QuranSource = .medina, onTap: @escaping () -> Void) {
-        self.page = page; self.onTap = onTap
+    init(page: Int, source: QuranSource = .medina, onTap: @escaping () -> Void, onVerse: @escaping (Int) -> Void = { _ in }) {
+        self.page = page; self.onTap = onTap; self.onVerse = onVerse
         regions = QuranMarginGeometry.regions(source: source, page: page, catalog: Self.catalog)
         super.init(nibName: nil, bundle: nil)
     }
@@ -222,7 +224,10 @@ final class PageController: UIViewController {
             audioHighlight.topAnchor.constraint(equalTo: view.topAnchor), audioHighlight.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         errorLabel.numberOfLines = 0; errorLabel.textAlignment = .center; errorLabel.font = .preferredFont(forTextStyle: .body)
-        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped)))
+        let hold = UILongPressGestureRecognizer(target: self, action: #selector(held(_:)))
+        hold.minimumPressDuration = 0.45
+        let tap = UITapGestureRecognizer(target: self, action: #selector(tapped)); tap.require(toFail: hold)
+        view.addGestureRecognizer(tap); view.addGestureRecognizer(hold)
         spinner.startAnimating()
     }
     override func viewDidAppear(_ animated: Bool) {
@@ -233,6 +238,15 @@ final class PageController: UIViewController {
         }
     }
     @objc private func tapped() { onTap() }
+    @objc private func held(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began, let image = imageView.image else { return }
+        let rect = QuranMarginGeometry.imageRect(image: image.size, viewport: view.bounds.size)
+        let point = gesture.location(in: view)
+        guard rect.contains(point), rect.width > 0, rect.height > 0 else { return }
+        let x = Double((point.x - rect.minX) / rect.width), y = Double((point.y - rect.minY) / rect.height)
+        guard let region = regions.first(where: { x >= $0.x && x <= $0.x + $0.width && y >= $0.y && y <= $0.y + $0.height }) else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred(); onVerse(region.id)
+    }
     func debugNavigation(_ status: String) {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { imageView.accessibilityLabel = "Page \(page) · \(status)" }

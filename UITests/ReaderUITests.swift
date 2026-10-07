@@ -226,15 +226,14 @@ final class ReaderUITests: XCTestCase {
         app.buttons["quran.action.Écouter"].tap()
         let open = app.buttons["quran.audio.repeat.open"]
         XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
-        let count = app.buttons["quran.audio.repeat.count"]
+        let count = app.steppers["quran.audio.repeat.count"]
         XCTAssertTrue(count.waitForExistence(timeout: 5))
-        let increment = app.buttons["Increment"]
+        let increment = count.buttons["Increment"]
         XCTAssertTrue(increment.isHittable); increment.tap(); increment.tap()
-        XCTAssertTrue(count.label.contains("3 fois"))
+        XCTAssertTrue(count.label.contains("3"))
         attach(app, name: "Audio natif — réglages des répétitions")
-        let start = app.buttons["quran.audio.repeat.start"]
-        for _ in 0..<4 where !start.isHittable { app.swipeUp() }
-        start.tap()
+        XCTAssertFalse(app.buttons["quran.audio.repeat.start"].exists)
+        app.buttons["Fermer"].tap()
         let slider = app.sliders["quran.audio.timeline"]
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: slider)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 20), .completed)

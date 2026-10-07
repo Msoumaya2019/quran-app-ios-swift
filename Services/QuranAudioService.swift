@@ -53,12 +53,23 @@ import Foundation
     }
     func configure(_ settings: AudioRepeatSettings) {
         guard settings.valid else { return }
+        let rangeChanged = repeatSettings.rangeStart != settings.rangeStart || repeatSettings.rangeEnd != settings.rangeEnd
         repeatSettings = settings
+        if rangeChanged, let first = settings.rangeStart, let last = settings.rangeEnd { updateRange(first...last) }
         if playing && transition == nil { player?.rate = Float(settings.speed) }
+    }
+    func updateRange(_ range: ClosedRange<Int>) {
+        guard range.lowerBound >= 1, range.upperBound <= 6236, range != playbackRange else { return }
+        playbackRange = range
+        if !range.contains(verseID) {
+            if playing || loading { play(range.lowerBound) }
+            else { releasePlayer(); verseID = range.lowerBound; repetition = 1; timeline.update(elapsed: 0, duration: 0) }
+        }
     }
     func start(range: ClosedRange<Int>, settings: AudioRepeatSettings) {
         guard range.lowerBound >= 1, range.upperBound <= 6236, settings.valid else { return }
-        playbackRange = range; configure(settings); play(range.lowerBound)
+        var value = settings; value.rangeStart = range.lowerBound; value.rangeEnd = range.upperBound
+        playbackRange = range; configure(value); play(range.lowerBound)
     }
     func play(_ id: Int) { load(id, repetition: 1) }
     private func load(_ id: Int, repetition nextRepetition: Int) {
@@ -143,18 +154,20 @@ import Foundation
                 guard let self, self.request == token, self.playing, self.player?.currentItem === item else { return }
                 guard let next = self.repeatSettings.next(range: self.playbackRange, current: .init(verse: self.verseID, repetition: self.repetition)) else { self.pause(); return }
                 let isRepeat = self.repeatSettings.mode == .eachVerse ? next.verse == self.verseID : next.repetition > self.repetition
-                let delay = isRepeat ? Double(self.repeatSettings.gap) : 0.2
+                let delay = max(isRepeat ? Double(self.repeatSettings.gap) : 0.2, Double(self.repeatSettings.recitePause ?? 0))
                 self.pendingRepeat = next; self.pendingDelay = delay
                 self.scheduleTransition(token: token)
             }
         }
     }
     private func scheduleTransition(token: Int) {
-        guard let next = pendingRepeat else { return }
+        guard pendingRepeat != nil else { return }
         let delay = pendingDelay
         transition = Task { @MainActor [weak self] in
             do { try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) } catch { return }
             guard let self, self.request == token, self.playing else { return }
+            guard let next = self.repeatSettings.next(range: self.playbackRange, current: .init(verse: self.verseID, repetition: self.repetition)) else { self.pendingRepeat = nil; self.pause(); return }
+            if !self.playbackRange.contains(next.verse) { self.playbackRange = next.verse...(self.repeatSettings.ending == .nextVerse ? next.verse : 6236) }
             self.transition = nil
             if next.verse == self.verseID, let player = self.player {
                 await player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)

@@ -21,7 +21,7 @@ extension RevisionValidation {
                   (state["memorizedAt"][id].string ?? "") == learnedAnchors[id] else { return state }
             if reviewed.contains(verse) { continue }
             if category == "priority" {
-                guard DifficultyChange.isDifficult(state, verseID: verse),
+                guard (DifficultyChange.isDifficult(state, verseID: verse) || state["nativeManualReviewDue"][id].string != nil),
                       (state["reviewPriorityDue"][id].string ?? "") == priorityDueAnchors?[id],
                       (state["nativeDifficultyUpdatedAt"][id].string ?? "") <= completedAt else { return state }
             } else {
@@ -78,6 +78,9 @@ extension RevisionValidation {
         var progress: JSONValue = .object(["id": .string(taskID), "mode": .string("revision"), "category": .string(category), "start": .number(Double(start)), "end": .number(Double(end)), "through": .number(Double(through)), "page": .number(Double(page)), "source": .string(source), "updatedAt": .string(completedAt), "scheduledDate": .string(scheduledDate), "status": .string(through == end ? "completed" : "partial"), "validations": .array(validations)])
         if let consolidationOffset { progress = progress.setting("consolidationDay", .number(Double(consolidationOffset))) }
         var result = state
+        var requested = state["nativeManualReviewDue"]
+        for verse in newIDs where (state["nativeVerseActionAt"]["nextRevision"][String(verse)].string ?? "") <= completedAt { requested = requested.setting(String(verse), .null) }
+        result = result.setting("nativeManualReviewDue", requested)
         if cycle != .null { result = result.setting("reviewCycle", cycle.setting("completed", .array(completed.sorted().map { .number(Double($0)) }))) }
         return result.setting("reviewHistory", .array(history)).setting("difficultyMarkers", markers).setting("reviewPriorityDue", due)
             .setting("difficultyHistory", .array(difficultyHistory)).setting("reviewConsolidations", consolidations).setting("consolidationHistory", .array(consolidationHistory))

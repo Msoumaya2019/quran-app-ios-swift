@@ -23,9 +23,10 @@ struct QuranMiniPlayer: View {
                 Button(action: close) { Image(systemName: "chevron.down").frame(width: 44, height: 44) }.accessibilityLabel("Réduire le lecteur audio").accessibilityIdentifier("quran.audio.close")
             }
             HStack {
-                Button { repeatSheet = true } label: { Label("Répétition ×\(audio.repeatSettings.countLabel)", systemImage: "repeat").font(.caption).frame(minHeight: 44) }.accessibilityIdentifier("quran.audio.repeat.open")
+                Label("Répétition ×\(audio.repeatSettings.countLabel)", systemImage: "repeat").font(.caption)
                 Spacer()
                 Text("Écoute \(audio.repetition) / \(audio.repeatSettings.countLabel)").font(.caption).accessibilityIdentifier("quran.audio.repeat.progress")
+                Button { repeatSheet = true } label: { Label("Réglages", systemImage: "gearshape").font(.caption).frame(minHeight: 44) }.accessibilityIdentifier("quran.audio.repeat.open")
             }
             AudioTimelineView(timeline: audio.timeline, seek: audio.seek)
             if let error = audio.error { Text(error).font(.caption).foregroundStyle(theme.muted) }

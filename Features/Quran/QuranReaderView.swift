@@ -33,6 +33,8 @@ struct QuranReaderView: View {
     @State private var showAudio = false
     @State private var recording = false
     @State private var confirmConsolidation = false
+    @State private var selectedVerse: SelectedVerse?
+    private struct SelectedVerse: Identifiable { let id: Int }
     private var verseID: Int {
         QuranSourceMapping.firstVerse(source: source, page: page, catalog: store.catalog)
     }
@@ -52,7 +54,7 @@ struct QuranReaderView: View {
         VStack(spacing: 0) {
             if let session { QuranSessionHeader(context: session, source: source, catalog: store.catalog, completedCount: session.mode == .learning ? LearningValidation.completedCount(context: session, state: store.snapshot.state) : session.mode == .revision ? RevisionValidation.completedCount(context: session, state: store.snapshot.state) : nil) }
             if loading { HStack { ProgressView(); Text("Chargement du Coran…").font(.caption) }.padding(8) }
-            QuranPager(source: source, page: $page, onTap: { withAnimation(.easeInOut(duration: 0.18)) { immersive.toggle() } }, annotations: pageAnnotations)
+            QuranPager(source: source, page: $page, onTap: { withAnimation(.easeInOut(duration: 0.18)) { immersive.toggle() } }, onVerse: { selectedVerse = SelectedVerse(id: $0) }, annotations: pageAnnotations)
                 .accessibilityIdentifier("quran.viewport")
             if !immersive {
                 if showAudio { QuranMiniPlayer(audio: audio, catalog: store.catalog, close: { showAudio = false }, pageRange: verseID...max(verseID, page < source.pageCount ? QuranSourceMapping.firstVerse(source: source, page: page + 1, catalog: store.catalog) - 1 : 6236), sessionRange: session.map { $0.range.start...$0.range.end }, saveRepeat: { settings in
@@ -135,6 +137,7 @@ struct QuranReaderView: View {
                             }.disabled(loading)
                         }
                         Text("Coran 1441 se télécharge uniquement à la sélection (environ 98 Mo). Il reste ensuite disponible hors connexion.").font(.caption)
+                        QuranDownloadProgress()
                     }
                     Section("Aller à une page") {
                         TextField("Numéro de page", value: $jumpPage, format: .number).keyboardType(.numberPad).frame(minHeight: 44)
@@ -182,6 +185,7 @@ struct QuranReaderView: View {
                 VoiceRecorderView(user: user, catalog: store.catalog, firstVerse: verseID, lastVerse: page < 604 ? max(verseID, QuranSourceMapping.firstVerse(source: source, page: page + 1, catalog: store.catalog) - 1) : 6236)
             }
         }
+        .sheet(item: $selectedVerse) { selected in VerseActionsSheet(verseID: selected.id, source: source, audio: audio, listen: { showAudio = true }) }
         .alert("Le Coran", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
     }
     private func canConsolidate(_ context: QuranSessionContext) -> Bool {

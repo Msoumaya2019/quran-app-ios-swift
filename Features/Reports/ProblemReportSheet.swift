@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 
 struct ProblemReportSheet: View {
+    init(initialDescription: String = "") { _description = State(initialValue: initialDescription) }
     @EnvironmentObject var theme: ThemeManager
     @EnvironmentObject var reports: ProblemReportLibrary
     @Environment(\.dismiss) private var dismiss

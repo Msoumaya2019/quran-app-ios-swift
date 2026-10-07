@@ -7,6 +7,7 @@ struct AudioRepeatSheet: View {
     let sessionRange: ClosedRange<Int>?
     let save: (AudioRepeatSettings) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var initialized = false
     @State private var settings = AudioRepeatSettings()
     @State private var selection = "verse"
     @State private var surahNumber = 1
@@ -23,6 +24,11 @@ struct AudioRepeatSheet: View {
             return (surah.start + first - 1)...(surah.start + last - 1)
         default: return audio.verseID...audio.verseID
         }
+    }
+    private func applyRange() {
+        guard initialized, let range else { return }
+        settings.rangeStart = range.lowerBound; settings.rangeEnd = range.upperBound; settings.selection = selection
+        audio.updateRange(range)
     }
     var body: some View {
         NavigationStack {
@@ -44,21 +50,19 @@ struct AudioRepeatSheet: View {
                 }
                 Section("Répétitions") {
                     Picker("Mode", selection: $settings.mode) { Text("Chaque verset").tag(AudioRepeatSettings.Mode.eachVerse); Text("Passage complet").tag(AudioRepeatSettings.Mode.passage) }
-                    Picker("Nombre d’écoutes", selection: $settings.count) {
-                        ForEach([1, 2, 3, 5, 10, 20], id: \.self) { Text("\($0) fois").tag($0) }
-                        Text("En continu").tag(0)
-                        if settings.count > 0 && ![1, 2, 3, 5, 10, 20].contains(settings.count) { Text("\(settings.count) fois").tag(settings.count) }
-                    }.accessibilityIdentifier("quran.audio.repeat.count")
-                    if settings.count > 0 { Stepper("Nombre personnalisé : \(settings.count)", value: $settings.count, in: 1...999) }
-                    Picker("Pause entre les répétitions", selection: $settings.gap) { ForEach([0, 2, 5, 10], id: \.self) { Text($0 == 0 ? "Aucune" : "\($0) secondes").tag($0) } }
-                    Picker("Vitesse", selection: $settings.speed) { ForEach([0.75, 1, 1.25], id: \.self) { Text("\($0, specifier: "%.2g")×").tag($0) } }
-                    Toggle("Arrêter à la fin des écoutes", isOn: $settings.autoStop).disabled(settings.count == 0)
+                    Stepper("Nombre de répétitions : \(settings.countLabel)", value: $settings.count, in: 1...999).accessibilityIdentifier("quran.audio.repeat.count")
+                    Picker("Pause entre répétitions", selection: $settings.gap) { ForEach([0, 1, 2, 3, 5, 10], id: \.self) { Text($0 == 0 ? "Aucune" : "\($0) secondes").tag($0) } }
+                    Picker("Vitesse", selection: $settings.speed) { ForEach([0.75, 0.85, 1, 1.15, 1.25], id: \.self) { Text("\($0, specifier: "%.3g")×").tag($0) } }.pickerStyle(.segmented).accessibilityIdentifier("quran.audio.speed")
+                    Picker("Après les répétitions", selection: Binding(get: { settings.ending }, set: { settings.after = $0 })) {
+                        Text("Arrêter").tag(AudioRepeatSettings.After.stop)
+                        Text("Passer au verset suivant").tag(AudioRepeatSettings.After.nextVerse)
+                        Text("Continuer la lecture").tag(AudioRepeatSettings.After.continuous)
+                    }
+                    Picker("Pause pour réciter", selection: Binding(get: { settings.recitePause ?? 0 }, set: { settings.recitePause = $0 })) {
+                        ForEach([0, 3, 5, 10, 15], id: \.self) { Text($0 == 0 ? "Désactivée" : "\($0) secondes").tag($0) }
+                    }
                 }
                 Section {
-                    Button("Lancer ce passage") {
-                        guard let range else { return }
-                        save(settings); audio.start(range: range, settings: settings); dismiss()
-                    }.frame(minHeight: 44).disabled(range == nil || !settings.valid).accessibilityIdentifier("quran.audio.repeat.start")
                     if range == nil { Text("Choisis une plage de versets valide.").foregroundStyle(.secondary) }
                 }
             }.navigationTitle("Réglages audio").navigationBarTitleDisplayMode(.inline)
@@ -66,8 +70,17 @@ struct AudioRepeatSheet: View {
                 .onAppear {
                     settings = audio.repeatSettings
                     if let chapter = catalog.surah(for: audio.verseID) { surahNumber = chapter.number; first = audio.verseID - chapter.start + 1; last = first }
-                    selection = sessionRange == nil ? "verse" : "session"
+                    selection = settings.selection ?? (audio.playbackRange == pageRange ? "page" : audio.playbackRange == sessionRange ? "session" : "verse")
+                    if let start = settings.rangeStart, let end = settings.rangeEnd, let chapter = catalog.surah(for: start), catalog.surah(for: end)?.number == chapter.number {
+                        surahNumber = chapter.number; first = start - chapter.start + 1; last = end - chapter.start + 1
+                    }
+                    initialized = true
                 }
-        }.presentationDetents([.large]).presentationDragIndicator(.visible)
+        }.onChange(of: settings) { _, value in if initialized { save(value); audio.configure(value) } }
+            .onChange(of: selection) { _, _ in applyRange() }
+            .onChange(of: surahNumber) { _, _ in applyRange() }
+            .onChange(of: first) { _, _ in applyRange() }
+            .onChange(of: last) { _, _ in applyRange() }
+            .presentationDetents([.large]).presentationDragIndicator(.visible)
     }
 }

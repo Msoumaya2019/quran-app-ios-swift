@@ -110,6 +110,9 @@ struct RevisionValidation: Codable, Sendable {
         let progress: JSONValue = .object(["id": .string(taskID), "mode": .string("revision"), "category": .string("habitual"), "start": .number(Double(start)), "end": .number(Double(end)), "through": .number(Double(through)), "page": .number(Double(page)), "source": .string(source), "updatedAt": .string(completedAt), "scheduledDate": .string(scheduledDate), "status": .string(through == end ? "completed" : "partial"), "validations": .array(validations)])
         let updatedCycle = cycle.setting("completed", .array(completed.sorted().map { .number(Double($0)) }))
         var result = state
+        var requested = state["nativeManualReviewDue"]
+        for verse in newIDs where (state["nativeVerseActionAt"]["nextRevision"][String(verse)].string ?? "") <= completedAt { requested = requested.setting(String(verse), .null) }
+        result = result.setting("nativeManualReviewDue", requested)
         if isCurrent { result = result.setting("reviewCycle", updatedCycle) }
         else if let archivedIndex { archives[archivedIndex] = updatedCycle; result = result.setting("reviewCycleHistory", .array(archives)) }
         return result

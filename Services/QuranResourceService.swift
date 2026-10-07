@@ -27,13 +27,16 @@ actor QuranResourceService {
         let task = Task { try await self.install() }
         download = task
         defer { download = nil }
-        try await task.value
+        do { try await task.value }
+        catch { await MainActor.run { QuranDownloadStatus.shared.phase = "error" }; throw error }
     }
     private func install() async throws {
         let url = URL(string: "https://files.quran.app/hafs/madani_1441/zips/images_1440.zip")!
-        let (temporary, response) = try await URLSession.shared.download(from: url)
+        await MainActor.run { QuranDownloadStatus.shared.phase = "downloading"; QuranDownloadStatus.shared.written = 0; QuranDownloadStatus.shared.expected = 0 }
+        let (temporary, response) = try await QuranDownloadTransfer().download(url)
         defer { try? FileManager.default.removeItem(at: temporary) }
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { throw URLError(.badServerResponse) }
+        await MainActor.run { QuranDownloadStatus.shared.phase = "installing" }
         let destination = directory
         try await Task.detached(priority: .utility) {
             let fm = FileManager.default
@@ -50,5 +53,6 @@ actor QuranResourceService {
             }
             try Data("9060".utf8).write(to: destination.appendingPathComponent("ready-v1"), options: .atomic)
         }.value
+        await MainActor.run { QuranDownloadStatus.shared.phase = "ready" }
     }
 }

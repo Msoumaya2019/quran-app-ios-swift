@@ -24,8 +24,8 @@ struct ReviewQueueProjection {
         guard state["reviewSettings"]["enabled"].bool != false else { return [] }
         let done = reviewed
         var priorityByDate: [String: [Int]] = [:]
-        for id in 1...6236 where known(id) && DifficultyChange.isDifficult(state, verseID: id) && !done.contains(id) {
-            let date = state["reviewPriorityDue"][String(id)].string ?? program.today
+        for id in 1...6236 where known(id) && (DifficultyChange.isDifficult(state, verseID: id) || state["nativeManualReviewDue"][String(id)].string != nil) && !done.contains(id) {
+            let date = state["nativeManualReviewDue"][String(id)].string ?? state["reviewPriorityDue"][String(id)].string ?? program.today
             if date <= program.today, ProgramProjection.addingDays(0, to: date, timeZone: program.timeZone) != nil { priorityByDate[date, default: []].append(id) }
         }
         let priority = priorityByDate.keys.sorted().flatMap { day in groups(priorityByDate[day]!).map {

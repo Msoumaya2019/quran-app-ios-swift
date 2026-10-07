@@ -59,6 +59,12 @@ final class QuranAudioTests: XCTestCase {
         XCTAssertEqual(audio.timeline.duration, 3, accuracy: 0.1)
         audio.seek(to: 1)
         try await Task.sleep(nanoseconds: 250_000_000)
+        let beforeChange = audio.timeline.elapsed
+        var live = audio.repeatSettings; live.speed = 0.85; live.count = 3; live.gap = 1; live.recitePause = 5
+        audio.configure(live)
+        XCTAssertTrue(audio.playing); XCTAssertFalse(audio.loading)
+        XCTAssertEqual(audio.verseID, 1); XCTAssertGreaterThanOrEqual(audio.timeline.elapsed, beforeChange - 0.05)
+        XCTAssertEqual(audio.repeatSettings.count, 3)
         audio.pause()
         XCTAssertFalse(audio.playing)
         XCTAssertGreaterThanOrEqual(audio.timeline.elapsed, 0.8)
