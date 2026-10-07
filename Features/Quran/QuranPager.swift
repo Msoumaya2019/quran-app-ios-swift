@@ -85,11 +85,18 @@ struct QuranPager: UIViewControllerRepresentable {
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
             guard let value = viewController as? PageController, let source, value.page < source.pageCount else { return nil }
             // Arabic page order: a swipe towards the right advances the Mushaf.
+            trace("before \(value.page) -> \(value.page + 1)")
             return pageController(value.page + 1)
         }
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
             guard let value = viewController as? PageController, value.page > 1 else { return nil }
+            trace("after \(value.page) -> \(value.page - 1)")
             return pageController(value.page - 1)
+        }
+        private func trace(_ value: String) {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { print("[ReaderSwipe] " + value) }
+            #endif
         }
         func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
             guard completed, let value = pageViewController.viewControllers?.first as? PageController, let source else { return }
@@ -147,9 +154,21 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         #endif
         for scroll in scrollViews(view) {
             scroll.panGestureRecognizer.require(toFail: readerBackGesture)
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") {
+                scroll.panGestureRecognizer.removeTarget(self, action: #selector(tracePagePan(_:)))
+                scroll.panGestureRecognizer.addTarget(self, action: #selector(tracePagePan(_:)))
+                print("[ReaderSwipe] scroll enabled \(scroll.isScrollEnabled), pan \(scroll.panGestureRecognizer.isEnabled), edge \(type(of: edge))")
+            }
+            #endif
         }
         print("[ReaderNavigation] native stack \(navigation.viewControllers.count), edge enabled \(edge.isEnabled)")
         (viewControllers?.first as? PageController)?.debugNavigation("stack \(navigation.viewControllers.count), edge \(edge.isEnabled)")
+    }
+    @objc private func tracePagePan(_ gesture: UIPanGestureRecognizer) {
+        #if DEBUG
+        if gesture.state != .changed { print("[ReaderSwipe] page pan state \(gesture.state.rawValue), translation \(gesture.translation(in: view))") }
+        #endif
     }
     @objc private func handleReaderBack(_ gesture: UIPanGestureRecognizer) {
         guard gesture.state == .ended, let navigationOwner else { return }
@@ -167,6 +186,9 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         if gestureRecognizer === readerBackGesture {
             let translation = readerBackGesture.translation(in: view)
             let start = readerBackGesture.location(in: view).x - translation.x
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { print("[ReaderSwipe] back start \(start), translation \(translation)") }
+            #endif
             return start <= 24 && translation.x > abs(translation.y)
         }
         guard !navigationOwner.isNavigationBarHidden else { return false }
