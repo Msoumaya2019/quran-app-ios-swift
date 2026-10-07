@@ -74,15 +74,18 @@ import Combine
             items[index] = confirmed
         } catch { if generation == token { message = "L’action n’a pas été confirmée. Réessaie après connexion." } }
     }
-    func feedback(_ row: JSONValue, id: UUID, comment: String, voice: URL? = nil) async -> Bool {
+    func feedback(_ row: JSONValue, id: UUID, comment: String, voice: URL? = nil, verseID: Int? = nil) async -> Bool {
         let text = comment.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let owner, !busy, let recitation = row["id"].string, (!text.isEmpty || voice != nil), text.count <= 2000 else { return false }
+        if let verseID, !ModerationRepository.validVerse(verseID, in: row) { message = "Choisis un verset du passage enregistré."; return false }
         let token = generation; busy = true; message = nil
         defer { if generation == token { busy = false } }
         do {
-            if let voice {
-                let data = try Data(contentsOf: voice, options: .mappedIfSafe)
-                guard !data.isEmpty, data.count <= 52_428_800 else { throw URLError(.cannotDecodeContentData) }
+            let data = try voice.map { try Data(contentsOf: $0, options: .mappedIfSafe) }
+            if let data, data.isEmpty || data.count > 52_428_800 { throw URLError(.cannotDecodeContentData) }
+            if let verseID {
+                try await remote.verseFeedback(owner: owner, recitation: recitation, id: id, verseID: verseID, comment: text, data: data)
+            } else if let data {
                 try await remote.voiceFeedback(owner: owner, recitation: recitation, id: id, comment: text, data: data)
             } else { try await remote.feedback(owner: owner, recitation: recitation, id: id, comment: text) }
             return generation == token

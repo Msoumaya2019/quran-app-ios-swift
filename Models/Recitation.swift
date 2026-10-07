@@ -8,6 +8,15 @@ struct RecitationFeedback: Codable, Identifiable, Equatable, Sendable {
     let voice_path: String?
     let created_at: String
     let resolved_at: String?
+    static func combining(general: [Self], verses: [Self]) -> [Self] {
+        // The existing RPC also creates an empty general row for a verse's voice attachment.
+        // Keep substantive general feedback, but display the same attachment only on its verse.
+        let result = general.filter { review in
+            guard review.comment?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false, let path = review.voice_path else { return true }
+            return !verses.contains { $0.recitation_id == review.recitation_id && $0.voice_path == path }
+        } + verses
+        return result.sorted { $0.created_at > $1.created_at }
+    }
     func belongs(to item: Recitation) -> Bool {
         Recitation.validRange(item.start, item.end) && recitation_id == item.id && UUID(uuidString: id) != nil && (verse_id == nil || (item.start...item.end).contains(verse_id!))
     }

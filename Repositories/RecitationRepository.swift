@@ -55,7 +55,7 @@ extension RecitationRemote {
         let (feedback, marks) = try await (general, corrections)
         let rows = feedback + marks
         guard rows.allSatisfy({ $0.belongs(to: item) }) else { throw URLError(.cannotParseResponse) }
-        return rows.sorted { $0.created_at > $1.created_at }
+        return RecitationFeedback.combining(general: feedback, verses: marks)
     }
     func feedbackAudio(_ item: Recitation, review: RecitationFeedback) async throws -> Data {
         guard review.belongs(to: item), let path = review.voice_path, RecitationFeedback.safeVoicePath(path) else { throw URLError(.badURL) }

@@ -110,6 +110,9 @@ import SwiftUI
     func listened(owner: UUID, id: String) async throws -> JSONValue { heard = true; return recitation }
     func feedback(owner: UUID, recitation: String, id: UUID, comment: String) async throws {}
     func voiceFeedback(owner: UUID, recitation: String, id: UUID, comment: String, data: Data) async throws { guard !data.isEmpty else { throw URLError(.cannotDecodeContentData) } }
+    func verseFeedback(owner: UUID, recitation: String, id: UUID, verseID: Int, comment: String, data: Data?) async throws {
+        guard ModerationRepository.validVerse(verseID, in: self.recitation), !comment.isEmpty || data != nil else { throw URLError(.badURL) }
+    }
 }
 @MainActor private final class PreviewAuth: AuthGateway {
     let cachedIdentity: AccountIdentity? = AccountIdentity(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, email: "preview@example.invalid")

@@ -48,8 +48,18 @@ private struct ModerationDetail: View {
     @State private var recording: JSONValue?
     @State private var openingOwner: UUID?
     @State private var attemptedComment: String?
+    @State private var preciseVerse = false
+    @State private var verseID = 0
     @StateObject private var recorder = VoiceRecorderService()
     private var current: JSONValue { library.items.first { $0["id"] == row["id"] } ?? row }
+    private var verseRange: ClosedRange<Int>? {
+        guard let start = row["start_verse_id"].int, let end = row["end_verse_id"].int, ModerationRepository.validVerse(start, in: row) else { return nil }
+        return start...end
+    }
+    private var verseReference: String {
+        guard let surah = store.catalog.surah(for: verseID) else { return "Verset" }
+        return "\(surah.name) · verset \(verseID - surah.start + 1)"
+    }
     private var passage: String {
         guard row["recording_type"].string != "invocation" else { return "Invocation" }
         guard let start = row["start_verse_id"].int, let end = row["end_verse_id"].int,
@@ -66,6 +76,7 @@ private struct ModerationDetail: View {
                 if section == .recitations {
                     Text(passage)
                     AdminRecitationPlayer(row: row)
+                        .disabled(recorder.recording || recorder.requesting || recorder.previewing)
                     Button(current["listened_at"] == .null ? "Marquer comme écoutée" : "Écoutée") { Task { await library.moderate(row, section: .recitations) } }
                         .disabled(library.busy || current["listened_at"] != .null)
                 } else {
@@ -76,12 +87,20 @@ private struct ModerationDetail: View {
             }
             if section == .recitations {
                 Section("Retour à l’utilisateur") {
-                    TextEditor(text: $comment).frame(minHeight: 100).accessibilityIdentifier("moderation.feedback")
+                    if let verseRange {
+                        Toggle("Corriger un verset précis", isOn: $preciseVerse).accessibilityIdentifier("moderation.verse.scope")
+                            .disabled(library.busy || recorder.recording || recorder.requesting)
+                        if preciseVerse {
+                            Stepper(value: $verseID, in: verseRange) { Text(verseReference).accessibilityIdentifier("moderation.verse.reference") }
+                                .disabled(library.busy || recorder.recording || recorder.requesting).accessibilityIdentifier("moderation.verse.stepper")
+                        }
+                    }
+                    TextEditor(text: Binding(get: { comment }, set: { comment = $0; feedbackSent = false })).frame(minHeight: 100).accessibilityIdentifier("moderation.feedback")
                         .disabled(library.busy)
                     if recorder.recording {
                         Button("Arrêter l’enregistrement") { recorder.stop() }.accessibilityIdentifier("moderation.voice.stop")
                     } else if recorder.draft != nil {
-                        Button(recorder.previewing ? "Arrêter la préécoute" : "Écouter ma correction") { library.stopAudio(); recorder.togglePreview() }
+                        Button(recorder.previewing ? "Arrêter la préécoute" : "Écouter ma correction") { library.stopAudio(); recorder.togglePreview() }.disabled(library.busy)
                         Button("Supprimer l’enregistrement", role: .destructive) { recorder.discard(); feedbackID = UUID(); attemptedComment = nil }.disabled(library.busy)
                     } else {
                         Button("Enregistrer une correction vocale") { library.stopAudio(); feedbackID = UUID(); attemptedComment = nil; Task { await recorder.start() } }
@@ -92,7 +111,7 @@ private struct ModerationDetail: View {
                         let text = comment.trimmingCharacters(in: .whitespacesAndNewlines)
                         if attemptedComment != text { feedbackID = UUID(); attemptedComment = text }
                         if recorder.previewing { recorder.togglePreview() }
-                        if await library.feedback(row, id: feedbackID, comment: comment, voice: recorder.draft) { comment = ""; recorder.discard(); feedbackID = UUID(); feedbackSent = true }
+                        if await library.feedback(row, id: feedbackID, comment: comment, voice: recorder.draft, verseID: preciseVerse ? verseID : nil) { comment = ""; recorder.discard(); feedbackID = UUID(); feedbackSent = true }
                     } }.disabled(library.busy || recorder.recording || recorder.requesting || (comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && recorder.draft == nil) || comment.count > 2000)
                     if feedbackSent { Label("Retour envoyé", systemImage: "checkmark.circle").foregroundStyle(theme.accent) }
                 }
@@ -104,7 +123,9 @@ private struct ModerationDetail: View {
             if let message = library.message { Text(message).font(.caption) }
         } } else { ContentUnavailableView("Accès indisponible", systemImage: "lock", description: Text("Reconnecte-toi avec ton compte administrateur.")) }
         }.navigationTitle(section == .recitations ? "Écouter la récitation" : "Modérer").navigationBarTitleDisplayMode(.inline)
-            .onAppear { if openingOwner == nil { openingOwner = library.account } }
+            .onAppear { if openingOwner == nil { openingOwner = library.account }; if verseID == 0 { verseID = verseRange?.lowerBound ?? 0 } }
+            .onChange(of: preciseVerse) { _, _ in feedbackID = UUID(); attemptedComment = nil; feedbackSent = false }
+            .onChange(of: verseID) { _, _ in feedbackID = UUID(); attemptedComment = nil; feedbackSent = false }
             .confirmationDialog("Supprimer ce message pour tous les participants ?", isPresented: $confirming) {
                 Button("Supprimer le message", role: .destructive) { Task { await library.moderate(row, section: .messages) } }
             }.onDisappear { library.stopAudio(); recorder.discard() }

@@ -1,6 +1,25 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testAdminCanSendCorrectionForSpecificRecordedVerse() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-moderation"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let open = app.buttons["settings.admin.recitations"]
+        for _ in 0..<6 { if open.exists && open.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
+        let user = app.staticTexts["Yassine"]; XCTAssertTrue(user.waitForExistence(timeout: 5)); user.tap()
+        let scope = app.switches["moderation.verse.scope"]
+        for _ in 0..<3 { if scope.exists && scope.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(scope.waitForExistence(timeout: 5)); scope.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        XCTAssertTrue(app.staticTexts["Al Fâtiha · verset 1"].waitForExistence(timeout: 5))
+        let stepper = app.steppers["moderation.verse.stepper"]
+        stepper.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(app.staticTexts["Al Fâtiha · verset 2"].waitForExistence(timeout: 5))
+        let field = app.textViews["moderation.feedback"]; field.tap(); field.typeText("Observation technique sur le verset sélectionné")
+        app.buttons["Envoyer le retour"].tap()
+        XCTAssertTrue(app.staticTexts["Retour envoyé"].waitForExistence(timeout: 5))
+        attach(app, name: "Administration — correction associée au verset enregistré")
+    }
     func testAdminRecordsAndSendsVoiceCorrectionWithoutText() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-moderation", "--ui-test-recording"]; app.launch()
         app.buttons["settings.open"].tap()

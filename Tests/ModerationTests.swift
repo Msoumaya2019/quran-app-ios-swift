@@ -8,6 +8,9 @@ import XCTest
     var supplied: [JSONValue] = [.object(["id": .string("message"), "body": .string("Original")])]
     var feedbackIDs: [UUID] = []
     var voiceData: [Data] = []
+    var verses: [Int] = []
+    var suspendCorrection = false
+    var correctionWaiting: CheckedContinuation<Void, Never>?
     func rows(owner: UUID, section: ModerationSection, offset: Int) async throws -> [JSONValue] {
         if fail { throw URLError(.userAuthenticationRequired) }
         if hold { return try await withCheckedThrowingContinuation { waiting = $0 } }
@@ -24,8 +27,51 @@ import XCTest
     func listened(owner: UUID, id: String) async throws -> JSONValue { supplied[0].setting("listened_at", .string("2026-10-05T10:00:00Z")) }
     func feedback(owner: UUID, recitation: String, id: UUID, comment: String) async throws { feedbackIDs.append(id); if fail { throw URLError(.networkConnectionLost) } }
     func voiceFeedback(owner: UUID, recitation: String, id: UUID, comment: String, data: Data) async throws { feedbackIDs.append(id); voiceData.append(data); if fail { throw URLError(.networkConnectionLost) } }
+    func verseFeedback(owner: UUID, recitation: String, id: UUID, verseID: Int, comment: String, data: Data?) async throws {
+        feedbackIDs.append(id); verses.append(verseID); if let data { voiceData.append(data) }
+        if suspendCorrection { await withCheckedContinuation { correctionWaiting = $0 } }
+        if fail { throw URLError(.networkConnectionLost) }
+    }
 }
 final class ModerationTests: XCTestCase {
+    private var recording: JSONValue { .object(["id": .string("recording"), "recording_type": .string("quran"), "start_verse_id": .number(7), "end_verse_id": .number(10)]) }
+    @MainActor func testVerseCorrectionIsLimitedToRecordedPassageAndNotInvocation() async {
+        let remote = ModerationProbe(), library = ModerationLibrary(remote: remote); library.select(UUID())
+        for verse in [0, 6, 11, 6237] {
+            let sent = await library.feedback(recording, id: UUID(), comment: "Observation", verseID: verse)
+            XCTAssertFalse(sent)
+        }
+        let invocation = recording.setting("recording_type", .string("invocation"))
+        let sent = await library.feedback(invocation, id: UUID(), comment: "Observation", verseID: 7)
+        XCTAssertFalse(sent); XCTAssertTrue(remote.verses.isEmpty)
+        XCTAssertFalse(ModerationRepository.validVerse(7, in: recording.setting("end_verse_id", .number(6))))
+    }
+    @MainActor func testWrittenVerseCorrectionRetriesSameRequestWithoutGeneralFeedback() async {
+        let remote = ModerationProbe(), library = ModerationLibrary(remote: remote), request = UUID(); library.select(UUID())
+        remote.fail = true
+        let first = await library.feedback(recording, id: request, comment: "Observation", verseID: 9)
+        XCTAssertFalse(first)
+        remote.fail = false
+        let retry = await library.feedback(recording, id: request, comment: "Observation", verseID: 9)
+        XCTAssertTrue(retry); XCTAssertEqual(remote.verses, [9, 9]); XCTAssertEqual(remote.feedbackIDs, [request, request]); XCTAssertTrue(remote.voiceData.isEmpty)
+    }
+    @MainActor func testVerseCorrectionCannotReportSuccessAfterAccountSwitch() async {
+        let remote = ModerationProbe(), library = ModerationLibrary(remote: remote); library.select(UUID()); remote.suspendCorrection = true
+        let task = Task { await library.feedback(recording, id: UUID(), comment: "Observation", verseID: 7) }
+        while remote.correctionWaiting == nil { await Task.yield() }
+        library.select(UUID()); remote.correctionWaiting?.resume()
+        let sent = await task.value
+        XCTAssertFalse(sent); XCTAssertNil(library.message); XCTAssertFalse(library.busy)
+    }
+    func testVerseVoiceFeedbackHidesOnlyRedundantEmptyGeneralAttachment() {
+        let path = "feedback/\(UUID().uuidString)/test.m4a"
+        func review(_ verse: Int?, _ comment: String?, _ voice: String?) -> RecitationFeedback {
+            RecitationFeedback(id: UUID().uuidString, recitation_id: "recording", verse_id: verse, comment: comment, voice_path: voice, created_at: "2026-10-07T10:00:00Z", resolved_at: nil)
+        }
+        let precise = review(7, "Observation", path), empty = review(nil, nil, path), meaningful = review(nil, "Retour général", path), standalone = review(nil, nil, "feedback/\(UUID().uuidString)/another.m4a")
+        let combined = RecitationFeedback.combining(general: [empty, meaningful, standalone], verses: [precise])
+        XCTAssertEqual(Set(combined.map(\.id)), Set([precise.id, meaningful.id, standalone.id]))
+    }
     @MainActor func testDeletionChangesOnlyAfterServerConfirmation() async {
         let remote = ModerationProbe()
         let subject = ModerationLibrary(remote: remote); subject.select(UUID()); await subject.load(.messages)
