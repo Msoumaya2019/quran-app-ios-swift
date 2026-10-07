@@ -54,7 +54,7 @@ import SwiftUI
             _quiz = StateObject(wrappedValue: QuizLibrary(client: nil, directory: friendsDirectory.appendingPathComponent("Quiz")))
             _reports = StateObject(wrappedValue: ProblemReportLibrary(directory: friendsDirectory.appendingPathComponent("Reports")))
             _moderation = StateObject(wrappedValue: ModerationLibrary(remote: ProcessInfo.processInfo.arguments.contains("--ui-test-moderation") ? PreviewModeration() : ModerationRepository(client: nil)))
-            _editorial = StateObject(wrappedValue: EditorialLibrary(remote: EditorialRepository(client: nil)))
+            _editorial = StateObject(wrappedValue: EditorialLibrary(remote: ProcessInfo.processInfo.arguments.contains("--ui-test-editorial") ? PreviewEditorial() : EditorialRepository(client: nil)))
             return
         }
         #endif
@@ -82,6 +82,21 @@ import SwiftUI
     }
 }
 #if DEBUG
+@MainActor private final class PreviewEditorial: EditorialRemote {
+    private var rows: [JSONValue] = []
+    private var categories: [JSONValue] = [.object(["id": .string("00000000-0000-0000-0000-000000000030"), "type": .string("reminder"), "name": .string("Catégorie technique"), "is_active": .bool(true), "display_order": .number(0)])]
+    private var schedules: [JSONValue] = []
+    func load(owner: UUID, kind: EditorialKind, offset: Int) async throws -> EditorialSnapshot { EditorialSnapshot(categories: categories, contents: offset == 0 ? rows.filter { $0["type"].string == kind.rawValue } : [], schedules: schedules) }
+    func save(owner: UUID, draft: EditorialDraft) async throws -> JSONValue {
+        guard draft.validation(categories: categories) == nil else { throw URLError(.badURL) }
+        rows.removeAll { $0["id"] == draft.payload["id"] }; rows.append(draft.payload)
+        if !draft.date.isEmpty { schedules.removeAll { $0["type"] == draft.payload["type"] && $0["display_date"].string == draft.date }; schedules.append(.object(["content_id": draft.payload["id"], "type": draft.payload["type"], "display_date": .string(draft.date)])) }
+        return draft.payload
+    }
+    func saveCategory(owner: UUID, row: JSONValue) async throws -> JSONValue { categories.removeAll { $0["id"] == row["id"] }; categories.append(row); return row }
+    func delete(owner: UUID, id: String, category: Bool) async throws { if category { categories.removeAll { $0["id"].string == id } } else { rows.removeAll { $0["id"].string == id }; schedules.removeAll { $0["content_id"].string == id } } }
+    func unschedule(owner: UUID, row: JSONValue) async throws { schedules.removeAll { $0 == row } }
+}
 @MainActor private final class PreviewRecitationFeedback: RecitationRemote {
     private let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     func upload(_ item: Recitation, file: URL) async throws {}

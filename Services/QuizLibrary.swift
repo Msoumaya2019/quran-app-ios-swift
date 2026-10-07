@@ -40,7 +40,7 @@ import Supabase
     private struct ChallengeAnswerArgs: Encodable { let p_challenge: String; let p_question: String; let p_answer: String }
     func checkAdmin() async {
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("--ui-test-moderation") { isAdmin = true; return }
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-moderation") || ProcessInfo.processInfo.arguments.contains("--ui-test-editorial") { isAdmin = true; return }
         #endif
         guard let owner = cache?.owner, let client else { return }
         let token = generation

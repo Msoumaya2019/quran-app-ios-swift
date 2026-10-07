@@ -36,7 +36,7 @@ struct EditorialAdminView: View {
             if library.hasMore { Button("Afficher la suite") { Task { await library.load(kind, more: true) } } }
         }
         .navigationTitle("Rappels et invocations").navigationBarTitleDisplayMode(.inline).tint(theme.accent)
-        .toolbar { Button { editor = EditorialEditorItem(draft: EditorialDraft(kind: kind, categories: library.categories)) } label: { Label("Nouveau contenu", systemImage: "plus") } }
+        .toolbar { Button { editor = EditorialEditorItem(draft: EditorialDraft(kind: kind, categories: library.categories)) } label: { Label("Nouveau contenu", systemImage: "plus") }.accessibilityIdentifier("editorial.new") }
         .task(id: kind) { await library.load(kind) }
         .disabled(library.busy)
         .sheet(item: $editor) { item in EditorialEditorView(initial: item.draft) }
@@ -62,24 +62,24 @@ private struct EditorialEditorView: View {
         NavigationStack {
             Form {
                 Section("Contenu") {
-                    TextField("Titre (facultatif)", text: text("title"))
+                    TextField("Titre (facultatif)", text: text("title")).accessibilityIdentifier("editorial.title")
                     Picker("Catégorie", selection: text("category_id")) {
                         Text("Choisir").tag("")
                         ForEach(library.categories.filter { $0["type"].string == kind.rawValue }, id: \.selfID) { row in Text(row["name"].string.orEmpty).tag(row["id"].string.orEmpty) }
                     }
                     TextField("Texte arabe", text: text("arabic_text"), axis: .vertical)
                     TextField("Phonétique", text: text("phonetic_text"), axis: .vertical)
-                    TextField("Texte français", text: text("french_text"), axis: .vertical)
+                    TextField("Texte français", text: text("french_text"), axis: .vertical).accessibilityIdentifier("editorial.french")
                     TextField("Explication (facultative)", text: text("explanation"), axis: .vertical)
                     Toggle("Actif", isOn: Binding(get: { draft.value["is_active"].bool ?? true }, set: { draft.value = draft.value.setting("is_active", .bool($0)) }))
                 }
-                Section("Source") { TextField("Source", text: text("source")); TextField("Référence", text: text("reference")) }
+                Section("Source") { TextField("Source", text: text("source")).accessibilityIdentifier("editorial.source"); TextField("Référence", text: text("reference")) }
                 Section("Médias") {
                     TextField("Lien HTTPS de l’image", text: text("image_url")).textInputAutocapitalization(.never).keyboardType(.URL)
                     TextField("Lien HTTPS de l’audio", text: text("audio_url")).textInputAutocapitalization(.never).keyboardType(.URL)
                 }
                 Section("Programmation") {
-                    Toggle("Programmer à une date", isOn: $scheduled)
+                    Toggle("Programmer à une date", isOn: $scheduled).accessibilityIdentifier("editorial.scheduled")
                     if scheduled { DatePicker("Date", selection: $day, displayedComponents: .date) }
                     Text("Une publication par type et par jour. Cette date remplace la publication du même type déjà programmée. Les autres dates sont conservées.").font(.caption).foregroundStyle(theme.muted)
                 }
@@ -87,7 +87,7 @@ private struct EditorialEditorView: View {
                 Button(library.busy ? "Enregistrement…" : "Enregistrer") {
                     draft.date = scheduled ? LocalCalendar.key(day) : ""
                     Task { if await library.save(draft) { dismiss(); await store.refresh() } }
-                }.disabled(library.busy || library.loading)
+                }.disabled(library.busy || library.loading).accessibilityIdentifier("editorial.save")
             }.navigationTitle(kind == .reminder ? "Rappel" : "Invocation").navigationBarTitleDisplayMode(.inline)
                 .toolbar { Button("Fermer") { dismiss() }.disabled(library.busy) }
         }.tint(theme.accent).presentationDragIndicator(.visible)

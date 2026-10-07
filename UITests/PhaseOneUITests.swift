@@ -1,6 +1,29 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testAdminCreatesReminderWithScheduledDate() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-editorial"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let open = app.buttons["settings.admin.contents"]
+        for _ in 0..<6 { if open.exists && open.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
+        let create = app.buttons["editorial.new"]; XCTAssertTrue(create.waitForExistence(timeout: 5)); create.tap()
+        let title = app.textFields["editorial.title"]; XCTAssertTrue(title.waitForExistence(timeout: 5)); title.tap(); title.typeText("Rappel technique de test")
+        let french = app.textFields["editorial.french"]; french.tap(); french.typeText("Texte technique sans contenu religieux")
+        let source = app.textFields["editorial.source"]
+        for _ in 0..<4 { if source.exists && source.isHittable { break }; app.swipeUp() }
+        source.tap(); source.typeText("Source technique de test")
+        let schedule = app.switches["editorial.scheduled"]
+        for _ in 0..<5 { if schedule.exists && schedule.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(schedule.waitForExistence(timeout: 5)); schedule.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        let save = app.buttons["editorial.save"]
+        for _ in 0..<3 { if save.exists && save.isHittable { break }; app.swipeUp() }
+        save.tap()
+        XCTAssertTrue(app.staticTexts["Rappel technique de test"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Déprogrammer"].exists)
+        attach(app, name: "Administration — rappel et date de publication")
+    }
+
     func testAdminCanSendCorrectionForSpecificRecordedVerse() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-moderation"]; app.launch()
         app.buttons["settings.open"].tap()
