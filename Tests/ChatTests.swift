@@ -63,12 +63,40 @@ final class ChatTests: XCTestCase {
         XCTAssertTrue(reopened.snapshot.pending.isEmpty); XCTAssertEqual(reopened.snapshot.visible.map(\.id), [id]); XCTAssertEqual(remote.insertions, 1)
         await reopened.refresh(); XCTAssertEqual(remote.insertions, 1)
     }
+    @MainActor func testRealtimeUsesExistingMergeAndRejectsLateEventsAfterStop() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let remote = FakeChatRemote()
+        let library = ConversationLibrary(owner: owner, link: link, remote: remote, cache: ChatCache(directory: directory))
+        await library.startUpdates()
+        var incoming = ChatSnapshot(owner: owner, linkID: link)
+        let row = try incoming.enqueue("Message recu")
+        remote.rows[row.id] = row
+        let callback = remote.update
+        callback?()
+        for _ in 0..<100 where library.snapshot.visible.isEmpty { await Task.yield() }
+        XCTAssertEqual(library.snapshot.visible.map(\.id), [row.id])
+        callback?()
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(library.snapshot.visible.count, 1)
+        library.stop()
+        let calls = remote.loads
+        callback?()
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(remote.loads, calls)
+        XCTAssertNil(remote.update)
+    }
+
 }
 @MainActor private final class FakeChatRemote: ChatRemote {
+    var update: (@MainActor @Sendable () -> Void)?
+    var loads = 0
+    func startUpdates(owner: UUID, link: UUID, onChange: @escaping @MainActor @Sendable () -> Void) async { update = onChange }
+    func stopUpdates() { update = nil }
     var rows: [UUID: ChatMessage] = [:]
     var insertions = 0
     var failAfterInsert = false
-    func load(owner: UUID, link: UUID, before: ChatMessage?) async throws -> ChatPage { ChatPage(messages: Array(rows.values), hidden: []) }
+    func load(owner: UUID, link: UUID, before: ChatMessage?) async throws -> ChatPage { loads += 1; return ChatPage(messages: Array(rows.values), hidden: []) }
     func send(owner: UUID, message: ChatMessage) async throws -> ChatMessage {
         if let existing = rows[message.id] { return existing }
         rows[message.id] = message; insertions += 1
