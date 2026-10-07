@@ -53,3 +53,5 @@ Groupes d’amis, invitations, rôles et conversations : [rapport natif](Docs/NA
 
 Profil ami et confidentialité dans Réglages, et stabilisation de la timeline audio : [rapport et validations](Docs/NATIVE_AUDIO_PRIVACY_REPORT.md). Pas de nouvelle IPA pour ce complément.
 
+Administration : écoute des récitations, retours écrits, suppression confirmée des messages et traitement des signalements. [Rapport et limites](Docs/NATIVE_MODERATION_REPORT.md). 120 tests unitaires et 15 parcours UI distincts vérifiés. [IPA Administration — 7 octobre 2026](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-moderation-2026-10-07), non signée.
+

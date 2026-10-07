@@ -106,3 +106,6 @@ Liste, création, invitations, rôles et conversations de groupe intégrés. Cac
 ## Audio et confidentialité — 5 octobre 2026
 Observation de la durée audio différée et protection du seek intégrées. Réglages → Profil ami et confidentialité permet la modification directe du nom et des consentements existants. 115 tests unitaires et deux parcours UI ciblés réussis, sans archive. Voir [NATIVE_AUDIO_PRIVACY_REPORT.md](Docs/NATIVE_AUDIO_PRIVACY_REPORT.md).
 
+## Administration — 7 octobre 2026
+Écoute privée des récitations du Coran et des invocations, retours écrits, consultation/modération des messages privés et groupes, traitement des signalements. Réutilisation des contrats Supabase existants, aucune migration SQL. 120 tests unitaires et 15 parcours UI distincts vérifiés ; accès aux données réelles à vérifier avec un compte administrateur. Voir [NATIVE_MODERATION_REPORT.md](Docs/NATIVE_MODERATION_REPORT.md). IPA Release arm64 non signée : https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-moderation-2026-10-07.
+
