@@ -69,12 +69,14 @@ struct AudioRepeatSheet: View {
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } } }
                 .onAppear {
                     settings = audio.repeatSettings
+                    settings.after = settings.ending
                     if let chapter = catalog.surah(for: audio.verseID) { surahNumber = chapter.number; first = audio.verseID - chapter.start + 1; last = first }
                     selection = settings.selection ?? (audio.playbackRange == pageRange ? "page" : audio.playbackRange == sessionRange ? "session" : "verse")
                     if let start = settings.rangeStart, let end = settings.rangeEnd, let chapter = catalog.surah(for: start), catalog.surah(for: end)?.number == chapter.number {
                         surahNumber = chapter.number; first = start - chapter.start + 1; last = end - chapter.start + 1
                     }
                     initialized = true
+                    applyRange()
                 }
         }.onChange(of: settings) { _, value in if initialized { save(value); audio.configure(value) } }
             .onChange(of: selection) { _, _ in applyRange() }

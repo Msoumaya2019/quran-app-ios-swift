@@ -137,7 +137,7 @@ struct QuranReaderView: View {
                             }.disabled(loading)
                         }
                         Text("Coran 1441 se télécharge uniquement à la sélection (environ 98 Mo). Il reste ensuite disponible hors connexion.").font(.caption)
-                        QuranDownloadProgress()
+                        QuranDownloadProgress(retry: { Task { await changeSource(.edition1441) } })
                     }
                     Section("Aller à une page") {
                         TextField("Numéro de page", value: $jumpPage, format: .number).keyboardType(.numberPad).frame(minHeight: 44)

@@ -18,7 +18,9 @@ struct VerseStudyChange: Codable, Sendable {
         var result = state
         if action == .nextRevision {
             guard ["perfect", "review"].contains(state["knowledge"][key].string ?? "") else { return state }
-            result = result.setting("nativeManualReviewDue", state["nativeManualReviewDue"].setting(key, .string(day)))
+            let reviewedToday = state["reviewHistory"].array.contains { row in row["date"].string == day && VerseRange(json: row).map { ($0.start...$0.end).contains(verseID) } == true }
+            let due = reviewedToday ? ProgramProjection.addingDays(1, to: day, timeZone: TimeZone(secondsFromGMT: 0)!) ?? day : day
+            result = result.setting("nativeManualReviewDue", state["nativeManualReviewDue"].setting(key, .string(due)))
         } else {
             if !["perfect", "review"].contains(state["knowledge"][key].string ?? "") {
                 var dates: [String: JSONValue] = [:]
@@ -26,6 +28,14 @@ struct VerseStudyChange: Codable, Sendable {
                 result = result.setting("memorizedAt", state["memorizedAt"].setting(key, .string(day)))
                     .setting("reviewConsolidations", state["reviewConsolidations"].setting(key, .object(["learnedAt": .string(day), "scheduledDates": .object(dates), "completed": .object([:])])))
                     .setting("knowledge", state["knowledge"].setting(key, .string("perfect")))
+                let progress: JSONValue = .object(["id": .string("verse-\(verseID)"), "mode": .string("learning"), "start": .number(Double(verseID)), "end": .number(Double(verseID)), "through": .number(Double(verseID)), "status": .string("completed"), "updatedAt": .string(at), "validations": .array([.object(["start": .number(Double(verseID)), "end": .number(Double(verseID)), "date": .string(day), "validatedAt": .string(at)])])])
+                result = result.setting("studyProgress", state["studyProgress"].setting("learning:verse-\(verseID)", progress))
+                var revisions = state["revisions"].array
+                let revisionID = "r-\(verseID)-\(verseID)"
+                if !revisions.contains(where: { $0["id"].string == revisionID }), let due = dates["1"] {
+                    revisions.append(.object(["id": .string(revisionID), "start": .number(Double(verseID)), "end": .number(Double(verseID)), "due": due, "interval": .number(1), "streak": .number(0), "completedCount": .number(0)]))
+                    result = result.setting("revisions", .array(revisions))
+                }
             }
         }
         return result.setting("nativeVerseActionAt", state["nativeVerseActionAt"].setting(action.rawValue, state["nativeVerseActionAt"][action.rawValue].setting(key, .string(at))))

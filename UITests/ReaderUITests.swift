@@ -1,6 +1,32 @@
 import XCTest
 
 final class ReaderUITests: XCTestCase {
+    func testLongPressVerseKeepsMushafAndSupportsTranslationBookmarkAndStudy() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-difficulty-cache=\(UUID().uuidString)"]; app.launch()
+        app.tabBars.buttons["Coran"].tap()
+        let image = app.images["quran.page.1"]; XCTAssertTrue(image.waitForExistence(timeout: 10))
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "ready"), object: image)], timeout: 10), .completed)
+        let frame = image.frame
+        let scale = min(frame.width / 1920, frame.height / 3106)
+        let top = (frame.height - 3106 * scale) / 2
+        let point = image.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.width / 2, dy: top + 394 * scale))
+        point.press(forDuration: 0.7)
+        let translate = app.buttons["Voir la traduction"]; XCTAssertTrue(translate.waitForExistence(timeout: 5)); translate.tap()
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH %@", "Au nom d’Allah")).firstMatch.waitForExistence(timeout: 5))
+        app.buttons["Fermer"].firstMatch.tap()
+        let learn = app.buttons["Marquer comme appris"]
+        for _ in 0..<4 where !learn.isHittable { app.swipeUp() }; learn.tap()
+        XCTAssertTrue(app.buttons["Verset déjà appris"].exists)
+        app.buttons["Ajouter à ma prochaine révision"].tap()
+        app.buttons["Ajouter aux marque-pages"].tap()
+        XCTAssertTrue(app.buttons["Retirer des marque-pages"].exists)
+        app.buttons["Marquer comme difficile"].tap()
+        XCTAssertTrue(app.buttons["Retirer des versets difficiles"].exists)
+        attach(app, name: "Appui long — actions sur Al Fâtiha 1:1")
+        app.buttons["Fermer"].tap()
+        XCTAssertEqual(image.frame, frame)
+        XCTAssertFalse(app.otherElements["quran.audio.highlight"].exists)
+    }
     func testDifficultVersePersistsAcrossRelaunchAndSourceChangeWithoutMovingPage() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-program", "--ui-test-difficulty-cache=\(UUID().uuidString)"]
