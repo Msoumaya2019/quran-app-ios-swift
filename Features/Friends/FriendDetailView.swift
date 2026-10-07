@@ -12,7 +12,7 @@ struct FriendDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 AppCard {
                     HStack(spacing: 14) {
-                        Text(String(item.name.prefix(1))).font(.title2).foregroundStyle(theme.accent).frame(width: 56, height: 56).background(theme.accent.opacity(0.08), in: Circle())
+                        if let user = UUID(uuidString: item.otherID) { FriendAvatarView(user: user, name: item.name, size: 56) }
                         VStack(alignment: .leading, spacing: 5) {
                             Text(item.name).font(theme.title())
                             Text("Apprenez et progressez ensemble").font(.caption).foregroundStyle(theme.muted)

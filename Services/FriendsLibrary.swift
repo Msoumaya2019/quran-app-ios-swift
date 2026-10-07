@@ -5,6 +5,7 @@ import Supabase
     @Published private(set) var snapshot: FriendsSnapshot?
     @Published private(set) var loading = false
     @Published private(set) var message: String?
+    @Published private(set) var avatarRevision = UUID()
     @Published private(set) var groups: [JSONValue] = []
     private let client: SupabaseClient?
     private var generation = UUID()
@@ -17,7 +18,7 @@ import Supabase
     private func file(_ user: UUID) -> URL { directory.appendingPathComponent(user.uuidString.lowercased() + ".json") }
     func select(_ user: UUID?) {
         guard snapshot?.owner != user else { return }
-        generation = UUID(); loading = false; message = nil; snapshot = user.map { FriendsSnapshot(owner: $0) }
+        generation = UUID(); actionBusy = false; loading = false; message = nil; snapshot = user.map { FriendsSnapshot(owner: $0) }
         groups = []
         if let user, let data = try? Data(contentsOf: groupFile(user)), let values = try? JSONDecoder().decode([JSONValue].self, from: data) { groups = values }
         if let user, let data = try? Data(contentsOf: file(user)), let cache = try? JSONDecoder().decode(FriendsSnapshot.self, from: data), cache.owner == user { snapshot = cache }
@@ -164,9 +165,48 @@ import Supabase
                   confirmed["share_online"].bool == online, confirmed["share_progress"].bool == progress else { throw URLError(.cannotParseResponse) }
         }
     }
+    func avatarPath(for user: UUID) -> String? {
+        let row = user == snapshot?.owner ? snapshot?.profile : snapshot?.profiles.array.first { $0["id"].string?.lowercased() == user.uuidString.lowercased() }
+        let expected = user.uuidString.lowercased() + "/avatar.jpg"
+        return row?["avatar_path"].string == expected ? expected : nil
+    }
+    func avatarData(for user: UUID) async -> Data? {
+        guard let owner = snapshot?.owner, let path = avatarPath(for: user) else { return nil }
+        let token = generation
+        let file = directory.appendingPathComponent(owner.uuidString.lowercased() + "-avatar-" + user.uuidString.lowercased() + ".jpg")
+        let cached = try? Data(contentsOf: file)
+        guard let client else { return cached }
+        do {
+            guard try await client.auth.session.user.id == owner else { return nil }
+            let data = try await client.storage.from("friend-avatars").download(path: path)
+            let prepared = try await ProblemScreenshot.prepare(data, maxPixelSize: 800, maxBytes: 2 * 1024 * 1024)
+            guard token == generation, avatarPath(for: user) == path else { return nil }
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try prepared.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            return prepared
+        } catch { return token == generation && avatarPath(for: user) == path ? cached : nil }
+    }
+    func saveAvatar(_ data: Data?) async -> Bool {
+        guard let owner = snapshot?.owner, data == nil || (data!.count <= 2 * 1024 * 1024 && data!.starts(with: [0xff, 0xd8])) else { return false }
+        let path = owner.uuidString.lowercased() + "/avatar.jpg"
+        let result = await action { client in
+            _ = try await client.rpc("ensure_social_profile").execute()
+            if let data {
+                try await client.storage.from("friend-avatars").upload(path, data: data, options: FileOptions(cacheControl: "3600", contentType: "image/jpeg", upsert: true))
+            }
+            guard try await client.auth.session.user.id == owner else { throw URLError(.userAuthenticationRequired) }
+            let values: JSONValue = .object(["avatar_path": data == nil ? .null : .string(path)])
+            let confirmed: JSONValue = try await client.from("friend_profiles").update(values).eq("id", value: owner.uuidString).select().single().execute().value
+            guard confirmed["id"].string?.lowercased() == owner.uuidString.lowercased(),
+                  confirmed["avatar_path"].string == (data == nil ? nil : path) else { throw URLError(.cannotParseResponse) }
+            // Clearing the profile is sufficient: avoid deleting an object a concurrent upload may have replaced.
+        }
+        if result { avatarRevision = UUID() }
+        return result
+    }
     private func action(_ operation: (SupabaseClient) async throws -> Void) async -> Bool {
         guard !actionBusy, let owner = snapshot?.owner, let client else { message = "Connexion nécessaire pour cette action."; return false }
-        let token = generation; actionBusy = true; defer { actionBusy = false }
+        let token = generation; actionBusy = true; defer { if token == generation { actionBusy = false } }
         do {
             guard try await client.auth.session.user.id == owner, token == generation else { return false }
             try await operation(client)

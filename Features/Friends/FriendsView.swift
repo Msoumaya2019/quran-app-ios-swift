@@ -73,7 +73,7 @@ struct FriendsView: View {
     }
     private func identity(_ item: FriendItem) -> some View {
         HStack(spacing: 12) {
-            Text(String(item.name.prefix(1))).font(.headline).foregroundStyle(theme.accent).frame(width: 44, height: 44).background(theme.accent.opacity(0.08), in: Circle())
+            if let user = UUID(uuidString: item.otherID) { FriendAvatarView(user: user, name: item.name, size: 44) }
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name).font(theme.title(.headline)).foregroundStyle(theme.text)
                 Text(item.status == "pending" ? (item.incoming ? "Demande reçue" : "En attente de sa réponse") : item.online && !network.isOffline ? "En ligne" : "Ami").font(.caption).foregroundStyle(theme.muted)
