@@ -85,18 +85,11 @@ struct QuranPager: UIViewControllerRepresentable {
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
             guard let value = viewController as? PageController, let source, value.page < source.pageCount else { return nil }
             // Arabic page order: a swipe towards the right advances the Mushaf.
-            trace("before \(value.page) -> \(value.page + 1)")
             return pageController(value.page + 1)
         }
         func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
             guard let value = viewController as? PageController, value.page > 1 else { return nil }
-            trace("after \(value.page) -> \(value.page - 1)")
             return pageController(value.page - 1)
-        }
-        private func trace(_ value: String) {
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { print("[ReaderSwipe] " + value) }
-            #endif
         }
         func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
             guard completed, let value = pageViewController.viewControllers?.first as? PageController, let source else { return }
@@ -146,29 +139,17 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
             if contentGesture == nil { previousContentDelegate = content.delegate; previousContentEnabled = content.isEnabled }
-            contentGesture = content
-            // The full-width iOS 26 pop gesture competes with the page scroll.
-            // Preserve edge return via readerBackGesture and restore this on exit.
-            content.isEnabled = false
+            contentGesture = content; content.delegate = self
+            content.isEnabled = navigation.viewControllers.count > 1 && !navigation.isNavigationBarHidden
         }
         #endif
         for scroll in scrollViews(view) {
             scroll.panGestureRecognizer.require(toFail: readerBackGesture)
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") {
-                scroll.panGestureRecognizer.removeTarget(self, action: #selector(tracePagePan(_:)))
-                scroll.panGestureRecognizer.addTarget(self, action: #selector(tracePagePan(_:)))
-                print("[ReaderSwipe] scroll enabled \(scroll.isScrollEnabled), pan \(scroll.panGestureRecognizer.isEnabled), edge \(type(of: edge))")
-            }
-            #endif
+            scroll.panGestureRecognizer.require(toFail: edge)
+            if let contentGesture { scroll.panGestureRecognizer.require(toFail: contentGesture) }
         }
         print("[ReaderNavigation] native stack \(navigation.viewControllers.count), edge enabled \(edge.isEnabled)")
         (viewControllers?.first as? PageController)?.debugNavigation("stack \(navigation.viewControllers.count), edge \(edge.isEnabled)")
-    }
-    @objc private func tracePagePan(_ gesture: UIPanGestureRecognizer) {
-        #if DEBUG
-        if gesture.state != .changed { print("[ReaderSwipe] page pan state \(gesture.state.rawValue), translation \(gesture.translation(in: view))") }
-        #endif
     }
     @objc private func handleReaderBack(_ gesture: UIPanGestureRecognizer) {
         guard gesture.state == .ended, let navigationOwner else { return }
@@ -186,9 +167,6 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         if gestureRecognizer === readerBackGesture {
             let translation = readerBackGesture.translation(in: view)
             let start = readerBackGesture.location(in: view).x - translation.x
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { print("[ReaderSwipe] back start \(start), translation \(translation)") }
-            #endif
             return start <= 24 && translation.x > abs(translation.y)
         }
         guard !navigationOwner.isNavigationBarHidden else { return false }
@@ -253,6 +231,13 @@ final class PageController: UIViewController {
         let tap = UITapGestureRecognizer(target: self, action: #selector(tapped)); tap.require(toFail: hold)
         view.addGestureRecognizer(tap); view.addGestureRecognizer(hold)
         spinner.startAnimating()
+    }
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        if let edge = navigationController?.interactivePopGestureRecognizer,
+           let pager = parent as? UIPageViewController {
+            for scroll in pager.view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.panGestureRecognizer.require(toFail: edge) }
+        }
     }
     @objc private func tapped() { onTap() }
     @objc private func held(_ gesture: UILongPressGestureRecognizer) {
