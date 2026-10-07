@@ -26,11 +26,11 @@ final class PhaseOneUITests: XCTestCase {
         XCTAssertTrue(open.waitForExistence(timeout: 5)); open.tap()
         let learning = app.switches["reminders.learning"]
         XCTAssertTrue(learning.waitForExistence(timeout: 5)); XCTAssertEqual(learning.value as? String, "0")
-        learning.tap(); XCTAssertEqual(learning.value as? String, "1")
+        learning.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap(); XCTAssertEqual(learning.value as? String, "1")
         attach(app, name: "Rappels locaux — réglage immédiat et autorisation iOS explicite")
         app.navigationBars["Notifications et rappels"].buttons.element(boundBy: 0).tap()
         open.tap(); XCTAssertTrue(learning.waitForExistence(timeout: 5)); XCTAssertEqual(learning.value as? String, "1")
-        learning.tap(); XCTAssertEqual(learning.value as? String, "0")
+        learning.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap(); XCTAssertEqual(learning.value as? String, "0")
     }
     func testUserCanReadAndListenToRecitationFeedbackWithoutLeavingLibrary() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-recitation-feedback"]; app.launch()

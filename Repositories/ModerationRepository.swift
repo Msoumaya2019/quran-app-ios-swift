@@ -90,8 +90,13 @@ extension ModerationRemote {
         let client = try await authorized(owner)
         guard !data.isEmpty, data.count <= 52_428_800, comment.count <= 2000 else { throw URLError(.cannotDecodeContentData) }
         let path = "feedback/\(owner.uuidString.lowercased())/\(id.uuidString.lowercased()).m4a"
-        // Stable request/path: a retry replaces the same upload and the RPC deduplicates publication.
-        try await client.storage.from("recitations").upload(path, data: data, options: FileOptions(contentType: "audio/mp4", upsert: true))
+        // Existing storage policies permit insert/read, not overwrite. Retry verifies the same object.
+        let bucket = client.storage.from("recitations")
+        do { try await bucket.upload(path, data: data, options: FileOptions(contentType: "audio/mp4", upsert: false)) }
+        catch {
+            let existing = try await bucket.download(path: path)
+            guard existing == data else { throw error }
+        }
         _ = try await authorized(owner)
         struct Parameters: Encodable {
             let p_recitation_id: String
