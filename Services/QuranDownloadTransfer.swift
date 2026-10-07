@@ -15,6 +15,7 @@ final class QuranDownloadTransfer: NSObject, URLSessionDownloadDelegate, @unchec
     private var session: URLSession?
     private var result: (URL, URLResponse)?
     private var failure: Error?
+    private var lastReport: TimeInterval = 0
     func download(_ url: URL) async throws -> (URL, URLResponse) {
         try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
@@ -26,6 +27,9 @@ final class QuranDownloadTransfer: NSObject, URLSessionDownloadDelegate, @unchec
         }
     }
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+        let now = Date.timeIntervalSinceReferenceDate
+        guard now - lastReport >= 0.1 || totalBytesExpectedToWrite > 0 && totalBytesWritten >= totalBytesExpectedToWrite else { return }
+        lastReport = now
         Task { @MainActor in
             QuranDownloadStatus.shared.written = totalBytesWritten
             QuranDownloadStatus.shared.expected = totalBytesExpectedToWrite
@@ -40,6 +44,8 @@ final class QuranDownloadTransfer: NSObject, URLSessionDownloadDelegate, @unchec
         } catch { failure = error }
     }
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let written = task.countOfBytesReceived, expected = task.countOfBytesExpectedToReceive
+        Task { @MainActor in QuranDownloadStatus.shared.written = written; QuranDownloadStatus.shared.expected = expected }
         if let error = error ?? failure { continuation?.resume(throwing: error) }
         else if let result { continuation?.resume(returning: result) }
         else { continuation?.resume(throwing: URLError(.cannotCreateFile)) }

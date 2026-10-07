@@ -21,9 +21,10 @@ extension RevisionValidation {
                   (state["memorizedAt"][id].string ?? "") == learnedAnchors[id] else { return state }
             if reviewed.contains(verse) { continue }
             if category == "priority" {
-                guard (DifficultyChange.isDifficult(state, verseID: verse) || state["nativeManualReviewDue"][id].string != nil),
-                      (state["reviewPriorityDue"][id].string ?? "") == priorityDueAnchors?[id],
-                      (state["nativeDifficultyUpdatedAt"][id].string ?? "") <= completedAt else { return state }
+                let manuallyRequested = state["nativeManualReviewDue"][id].string != nil
+                guard manuallyRequested || (DifficultyChange.isDifficult(state, verseID: verse) &&
+                      (state["reviewPriorityDue"][id].string ?? "") == priorityDueAnchors?[id] &&
+                      (state["nativeDifficultyUpdatedAt"][id].string ?? "") <= completedAt) else { return state }
             } else {
                 let row = state["reviewConsolidations"][id]
                 guard let offset = consolidationOffset, [1, 3, 7].first(where: { row["completed"][String($0)] == .null }) == offset,
