@@ -8,11 +8,16 @@ final class PhaseOneUITests: XCTestCase {
         for _ in 0..<6 { if open.exists && open.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
         let create = app.buttons["editorial.new"]; XCTAssertTrue(create.waitForExistence(timeout: 5)); create.tap()
-        let title = app.textFields["editorial.title"]; XCTAssertTrue(title.waitForExistence(timeout: 5)); title.tap(); title.typeText("Rappel technique de test")
-        let french = app.textFields["editorial.french"]; french.tap(); french.typeText("Texte technique sans contenu religieux")
+        let title = app.textFields["editorial.title"]; XCTAssertTrue(title.waitForExistence(timeout: 5)); title.tap(); title.typeText("Rappel technique de test"); app.buttons["Terminé"].tap()
+        let french = app.textFields["editorial.french"]; french.tap(); french.typeText("Texte technique sans contenu religieux"); app.buttons["Terminé"].tap()
         let source = app.textFields["editorial.source"]
-        for _ in 0..<4 { if source.exists && source.isHittable { break }; app.swipeUp() }
-        source.tap(); source.typeText("Source technique de test")
+        for _ in 0..<8 {
+            if source.exists && source.frame.minY > 150 && source.frame.maxY < 700 && source.isHittable { break }
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: source.exists && source.frame.minY < 150 ? 0.3 : 0.5))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: source.exists && source.frame.minY < 150 ? 0.45 : 0.35))
+            start.press(forDuration: 0.05, thenDragTo: end)
+        }
+        source.tap(); source.typeText("Source technique de test"); app.buttons["Terminé"].tap()
         let schedule = app.switches["editorial.scheduled"]
         for _ in 0..<5 { if schedule.exists && schedule.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(schedule.waitForExistence(timeout: 5)); schedule.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()

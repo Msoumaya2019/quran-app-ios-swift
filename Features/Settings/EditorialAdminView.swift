@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct EditorialAdminView: View {
     @EnvironmentObject var library: EditorialLibrary
@@ -90,6 +91,7 @@ private struct EditorialEditorView: View {
                 }.disabled(library.busy || library.loading).accessibilityIdentifier("editorial.save")
             }.navigationTitle(kind == .reminder ? "Rappel" : "Invocation").navigationBarTitleDisplayMode(.inline)
                 .toolbar { Button("Fermer") { dismiss() }.disabled(library.busy) }
+                .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Terminé") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) } } }
         }.tint(theme.accent).presentationDragIndicator(.visible)
             .onChange(of: store.identity?.id) { _, _ in dismiss() }
     }
