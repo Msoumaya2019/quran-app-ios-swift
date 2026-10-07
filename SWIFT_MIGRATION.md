@@ -112,3 +112,9 @@ Observation de la durée audio différée et protection du seek intégrées. Ré
 ## Actions des versets et audio — 7 octobre 2026
 Appui long natif, traduction locale, actions persistantes sur les connaissances/difficultés/marque-pages et demande indépendante de prochaine révision. Réglages audio immédiats, pauses pour réciter et progression réelle du téléchargement Coran 1441. 126 tests unitaires et 28 parcours UI réussis, avec revalidation audio finale ; aucun schéma SQL modifié. [Rapport](Docs/NATIVE_VERSE_AUDIO_DOWNLOAD_REPORT.md), [IPA non signée](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-lecteur-audio-2026-10-07).
 
+## Préparation 1441 et retours utilisateur — 7 octobre 2026
+Préparation du ZIP en une seule indexation, progression réelle 604 pages / 9060 images et vérification CRC avant installation. ZIP complet préparé en 20,23 secondes sur simulateur ; 130 tests unitaires réussis. Les retours écrits et vocaux sur les récitations utilisent les tables et le cache existants. [Rapport retours](Docs/NATIVE_RECITATION_FEEDBACK_REPORT.md), [IPA corrigée](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-preparation1441-2026-10-07).
+
+## Rappels locaux et correction vocale administrateur — 7 octobre 2026
+Réglages immédiats de deux rappels quotidiens locaux et navigation vers Programme depuis la notification. Correction vocale administrateur avec enregistrement/préécoute existants et publication par la fonction Supabase existante. 136 tests unitaires réussis et parcours UI d'enregistrement/envoi réussi ; parcours UI de persistance des rappels réussi sur le dernier correctif. Aucun SQL ni fichier React Native modifié. [Rappels](Docs/NATIVE_LOCAL_REMINDERS_REPORT.md), [Corrections vocales](Docs/NATIVE_ADMIN_VOICE_REPORT.md).
+
