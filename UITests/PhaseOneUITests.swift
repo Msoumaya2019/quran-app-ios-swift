@@ -7,6 +7,8 @@ final class PhaseOneUITests: XCTestCase {
         XCTAssertTrue(learning.waitForExistence(timeout: 10)); learning.tap()
         XCTAssertTrue(app.staticTexts["0 / 15 versets"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.images["quran.page.604"].waitForExistence(timeout: 10))
+        app.buttons["quran.action.Plus"].tap()
+        XCTAssertTrue(app.buttons["learning.open"].waitForExistence(timeout: 5))
         app.buttons["learning.open"].tap()
         XCTAssertTrue(app.staticTexts["0 / 15 versets validés"].waitForExistence(timeout: 5))
         attach(app, name: "Apprentissage page 604 — trois petites sourates")
