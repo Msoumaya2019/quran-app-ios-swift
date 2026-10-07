@@ -1,6 +1,16 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testPageLearningIncludesAllThreeSmallSurahsInExistingProgram() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-program-tail"]; app.launch()
+        let learning = app.buttons["home.Apprentissage"]
+        XCTAssertTrue(learning.waitForExistence(timeout: 10)); learning.tap()
+        XCTAssertTrue(app.staticTexts["0 / 15 versets"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.images["quran.page.604"].waitForExistence(timeout: 10))
+        app.buttons["learning.open"].tap()
+        XCTAssertTrue(app.staticTexts["0 / 15 versets validés"].waitForExistence(timeout: 5))
+        attach(app, name: "Apprentissage page 604 — trois petites sourates")
+    }
     func testAdminCreatesReminderWithScheduledDate() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-editorial"]; app.launch()
         app.buttons["settings.open"].tap()

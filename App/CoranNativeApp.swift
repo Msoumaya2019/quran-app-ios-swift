@@ -176,6 +176,13 @@ private struct PreviewCache: HomeCache {
                 .setting("reviewConsolidations", .object(Dictionary(uniqueKeysWithValues: (1...7).map { (String($0), JSONValue.object(["learnedAt": .string(learned), "completed": .object([:])])) })))
             return value
         }
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-program-tail") {
+            let rows: [JSONValue] = QuranCatalog().surahs.suffix(3).map { surah in
+                .object(["id": .string("tail-\(surah.number)"), "start": .number(Double(surah.start)), "end": .number(Double(surah.end)),
+                         "unit": .string("page"), "status": .string("todo"), "scheduledDate": .string(LocalCalendar.key(.now))])
+            }
+            var value = snapshot; value.state = snapshot.state.setting("sessions", .array(rows)); return value
+        }
         if ProcessInfo.processInfo.arguments.contains("--ui-test-program") {
             let task: JSONValue = .object(["id": .string("preview-learning"), "start": .number(1), "end": .number(7), "status": .string("todo"), "scheduledDate": .string(LocalCalendar.key(.now))])
             var value = snapshot; value.state = snapshot.state.setting("sessions", .array([task])); return value

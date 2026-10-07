@@ -86,7 +86,11 @@ struct HomeProjection {
     var today: String { LocalCalendar.key(now, timeZone: timeZone) }
     var name: String { state["profile"]["firstName"].string ?? snapshot.displayName ?? "Bienvenue" }
     var readID: Int { min(6236, max(1, state["lastRead"]["verseId"].int ?? learning?["start"].int ?? state["goal"]["ranges"].array.first?["start"].int ?? 1)) }
-    var learning: JSONValue? { state["sessions"].array.first { $0["status"].string == "todo" && scheduled($0) == today } }
+    var learning: JSONValue? {
+        guard let task = ProgramProjection(snapshot: snapshot, now: now, timeZone: timeZone).todayLearning,
+              let row = state["sessions"].array.first(where: { $0["id"].string == task.id }) else { return nil }
+        return row.setting("start", .number(Double(task.range.start))).setting("end", .number(Double(task.range.end)))
+    }
     func scheduled(_ session: JSONValue) -> String { session["scheduledDate"].string ?? session["date"].string ?? "" }
     var week: WeekProgress {
         let (start, end) = LocalCalendar.week(now: now, timeZone: timeZone)
