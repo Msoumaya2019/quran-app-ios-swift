@@ -15,6 +15,7 @@ struct DailyContent: Codable, Identifiable, Sendable {
     let reference: String?
     let explanation: String?
     let image_url: String?
+    var audio_url: String? = nil
 }
 struct HomeSnapshot: Codable, Sendable {
     var readerOperations: [ReaderOperation]?

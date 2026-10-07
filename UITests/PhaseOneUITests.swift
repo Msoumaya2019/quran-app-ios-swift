@@ -19,8 +19,14 @@ final class PhaseOneUITests: XCTestCase {
         }
         source.tap(); source.typeText("Source technique de test"); app.buttons["Terminé"].tap()
         let schedule = app.switches["editorial.scheduled"]
-        for _ in 0..<5 { if schedule.exists && schedule.isHittable { break }; app.swipeUp() }
+        for _ in 0..<10 {
+            if schedule.exists && schedule.frame.minY > 180 && schedule.frame.maxY < 700 && schedule.isHittable { break }
+            let above = schedule.exists && schedule.frame.minY < 180
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? 0.3 : 0.5)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? 0.45 : 0.35)))
+        }
         XCTAssertTrue(schedule.waitForExistence(timeout: 5)); schedule.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        XCTAssertEqual(schedule.value as? String, "1")
+        XCTAssertTrue(app.datePickers["editorial.date"].waitForExistence(timeout: 5))
         let save = app.buttons["editorial.save"]
         for _ in 0..<3 { if save.exists && save.isHittable { break }; app.swipeUp() }
         save.tap()

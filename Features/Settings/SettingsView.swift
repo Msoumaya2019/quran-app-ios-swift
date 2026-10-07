@@ -16,6 +16,9 @@ struct SettingsView: View {
                     Button("Actualiser mes données") { Task { await store.refresh() } }.disabled(store.isRefreshing)
                     NavigationLink("Profil ami et confidentialité") { SocialProfileSettingsView() }.accessibilityIdentifier("settings.social.open")
                 }
+                Section("Mes contenus") {
+                    NavigationLink("Rappels et invocations favoris") { ContentFavoritesView() }.accessibilityIdentifier("settings.content.favorites")
+                }
                 Section("Mon programme") {
                     NavigationLink { ProgramEditorView(state: store.snapshot.state) } label: {
                         Label("Modifier mon programme", systemImage: "calendar.badge.clock").frame(minHeight: 44)

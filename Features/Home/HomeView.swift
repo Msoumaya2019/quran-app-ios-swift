@@ -159,7 +159,16 @@ struct HomeView: View {
     }
 }
 struct DailyContentView: View {
+    @EnvironmentObject var favorites: ContentFavoritesLibrary
+    @EnvironmentObject var media: DailyContentMediaService
+    @EnvironmentObject var store: AppStore
     @EnvironmentObject var theme: ThemeManager
+    @StateObject private var player = RecitationPlaybackService()
+    @State private var audioGeneration = UUID()
+    @State private var audioLoading = false
+    @State private var audioError: String?
+    @State private var visible = true
+
     @Environment(\.dismiss) var dismiss
     let content: DailyContent
     var body: some View {
@@ -169,11 +178,39 @@ struct DailyContentView: View {
                     if content.image_url != nil { DailyContentImage(url: content.image_url, mode: .fit).clipShape(RoundedRectangle(cornerRadius: 18)) }
                     if let arabic = content.arabic_text { Text(arabic).font(.title2).frame(maxWidth: .infinity, alignment: .trailing) }
                     if let phonetic = content.phonetic_text { Text(phonetic).foregroundStyle(theme.muted) }
+                    if let url = content.audio_url {
+                        Button {
+                            if player.activeID == content.id { player.stop(); return }
+                            let owner = store.identity?.id
+                            let token = UUID(); audioGeneration = token
+                            audioLoading = true; audioError = nil
+                            Task {
+                                defer { if audioGeneration == token { audioLoading = false } }
+                                do {
+                                    let data = try await media.audio(url, owner: owner)
+                                    guard audioGeneration == token, visible, owner == store.identity?.id, !Task.isCancelled else { return }
+                                    try player.play(data: data, id: content.id)
+                                } catch { if audioGeneration == token, visible, owner == store.identity?.id { audioError = "Cet audio n’est pas encore disponible hors connexion ou n’a pas pu être lu." } }
+                            }
+                        } label: {
+                            HStack { if audioLoading { ProgressView() }; Label(player.activeID == content.id ? "Arrêter l’audio" : "Écouter", systemImage: player.activeID == content.id ? "stop.circle" : "play.circle").frame(minHeight: 44) }
+                        }.disabled(audioLoading).accessibilityIdentifier("daily.audio")
+                    }
+                    if let audioError { Text(audioError).font(.caption).foregroundStyle(theme.muted) }
+                    Button {
+                        favorites.toggle(content); Task { await favorites.synchronize() }
+                    } label: {
+                        Label(favorites.contains(content.id) ? "Retirer des favoris" : "Ajouter aux favoris", systemImage: favorites.contains(content.id) ? "heart.fill" : "heart").frame(minHeight: 44)
+                    }.disabled(favorites.cache == nil).accessibilityIdentifier("daily.favorite")
+                    if let message = favorites.message { Text(message).font(.caption).foregroundStyle(theme.muted) }
                     Text(content.french_text)
                     if let explanation = content.explanation { Text(explanation) }
                     Text([content.source, content.reference].compactMap { $0 }.joined(separator: " • ")).font(.footnote).foregroundStyle(theme.muted)
                 }.padding(20)
             }.background(theme.background).navigationTitle(content.title ?? (content.type == "invocation" ? "Invocation du jour" : "Rappel du jour")).navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() }.frame(minHeight: 44) } }
         }.presentationDragIndicator(.visible)
+            .onAppear { visible = true }
+            .onDisappear { visible = false; audioGeneration = UUID(); audioLoading = false; player.stop() }
+            .onChange(of: store.identity?.id) { _, _ in audioGeneration = UUID(); audioLoading = false; player.stop() }
     }
 }

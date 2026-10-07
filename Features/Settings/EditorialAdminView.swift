@@ -95,7 +95,7 @@ private struct EditorialEditorView: View {
                 }
                 Section("Programmation") {
                     Toggle("Programmer à une date", isOn: $scheduled).accessibilityIdentifier("editorial.scheduled")
-                    if scheduled { DatePicker("Date", selection: $day, displayedComponents: .date) }
+                    if scheduled { DatePicker("Date", selection: $day, displayedComponents: .date).accessibilityIdentifier("editorial.date") }
                     Text("Une publication par type et par jour. Cette date remplace la publication du même type déjà programmée. Les autres dates sont conservées.").font(.caption).foregroundStyle(theme.muted)
                 }
                 if let message = library.message { Text(message).foregroundStyle(.red) }

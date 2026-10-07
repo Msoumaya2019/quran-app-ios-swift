@@ -6,6 +6,7 @@ import SwiftUI
     @StateObject private var friends: FriendsLibrary
     @StateObject private var quiz: QuizLibrary
     @StateObject private var reports: ProblemReportLibrary
+    @StateObject private var contentFavorites: ContentFavoritesLibrary
     @StateObject private var media: DailyContentMediaService
     @StateObject private var editorial: EditorialLibrary
     @StateObject private var moderation: ModerationLibrary
@@ -55,6 +56,7 @@ import SwiftUI
             _quiz = StateObject(wrappedValue: QuizLibrary(client: nil, directory: friendsDirectory.appendingPathComponent("Quiz")))
             _reports = StateObject(wrappedValue: ProblemReportLibrary(directory: friendsDirectory.appendingPathComponent("Reports")))
             _moderation = StateObject(wrappedValue: ModerationLibrary(remote: ProcessInfo.processInfo.arguments.contains("--ui-test-moderation") ? PreviewModeration() : ModerationRepository(client: nil)))
+            _contentFavorites = StateObject(wrappedValue: ContentFavoritesLibrary(remote: ContentFavoritesRepository(client: nil), directory: friendsDirectory.appendingPathComponent("ContentFavorites")))
             _media = StateObject(wrappedValue: DailyContentMediaService(client: nil))
             _editorial = StateObject(wrappedValue: EditorialLibrary(remote: ProcessInfo.processInfo.arguments.contains("--ui-test-editorial") ? PreviewEditorial() : EditorialRepository(client: nil)))
             return
@@ -68,17 +70,20 @@ import SwiftUI
         _moderation = StateObject(wrappedValue: ModerationLibrary(remote: ModerationRepository(client: client)))
         _editorial = StateObject(wrappedValue: EditorialLibrary(remote: EditorialRepository(client: client)))
         _media = StateObject(wrappedValue: DailyContentMediaService(client: client))
+        _contentFavorites = StateObject(wrappedValue: ContentFavoritesLibrary(remote: ContentFavoritesRepository(client: client)))
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation).environmentObject(reminders).environmentObject(editorial).environmentObject(media)
+            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation).environmentObject(reminders).environmentObject(editorial).environmentObject(media).environmentObject(contentFavorites)
                 .onOpenURL { url in Task { await store.receive(url) } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh(); await quiz.refresh() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in Task { await recitations.select(user); await recitations.synchronize() } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await reports.synchronize() } } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { reminders.update(owner: store.identity?.id, settings: ReminderSettings.load(store.snapshot.state), force: true) } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in reports.select(user); Task { await reports.synchronize() } }
-                .onChange(of: store.identity?.id, initial: true) { _, user in friends.select(user) }
+                .onChange(of: store.identity?.id, initial: true) { _, user in friends.select(user); contentFavorites.select(user); Task { await contentFavorites.synchronize() } }
+                .onChange(of: network.isOffline) { _, offline in if !offline { Task { await contentFavorites.synchronize() } } }
+                .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await contentFavorites.synchronize() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in moderation.select(user); editorial.select(user) }
                 .onChange(of: store.identity?.id, initial: true) { _, user in quiz.select(user); Task { await quiz.refresh() } }
         }
