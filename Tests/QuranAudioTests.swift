@@ -145,6 +145,23 @@ final class QuranAudioTests: XCTestCase {
         XCTAssertTrue(reached7)
         XCTAssertTrue(audio.playing); XCTAssertEqual(audio.verseID, 1); XCTAssertNil(audio.error)
     }
+    @MainActor func testChangingRangeWhileRepeatIsPausedStartsFirstListenOfNewVerse() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let wave = Self.silentWave()
+        let audio = QuranAudioService(cache: QuranAudioCache(directory: directory, downloader: { _ in wave }))
+        defer { audio.pause() }
+        var settings = AudioRepeatSettings(); settings.count = 2; settings.gap = 2
+        audio.start(range: 1...1, settings: settings)
+        let initialReady = await waitUntil { audio.timeline.duration > 0 || audio.error != nil }
+        XCTAssertTrue(initialReady)
+        audio.seek(to: 2.6); try await Task.sleep(nanoseconds: 900_000_000); audio.pause()
+        settings.rangeStart = 2; settings.rangeEnd = 2; audio.configure(settings)
+        audio.toggle(start: 2)
+        let ready = await waitUntil { audio.playing && audio.timeline.duration > 0 || audio.error != nil }
+        XCTAssertTrue(ready); XCTAssertNil(audio.error)
+        XCTAssertEqual(audio.verseID, 2); XCTAssertEqual(audio.repetition, 1)
+    }
     @MainActor private func waitUntil(timeout: Double = 5, _ condition: () -> Bool) async -> Bool {
         for _ in 0..<Int(timeout * 20) { if condition() { return true }; try? await Task.sleep(nanoseconds: 50_000_000) }
         return condition()

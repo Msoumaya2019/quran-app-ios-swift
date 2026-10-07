@@ -52,7 +52,8 @@ struct AudioRepeatSheet: View {
                 }
                 Section("Répétitions") {
                     Picker("Mode", selection: $settings.mode) { Text("Chaque verset").tag(AudioRepeatSettings.Mode.eachVerse); Text("Passage complet").tag(AudioRepeatSettings.Mode.passage) }
-                    Stepper("Nombre de répétitions : \(settings.countLabel)", value: $settings.count, in: 1...999).accessibilityIdentifier("quran.audio.repeat.count")
+                    Stepper("Nombre de répétitions : \(settings.countLabel)", value: $settings.count, in: 0...999).accessibilityIdentifier("quran.audio.repeat.count")
+                    if settings.count == 0 { Text("Répétition en continu").font(.caption).foregroundStyle(.secondary) }
                     Picker("Pause entre répétitions", selection: $settings.gap) { ForEach([0, 1, 2, 3, 5, 10], id: \.self) { Text($0 == 0 ? "Aucune" : "\($0) secondes").tag($0) } }
                     Picker("Vitesse", selection: $settings.speed) { ForEach([0.75, 0.85, 1, 1.15, 1.25], id: \.self) { Text("\($0, specifier: "%.3g")×").tag($0) } }.pickerStyle(.segmented).accessibilityIdentifier("quran.audio.speed")
                     Picker("Après les répétitions", selection: Binding(get: { settings.ending }, set: { settings.after = $0 })) {
