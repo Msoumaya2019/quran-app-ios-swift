@@ -21,7 +21,7 @@ import SwiftUI
             } else {
                 _store = StateObject(wrappedValue: AppStore(auth: PreviewAuth(), remote: PreviewRemote(), cache: PreviewCache()))
             }
-            _recitations = StateObject(wrappedValue: RecitationLibrary(storage: RecitationStorage(directory: FileManager.default.temporaryDirectory.appendingPathComponent("PreviewRecitations-\(UUID().uuidString)")), remote: RecitationRepository(client: nil)))
+            _recitations = StateObject(wrappedValue: RecitationLibrary(storage: RecitationStorage(directory: FileManager.default.temporaryDirectory.appendingPathComponent("PreviewRecitations-\(UUID().uuidString)")), remote: ProcessInfo.processInfo.arguments.contains("--ui-test-recitation-feedback") ? PreviewRecitationFeedback() : RecitationRepository(client: nil)))
             let friendsDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("PreviewFriends-\(UUID().uuidString)")
             if ProcessInfo.processInfo.arguments.contains("--ui-test-friends") {
                 let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, other = "00000000-0000-0000-0000-000000000002"
@@ -77,6 +77,20 @@ import SwiftUI
     }
 }
 #if DEBUG
+@MainActor private final class PreviewRecitationFeedback: RecitationRemote {
+    private let owner = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    func upload(_ item: Recitation, file: URL) async throws {}
+    func list(owner: UUID) async throws -> [Recitation] {
+        guard owner == self.owner else { return [] }
+        return [Recitation(id: "00000000-0000-0000-0000-000000000020", userID: owner, start: 1, end: 7, durationMs: 60000, createdAt: "2026-10-07T10:00:00Z", storagePath: "\(owner.uuidString.lowercased())/test.m4a", synced: true)]
+    }
+    func download(_ item: Recitation) async throws -> Data { try fixture() }
+    func reviews(_ item: Recitation) async throws -> [RecitationFeedback] {
+        [RecitationFeedback(id: "00000000-0000-0000-0000-000000000021", recitation_id: item.id, verse_id: 3, comment: "Observation technique de test", voice_path: "feedback/00000000-0000-0000-0000-000000000002/test.m4a", created_at: "2026-10-07T10:01:00Z", resolved_at: nil)]
+    }
+    func feedbackAudio(_ item: Recitation, review: RecitationFeedback) async throws -> Data { try fixture() }
+    private func fixture() throws -> Data { try Data(contentsOf: Bundle.main.resourceURL!.appendingPathComponent("ReaderTestFixtures/audio.wav")) }
+}
 @MainActor private final class PreviewModeration: ModerationRemote {
     private var deleted = false
     private var reviewed = false

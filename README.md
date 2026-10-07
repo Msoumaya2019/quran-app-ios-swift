@@ -55,3 +55,5 @@ Profil ami et confidentialité dans Réglages, et stabilisation de la timeline a
 
 Administration : écoute des récitations, retours écrits, suppression confirmée des messages et traitement des signalements. [Rapport et limites](Docs/NATIVE_MODERATION_REPORT.md). 120 tests unitaires et 15 parcours UI distincts vérifiés. [IPA Administration — 7 octobre 2026](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-moderation-2026-10-07), non signée.
 
+Actions natives sur les versets, progression réelle du téléchargement et réglages audio instantanés : [rapport](Docs/NATIVE_VERSE_AUDIO_DOWNLOAD_REPORT.md). 126 tests unitaires, 28 parcours UI et revalidation audio finale réussis. [IPA Lecteur et audio — 7 octobre 2026](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-lecteur-audio-2026-10-07), non signée.
+

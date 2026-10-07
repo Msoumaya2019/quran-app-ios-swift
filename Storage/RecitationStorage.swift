@@ -54,6 +54,36 @@ actor RecitationStorage {
         }
         try write(items, owner: owner)
     }
+    func reviews(owner: UUID) throws -> [String: [RecitationFeedback]] {
+        let file = directory(owner).appendingPathComponent("feedback.json")
+        guard FileManager.default.fileExists(atPath: file.path) else { return [:] }
+        let rows = try JSONDecoder().decode([String: [RecitationFeedback]].self, from: Data(contentsOf: file))
+        let owned = try list(owner: owner)
+        return rows.filter { id, values in
+            guard let item = owned.first(where: { $0.id == id }) else { return false }
+            return values.allSatisfy { $0.belongs(to: item) }
+        }
+    }
+    func saveReviews(_ rows: [RecitationFeedback], for item: Recitation) throws {
+        guard try list(owner: item.userID).contains(where: { $0.id == item.id }), rows.allSatisfy({ $0.belongs(to: item) }) else { throw URLError(.cannotParseResponse) }
+        var saved = try reviews(owner: item.userID)
+        for previous in saved[item.id] ?? [] where rows.first(where: { $0.id == previous.id })?.voice_path != previous.voice_path {
+            try? FileManager.default.removeItem(at: directory(item.userID).appendingPathComponent("feedback-\(previous.id).m4a"))
+        }
+        saved[item.id] = rows
+        try JSONEncoder().encode(saved).write(to: directory(item.userID).appendingPathComponent("feedback.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+    func feedbackFile(_ review: RecitationFeedback, for item: Recitation) throws -> URL {
+        guard review.belongs(to: item), try reviews(owner: item.userID)[item.id]?.contains(review) == true else { throw URLError(.fileDoesNotExist) }
+        let file = directory(item.userID).appendingPathComponent("feedback-\(review.id).m4a")
+        guard FileManager.default.fileExists(atPath: file.path) else { throw URLError(.fileDoesNotExist) }
+        return file
+    }
+    func cacheFeedback(_ data: Data, review: RecitationFeedback, for item: Recitation) throws -> URL {
+        guard !data.isEmpty, data.count <= 52_428_800, review.belongs(to: item), try reviews(owner: item.userID)[item.id]?.contains(review) == true else { throw URLError(.cannotDecodeContentData) }
+        let file = directory(item.userID).appendingPathComponent("feedback-\(review.id).m4a")
+        try data.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]); return file
+    }
     func cacheAudio(_ data: Data, for item: Recitation) throws -> URL {
         guard item.synced, !data.isEmpty, data.count <= 52_428_800 else { throw URLError(.cannotDecodeContentData) }
         var items = try list(owner: item.userID)

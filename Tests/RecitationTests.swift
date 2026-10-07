@@ -9,6 +9,8 @@ import XCTest
     var attempts = 0
     var delay = false
     var rejectedID: String?
+    var reviewRows: [RecitationFeedback] = []
+    var feedbackDownloads = 0
     func upload(_ item: Recitation, file: URL) async throws {
         attempts += 1
         if delay { try await Task.sleep(nanoseconds: 50_000_000) }
@@ -25,6 +27,15 @@ import XCTest
         return rows.filter { $0.userID == owner }
     }
     func download(_ item: Recitation) async throws -> Data { throw URLError(.notConnectedToInternet) }
+    func reviews(_ item: Recitation) async throws -> [RecitationFeedback] {
+        if delay { try await Task.sleep(nanoseconds: 50_000_000) }
+        if offline { throw URLError(.notConnectedToInternet) }
+        return reviewRows
+    }
+    func feedbackAudio(_ item: Recitation, review: RecitationFeedback) async throws -> Data {
+        if offline { throw URLError(.notConnectedToInternet) }
+        feedbackDownloads += 1; return Data([1, 2, 3, 4])
+    }
 }
 @MainActor private final class CaptureProbe: VoiceCaptureDevice {
     let file: URL
@@ -107,6 +118,53 @@ import XCTest
         while !library.syncing { await Task.yield() }
         await library.select(other); await refresh.value
         XCTAssertEqual(library.owner, other); XCTAssertTrue(library.items.isEmpty)
+    }
+    func testFeedbackTextAndAudioSurviveOfflineReopenAndRemainAccountIsolated() async throws {
+        let root = directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let remote = RecordingRemoteProbe(), storage = RecitationStorage(directory: root.appendingPathComponent("saved"))
+        let user = UUID(), library = RecitationLibrary(storage: storage, remote: remote)
+        await library.select(user)
+        try await library.save(source: source(in: root), start: 1, end: 7, durationMs: 2500, user: user)
+        await library.synchronize(); let item = library.items[0]
+        let review = RecitationFeedback(id: UUID().uuidString, recitation_id: item.id, verse_id: 3, comment: "Revoir la prononciation", voice_path: "feedback/\(UUID())/voice.m4a", created_at: "2026-10-07T10:00:00Z", resolved_at: nil)
+        remote.reviewRows = [review]; await library.loadReviews(item)
+        let file = try await library.feedbackPlayable(review, for: item)
+        XCTAssertEqual(try Data(contentsOf: file), Data([1, 2, 3, 4]))
+        remote.offline = true
+        let reopened = RecitationLibrary(storage: storage, remote: remote)
+        await reopened.select(user); await reopened.loadReviews(item)
+        XCTAssertEqual(reopened.reviews[item.id], [review])
+        let cached = try await reopened.feedbackPlayable(review, for: item)
+        XCTAssertEqual(cached, file); XCTAssertEqual(remote.feedbackDownloads, 1)
+        await reopened.select(UUID()); XCTAssertTrue(reopened.reviews.isEmpty)
+        do { _ = try await reopened.feedbackPlayable(review, for: item); XCTFail("Foreign account accessed cached feedback") } catch {}
+    }
+    func testLateFeedbackResponseCannotRestorePreviousAccountAndMalformedRowsAreRejected() async throws {
+        let root = directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let remote = RecordingRemoteProbe(), storage = RecitationStorage(directory: root.appendingPathComponent("saved"))
+        let user = UUID(), library = RecitationLibrary(storage: storage, remote: remote)
+        await library.select(user); try await library.save(source: source(in: root), start: 1, end: 7, durationMs: 2500, user: user)
+        await library.synchronize(); let item = library.items[0]
+        remote.reviewRows = [RecitationFeedback(id: UUID().uuidString, recitation_id: item.id, verse_id: 2, comment: "Correction", voice_path: nil, created_at: "2026-10-07", resolved_at: nil)]
+        remote.delay = true
+        let request = Task { await library.loadReviews(item) }; try await Task.sleep(nanoseconds: 10_000_000)
+        await library.select(UUID()); await request.value
+        XCTAssertTrue(library.reviews.isEmpty)
+        let malformed = RecitationFeedback(id: UUID().uuidString, recitation_id: item.id, verse_id: 200, comment: "Wrong verse", voice_path: nil, created_at: "2026-10-07", resolved_at: nil)
+        do { try await storage.saveReviews([malformed], for: item); XCTFail("Unrelated verse accepted") } catch {}
+        XCTAssertFalse(RecitationFeedback.safeVoicePath("feedback/\(UUID())/../../secret"))
+    }
+    func testChangedFeedbackVoiceInvalidatesOldOfflineAudio() async throws {
+        let root = directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let storage = RecitationStorage(directory: root.appendingPathComponent("saved")), user = UUID()
+        let item = try await storage.save(source: source(in: root), start: 1, end: 7, durationMs: 2500, owner: user)
+        let id = UUID().uuidString, admin = UUID()
+        let old = RecitationFeedback(id: id, recitation_id: item.id, verse_id: nil, comment: "Observation", voice_path: "feedback/\(admin)/old.m4a", created_at: "2026-10-07", resolved_at: nil)
+        try await storage.saveReviews([old], for: item)
+        _ = try await storage.cacheFeedback(Data([1]), review: old, for: item)
+        let updated = RecitationFeedback(id: id, recitation_id: item.id, verse_id: nil, comment: "Observation", voice_path: "feedback/\(admin)/new.m4a", created_at: "2026-10-07", resolved_at: nil)
+        try await storage.saveReviews([updated], for: item)
+        do { _ = try await storage.feedbackFile(updated, for: item); XCTFail("Old voice returned for updated feedback") } catch {}
     }
     func testDeniedMicrophoneDoesNotCreateCapture() async {
         var captures = 0

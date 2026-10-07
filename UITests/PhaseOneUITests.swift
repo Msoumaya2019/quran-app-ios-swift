@@ -1,6 +1,23 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testUserCanReadAndListenToRecitationFeedbackWithoutLeavingLibrary() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-reader-fixtures", "--ui-test-recitation-feedback"]; app.launch()
+        app.tabBars.buttons["Coran"].tap()
+        XCTAssertTrue(app.images["quran.page.1"].waitForExistence(timeout: 10))
+        app.buttons["quran.action.Plus"].tap()
+        let library = app.buttons["recitations.open"]; XCTAssertTrue(library.waitForExistence(timeout: 5)); library.tap()
+        let reviews = app.buttons["recitation.reviews.00000000-0000-0000-0000-000000000020"]
+        XCTAssertTrue(reviews.waitForExistence(timeout: 10)); reviews.tap()
+        XCTAssertTrue(app.staticTexts["Observation technique de test"].waitForExistence(timeout: 5))
+        let play = app.buttons["recitation.feedback.audio.00000000-0000-0000-0000-000000000021"]
+        XCTAssertTrue(play.waitForExistence(timeout: 5)); play.tap()
+        XCTAssertTrue(app.buttons["Arrêter"].waitForExistence(timeout: 5))
+        attach(app, name: "Mes récitations — retour par verset et écoute de la correction")
+        app.buttons["Fermer"].tap(); XCTAssertTrue(reviews.waitForExistence(timeout: 5))
+        reviews.tap(); XCTAssertTrue(app.staticTexts["Observation technique de test"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Écouter la correction"].exists)
+    }
     func testAdminCanListenToRecitationAndSendFeedback() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-moderation"]; app.launch()
         app.buttons["settings.open"].tap()

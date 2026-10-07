@@ -1,5 +1,22 @@
 import Foundation
 
+struct RecitationFeedback: Codable, Identifiable, Equatable, Sendable {
+    let id: String
+    let recitation_id: String
+    let verse_id: Int?
+    let comment: String?
+    let voice_path: String?
+    let created_at: String
+    let resolved_at: String?
+    func belongs(to item: Recitation) -> Bool {
+        Recitation.validRange(item.start, item.end) && recitation_id == item.id && UUID(uuidString: id) != nil && (verse_id == nil || (item.start...item.end).contains(verse_id!))
+    }
+    static func safeVoicePath(_ path: String) -> Bool {
+        let parts = path.split(separator: "/", omittingEmptySubsequences: false)
+        return parts.count == 3 && parts[0] == "feedback" && UUID(uuidString: String(parts[1])) != nil && Recitation.safeFilename(String(parts[2]))
+    }
+}
+
 struct Recitation: Codable, Identifiable, Equatable, Sendable {
     let id: String
     let userID: UUID

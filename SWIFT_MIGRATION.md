@@ -109,3 +109,6 @@ Observation de la durée audio différée et protection du seek intégrées. Ré
 ## Administration — 7 octobre 2026
 Écoute privée des récitations du Coran et des invocations, retours écrits, consultation/modération des messages privés et groupes, traitement des signalements. Réutilisation des contrats Supabase existants, aucune migration SQL. 120 tests unitaires et 15 parcours UI distincts vérifiés ; accès aux données réelles à vérifier avec un compte administrateur. Voir [NATIVE_MODERATION_REPORT.md](Docs/NATIVE_MODERATION_REPORT.md). IPA Release arm64 non signée : https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-moderation-2026-10-07.
 
+## Actions des versets et audio — 7 octobre 2026
+Appui long natif, traduction locale, actions persistantes sur les connaissances/difficultés/marque-pages et demande indépendante de prochaine révision. Réglages audio immédiats, pauses pour réciter et progression réelle du téléchargement Coran 1441. 126 tests unitaires et 28 parcours UI réussis, avec revalidation audio finale ; aucun schéma SQL modifié. [Rapport](Docs/NATIVE_VERSE_AUDIO_DOWNLOAD_REPORT.md), [IPA non signée](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-lecteur-audio-2026-10-07).
+
