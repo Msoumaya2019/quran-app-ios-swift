@@ -54,3 +54,5 @@ struct EditorialSnapshot {
     let contents: [JSONValue]
     let schedules: [JSONValue]
 }
+
+private extension Optional where Wrapped == String { var orEmpty: String { self ?? "" } }

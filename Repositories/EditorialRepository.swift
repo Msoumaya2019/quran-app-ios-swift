@@ -69,3 +69,5 @@ import Supabase
         _ = try await authorized(owner)
     }
 }
+
+private extension Optional where Wrapped == String { var orEmpty: String { self ?? "" } }

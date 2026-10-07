@@ -125,3 +125,5 @@ private extension JSONValue {
     var selfID: String { self["id"].string.orEmpty }
     var scheduleID: String { self["type"].string.orEmpty + self["display_date"].string.orEmpty }
 }
+
+private extension Optional where Wrapped == String { var orEmpty: String { self ?? "" } }
