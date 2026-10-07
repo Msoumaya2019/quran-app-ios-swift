@@ -16,6 +16,10 @@ import SwiftUI
     @Environment(\.scenePhase) private var scenePhase
     init() {
         let client = try? BackendConfiguration.load().client()
+        if let client, let configuration = try? BackendConfiguration.load() {
+            let repository = TajweedMushafRepository(client: client, configuration: configuration)
+            Task { await TajweedMushafResourceService.shared.configure(repository: repository) }
+        }
         let auth = AuthService(client: client)
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") {
