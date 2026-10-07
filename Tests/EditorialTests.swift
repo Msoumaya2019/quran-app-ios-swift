@@ -7,14 +7,24 @@ import XCTest
     var rows: [JSONValue] = []
     var holdSave = false
     var waiting: CheckedContinuation<Void, Never>?
-    func load(owner: UUID, kind: EditorialKind, offset: Int) async throws -> EditorialSnapshot { EditorialSnapshot(categories: [category], contents: rows, schedules: []) }
+    func load(owner: UUID, kind: EditorialKind, offset: Int) async throws -> EditorialSnapshot { EditorialSnapshot(categories: [category], contents: Array(rows.dropFirst(offset).prefix(30)), schedules: []) }
     func save(owner: UUID, draft: EditorialDraft) async throws -> JSONValue { if holdSave { await withCheckedContinuation { waiting = $0 } }; if fail { throw URLError(.notConnectedToInternet) }; return draft.payload }
     func saveCategory(owner: UUID, row: JSONValue) async throws -> JSONValue { if fail { throw URLError(.notConnectedToInternet) }; return row }
-    func delete(owner: UUID, id: String, category: Bool) async throws { if fail { throw URLError(.notConnectedToInternet) } }
+    func delete(owner: UUID, id: String, category: Bool) async throws { if fail { throw URLError(.notConnectedToInternet) }; rows.removeAll { $0["id"].string == id } }
     func unschedule(owner: UUID, row: JSONValue) async throws { if fail { throw URLError(.notConnectedToInternet) } }
 }
 
 final class EditorialTests: XCTestCase {
+    @MainActor func testDeletionBetweenPagesDoesNotSkipNextContent() async {
+        let remote = EditorialProbe()
+        remote.rows = (0..<35).map { _ in .object(["id": .string(UUID().uuidString), "type": .string("reminder")]) }
+        let expected = Set(remote.rows.dropFirst().compactMap { $0["id"].string })
+        let library = EditorialLibrary(remote: remote); library.select(UUID()); await library.load(.reminder)
+        XCTAssertEqual(library.contents.count, 30)
+        await library.delete(library.contents[0]); await library.load(.reminder, more: true)
+        XCTAssertEqual(Set(library.contents.compactMap { $0["id"].string }), expected)
+        XCTAssertFalse(library.hasMore)
+    }
     func testCalendarAndMediaValidation() {
         XCTAssertTrue(EditorialDraft.validDate("2028-02-29"))
         XCTAssertFalse(EditorialDraft.validDate("2026-02-29"))

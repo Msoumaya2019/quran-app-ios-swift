@@ -73,7 +73,10 @@ import Combine
             try await remote.delete(owner: owner, id: id, category: category)
             guard generation == token else { return }
             if category { categories.removeAll { $0["id"].string == id } }
-            else { contents.removeAll { $0["id"].string == id }; schedules.removeAll { $0["content_id"].string == id } }
+            else {
+                if contents.contains(where: { $0["id"].string == id }) { offset = max(0, offset - 1) }
+                contents.removeAll { $0["id"].string == id }; schedules.removeAll { $0["content_id"].string == id }
+            }
         } catch { if generation == token { message = category ? "Suppression impossible. Désactive une catégorie encore utilisée." : "La suppression n’a pas été confirmée." } }
     }
     func unschedule(_ row: JSONValue) async {
