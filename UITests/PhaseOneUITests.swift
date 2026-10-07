@@ -91,13 +91,13 @@ final class PhaseOneUITests: XCTestCase {
         XCTAssertTrue(open.waitForExistence(timeout: 5)); open.tap()
         let learning = app.switches["reminders.learning"]
         XCTAssertTrue(learning.waitForExistence(timeout: 5))
-        for _ in 0..<6 { if learning.isHittable { break }; app.swipeUp() }
+        for _ in 0..<6 { if learning.isHittable && learning.frame.maxY < app.frame.maxY - 80 && learning.frame.minY > 180 { break }; app.swipeUp() }
         XCTAssertTrue(learning.isHittable); XCTAssertEqual(learning.value as? String, "0")
         learning.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap(); XCTAssertEqual(learning.value as? String, "1")
         attach(app, name: "Rappels locaux — réglage immédiat et autorisation iOS explicite")
         app.navigationBars["Notifications et rappels"].buttons.element(boundBy: 0).tap()
         open.tap(); XCTAssertTrue(learning.waitForExistence(timeout: 5))
-        for _ in 0..<6 { if learning.isHittable { break }; app.swipeUp() }
+        for _ in 0..<6 { if learning.isHittable && learning.frame.maxY < app.frame.maxY - 80 && learning.frame.minY > 180 { break }; app.swipeUp() }
         XCTAssertTrue(learning.isHittable); XCTAssertEqual(learning.value as? String, "1")
         learning.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap(); XCTAssertEqual(learning.value as? String, "0")
     }
