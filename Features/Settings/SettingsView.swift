@@ -40,6 +40,7 @@ struct SettingsView: View {
                     NavigationLink("Notifications et rappels") { ReminderSettingsView() }.accessibilityIdentifier("settings.reminders.open")
                 }
                 if quiz.isAdmin { Section("Administration") {
+                    NavigationLink("Rappels et invocations") { EditorialAdminView() }.accessibilityIdentifier("settings.admin.contents")
                     NavigationLink("Récitations à écouter") { ModerationView(section: .recitations) }.accessibilityIdentifier("settings.admin.recitations")
                     NavigationLink("Modération des messages") { ModerationView(section: .messages) }.accessibilityIdentifier("settings.admin.messages")
                     NavigationLink("Quiz · Questions et thèmes") { QuizAdminView() }
