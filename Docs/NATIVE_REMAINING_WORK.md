@@ -4,13 +4,13 @@ Cette liste provient de l'inspection du code Swift actuel. Les rapports de phase
 
 ## Fonctions présentes
 
-Lecteur Médine/1441 et téléchargement à la demande, cache/préchargement, centrage, audio et répétitions immédiates, actions des versets, difficulté, traduction, marque-pages, reprise, enregistrement, programme modifiable, révisions/consolidations et validation partielle, statistiques, amis/profils/consentements, messages/groupes, Quiz/défis/administration Quiz, signalements/modération, retours de récitations et corrections administrateur, rappels quotidiens locaux.
+Lecteur Médine/1441 et téléchargement à la demande, cache/préchargement, centrage, audio et répétitions immédiates, actions des versets, difficulté, traduction, marque-pages, reprise, enregistrement, programme modifiable, révisions/consolidations et validation partielle, statistiques, amis/profils/consentements, messages/groupes, Quiz/défis/administration Quiz, signalements/modération, retours de récitations et corrections administrateur, rappels quotidiens locaux, administration des rappels/invocations (catégories, contenus, programmation, liens médias).
 
 ## Fonctions encore à compléter dans Swift
 
 | Priorité | Fonction | Point d'intégration existant |
 |---|---|---|
-| 1 | Administration des rappels et invocations : catégories, création/édition, programmation, médias | `DailyContent`, `HomeRepository`, tables `daily_contents`, `content_categories`, `daily_content_schedule`, RPC `save_daily_content` |
+| 1 | Import direct des médias des rappels/invocations et résolution des images du bucket privé | `DailyContent`, `HomeRepository`, tables `daily_contents`, `content_categories`, `daily_content_schedule`, RPC `save_daily_content` |
 | 2 | Favoris des contenus quotidiens, audio éditorial et enregistrement d'invocations | `DailyContentView`, `content_favorites`, `audio_url`, recorder existant ; conserver le type invocation et son snapshot serveur |
 | 3 | Photo du profil ami | `SocialProfileSettingsView`, `friend_profiles`, bucket/policies d'avatars existants |
 | 4 | Actualisation sociale Realtime | `ConversationLibrary` et `FriendsLibrary` ; l'actualisation périodique actuelle reste fonctionnelle |
