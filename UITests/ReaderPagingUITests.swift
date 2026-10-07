@@ -16,10 +16,12 @@ final class ReaderPagingUITests: XCTestCase {
             let choice = app.buttons["quran.source." + source]
             for _ in 0..<5 { if choice.isHittable { break }; app.swipeUp() }
             XCTAssertTrue(choice.waitForExistence(timeout: 5)); choice.tap()
-            XCTAssertTrue(app.buttons["quran.action.Plus"].waitForExistence(timeout: 10))
+            XCTAssertTrue(app.navigationBars["Coran 1441"].waitForExistence(timeout: 10))
         }
         let first = app.images["quran.page.1"]
         XCTAssertTrue(first.waitForExistence(timeout: 10))
+        let ready = NSPredicate { _, _ in first.isHittable && first.value as? String == "ready" }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 10), .completed)
         let original = first.frame
         for page in 2...21 { turn(app, to: page, forward: true) }
         for page in stride(from: 20, through: 16, by: -1) { turn(app, to: page, forward: false) }
@@ -38,7 +40,7 @@ final class ReaderPagingUITests: XCTestCase {
         let end = app.coordinate(withNormalizedOffset: CGVector(dx: forward ? 0.8 : 0.3, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: end)
         let image = app.images["quran.page.\(page)"]
-        let visible = NSPredicate { _, _ in image.exists && image.isHittable }
+        let visible = NSPredicate { _, _ in image.exists && image.isHittable && image.value as? String == "ready" }
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: visible, object: nil)], timeout: 5), .completed, "Page \(page) must be visible after swipe")
         XCTAssertFalse(app.staticTexts["La page n’a pas pu être chargée. Réessaie depuis le menu Plus."].exists)
     }

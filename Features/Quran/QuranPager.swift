@@ -67,8 +67,10 @@ struct QuranPager: UIViewControllerRepresentable {
             pages = pages.filter { range.contains($0.key) }
             for number in range { _ = pageController(number) }
             Task {
+                guard generation == token else { return }
                 await QuranPageCache.shared.setWindow(source: source, page: page)
                 for number in [page, page - 1, page + 1] where range.contains(number) {
+                    guard generation == token, !Task.isCancelled else { return }
                     do {
                         let image = try await QuranPageCache.shared.image(source: source, page: number)
                         guard generation == token else { return }
