@@ -48,6 +48,7 @@ private struct ModerationDetail: View {
     @State private var recording: JSONValue?
     @State private var openingOwner: UUID?
     @State private var attemptedComment: String?
+    @StateObject private var recorder = VoiceRecorderService()
     private var current: JSONValue { library.items.first { $0["id"] == row["id"] } ?? row }
     private var passage: String {
         guard row["recording_type"].string != "invocation" else { return "Invocation" }
@@ -76,11 +77,23 @@ private struct ModerationDetail: View {
             if section == .recitations {
                 Section("Retour à l’utilisateur") {
                     TextEditor(text: $comment).frame(minHeight: 100).accessibilityIdentifier("moderation.feedback")
+                        .disabled(library.busy)
+                    if recorder.recording {
+                        Button("Arrêter l’enregistrement") { recorder.stop() }.accessibilityIdentifier("moderation.voice.stop")
+                    } else if recorder.draft != nil {
+                        Button(recorder.previewing ? "Arrêter la préécoute" : "Écouter ma correction") { library.stopAudio(); recorder.togglePreview() }
+                        Button("Supprimer l’enregistrement", role: .destructive) { recorder.discard(); feedbackID = UUID(); attemptedComment = nil }.disabled(library.busy)
+                    } else {
+                        Button("Enregistrer une correction vocale") { library.stopAudio(); feedbackID = UUID(); attemptedComment = nil; Task { await recorder.start() } }
+                            .disabled(library.busy || recorder.requesting).accessibilityIdentifier("moderation.voice.record")
+                    }
+                    if let error = recorder.error { Text(error).font(.caption).foregroundStyle(theme.muted) }
                     Button("Envoyer le retour") { Task {
                         let text = comment.trimmingCharacters(in: .whitespacesAndNewlines)
                         if attemptedComment != text { feedbackID = UUID(); attemptedComment = text }
-                        if await library.feedback(row, id: feedbackID, comment: comment) { comment = ""; feedbackID = UUID(); feedbackSent = true }
-                    } }.disabled(library.busy || comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || comment.count > 2000)
+                        if recorder.previewing { recorder.togglePreview() }
+                        if await library.feedback(row, id: feedbackID, comment: comment, voice: recorder.draft) { comment = ""; recorder.discard(); feedbackID = UUID(); feedbackSent = true }
+                    } }.disabled(library.busy || recorder.recording || recorder.requesting || (comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && recorder.draft == nil) || comment.count > 2000)
                     if feedbackSent { Label("Retour envoyé", systemImage: "checkmark.circle").foregroundStyle(theme.accent) }
                 }
             } else if section == .messages {
@@ -94,7 +107,8 @@ private struct ModerationDetail: View {
             .onAppear { if openingOwner == nil { openingOwner = library.account } }
             .confirmationDialog("Supprimer ce message pour tous les participants ?", isPresented: $confirming) {
                 Button("Supprimer le message", role: .destructive) { Task { await library.moderate(row, section: .messages) } }
-            }.onDisappear { library.stopAudio() }
+            }.onDisappear { library.stopAudio(); recorder.discard() }
+            .onChange(of: library.account) { _, _ in recorder.discard(); comment = ""; feedbackSent = false }
             .task { if section == .messages, current["deleted_at"] == .null, let id = row["recitation_id"].string { recording = await library.recording(id) } }
     }
 }

@@ -11,6 +11,11 @@ enum ModerationSection: String, CaseIterable { case recitations, messages, repor
     func resolveReport(owner: UUID, id: String) async throws -> JSONValue
     func listened(owner: UUID, id: String) async throws -> JSONValue
     func feedback(owner: UUID, recitation: String, id: UUID, comment: String) async throws
+    func voiceFeedback(owner: UUID, recitation: String, id: UUID, comment: String, data: Data) async throws
+}
+
+extension ModerationRemote {
+    func voiceFeedback(owner: UUID, recitation: String, id: UUID, comment: String, data: Data) async throws { throw URLError(.unsupportedURL) }
 }
 
 @MainActor final class ModerationRepository: ModerationRemote {
@@ -80,5 +85,24 @@ enum ModerationSection: String, CaseIterable { case recitations, messages, repor
         try await client.from("recitation_feedback").upsert(value, onConflict: "id", ignoreDuplicates: true).execute()
         let confirmed: JSONValue = try await client.from("recitation_feedback").select().eq("id", value: id.uuidString).single().execute().value
         guard confirmed["admin_id"].string?.lowercased() == owner.uuidString.lowercased(), confirmed["recitation_id"].string == recitation, confirmed["comment"].string == comment else { throw URLError(.cannotParseResponse) }
+    }
+    func voiceFeedback(owner: UUID, recitation: String, id: UUID, comment: String, data: Data) async throws {
+        let client = try await authorized(owner)
+        guard !data.isEmpty, data.count <= 52_428_800, comment.count <= 2000 else { throw URLError(.cannotDecodeContentData) }
+        let path = "feedback/\(owner.uuidString.lowercased())/\(id.uuidString.lowercased()).m4a"
+        // Stable request/path: a retry replaces the same upload and the RPC deduplicates publication.
+        try await client.storage.from("recitations").upload(path, data: data, options: FileOptions(contentType: "audio/mp4", upsert: true))
+        _ = try await authorized(owner)
+        struct Parameters: Encodable {
+            let p_recitation_id: String
+            let p_request_id: String
+            let p_verses: [Int]
+            let p_general_comment: String
+            let p_voice_path: String
+        }
+        _ = try await client.rpc("finalize_recitation_correction", params: Parameters(p_recitation_id: recitation, p_request_id: id.uuidString.lowercased(), p_verses: [], p_general_comment: comment, p_voice_path: path)).execute()
+        _ = try await authorized(owner)
+        let confirmed: JSONValue = try await client.from("recitations").select("id,last_correction_request_id").eq("id", value: recitation).single().execute().value
+        guard confirmed["last_correction_request_id"].string == id.uuidString.lowercased() else { throw URLError(.cannotParseResponse) }
     }
 }

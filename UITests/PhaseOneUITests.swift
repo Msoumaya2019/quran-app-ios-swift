@@ -1,6 +1,23 @@
 import XCTest
 
 final class PhaseOneUITests: XCTestCase {
+    func testAdminRecordsAndSendsVoiceCorrectionWithoutText() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-moderation", "--ui-test-recording"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let open = app.buttons["settings.admin.recitations"]
+        for _ in 0..<6 { if open.exists && open.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(open.waitForExistence(timeout: 10)); open.tap()
+        let user = app.staticTexts["Yassine"]; XCTAssertTrue(user.waitForExistence(timeout: 5)); user.tap()
+        let record = app.buttons["moderation.voice.record"]
+        for _ in 0..<3 { if record.exists && record.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(record.waitForExistence(timeout: 5)); record.tap()
+        let stop = app.buttons["moderation.voice.stop"]; XCTAssertTrue(stop.waitForExistence(timeout: 5)); stop.tap()
+        XCTAssertTrue(app.buttons["Écouter ma correction"].waitForExistence(timeout: 5))
+        attach(app, name: "Administration — correction vocale prête à envoyer")
+        app.buttons["Envoyer le retour"].tap()
+        XCTAssertTrue(app.staticTexts["Retour envoyé"].waitForExistence(timeout: 5))
+        XCTAssertTrue(record.exists)
+    }
     func testReminderPreferencesSaveImmediatelyAndRemainWhenReopened() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
         app.buttons["settings.open"].tap()

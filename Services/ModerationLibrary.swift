@@ -74,12 +74,19 @@ import Combine
             items[index] = confirmed
         } catch { if generation == token { message = "L’action n’a pas été confirmée. Réessaie après connexion." } }
     }
-    func feedback(_ row: JSONValue, id: UUID, comment: String) async -> Bool {
+    func feedback(_ row: JSONValue, id: UUID, comment: String, voice: URL? = nil) async -> Bool {
         let text = comment.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let owner, !busy, let recitation = row["id"].string, !text.isEmpty, text.count <= 2000 else { return false }
+        guard let owner, !busy, let recitation = row["id"].string, (!text.isEmpty || voice != nil), text.count <= 2000 else { return false }
         let token = generation; busy = true; message = nil
         defer { if generation == token { busy = false } }
-        do { try await remote.feedback(owner: owner, recitation: recitation, id: id, comment: text); return generation == token }
+        do {
+            if let voice {
+                let data = try Data(contentsOf: voice, options: .mappedIfSafe)
+                guard !data.isEmpty, data.count <= 52_428_800 else { throw URLError(.cannotDecodeContentData) }
+                try await remote.voiceFeedback(owner: owner, recitation: recitation, id: id, comment: text, data: data)
+            } else { try await remote.feedback(owner: owner, recitation: recitation, id: id, comment: text) }
+            return generation == token
+        }
         catch { if generation == token { message = "Le retour n’a pas été confirmé. Le texte reste disponible pour réessayer." }; return false }
     }
 }

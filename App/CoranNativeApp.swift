@@ -109,6 +109,7 @@ import SwiftUI
     func resolveReport(owner: UUID, id: String) async throws -> JSONValue { reviewed = true; return report }
     func listened(owner: UUID, id: String) async throws -> JSONValue { heard = true; return recitation }
     func feedback(owner: UUID, recitation: String, id: UUID, comment: String) async throws {}
+    func voiceFeedback(owner: UUID, recitation: String, id: UUID, comment: String, data: Data) async throws { guard !data.isEmpty else { throw URLError(.cannotDecodeContentData) } }
 }
 @MainActor private final class PreviewAuth: AuthGateway {
     let cachedIdentity: AccountIdentity? = AccountIdentity(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, email: "preview@example.invalid")

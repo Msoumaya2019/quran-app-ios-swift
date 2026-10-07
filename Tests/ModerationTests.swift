@@ -7,6 +7,7 @@ import XCTest
     var waiting: CheckedContinuation<[JSONValue], Error>?
     var supplied: [JSONValue] = [.object(["id": .string("message"), "body": .string("Original")])]
     var feedbackIDs: [UUID] = []
+    var voiceData: [Data] = []
     func rows(owner: UUID, section: ModerationSection, offset: Int) async throws -> [JSONValue] {
         if fail { throw URLError(.userAuthenticationRequired) }
         if hold { return try await withCheckedThrowingContinuation { waiting = $0 } }
@@ -22,6 +23,7 @@ import XCTest
     func resolveReport(owner: UUID, id: String) async throws -> JSONValue { supplied[0].setting("status", .string("reviewed")) }
     func listened(owner: UUID, id: String) async throws -> JSONValue { supplied[0].setting("listened_at", .string("2026-10-05T10:00:00Z")) }
     func feedback(owner: UUID, recitation: String, id: UUID, comment: String) async throws { feedbackIDs.append(id); if fail { throw URLError(.networkConnectionLost) } }
+    func voiceFeedback(owner: UUID, recitation: String, id: UUID, comment: String, data: Data) async throws { feedbackIDs.append(id); voiceData.append(data); if fail { throw URLError(.networkConnectionLost) } }
 }
 final class ModerationTests: XCTestCase {
     @MainActor func testDeletionChangesOnlyAfterServerConfirmation() async {
@@ -63,5 +65,24 @@ final class ModerationTests: XCTestCase {
         for path in ["other/file.m4a", owner + "/../file.m4a", owner + "/%2e%2e/file.m4a", owner + "/"] {
             XCTAssertFalse(ModerationRepository.validAudioPath(row.setting("storage_path", .string(path))))
         }
+    }
+    @MainActor func testVoiceFeedbackRetryKeepsDraftAndRequestWithoutRequiringText() async throws {
+        let remote = ModerationProbe(), id = UUID(), file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let bytes = Data([1, 2, 3]); try bytes.write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let library = ModerationLibrary(remote: remote); library.select(UUID())
+        remote.fail = true
+        let first = await library.feedback(remote.supplied[0], id: id, comment: "", voice: file)
+        XCTAssertFalse(first); XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+        remote.fail = false
+        let second = await library.feedback(remote.supplied[0], id: id, comment: "", voice: file)
+        XCTAssertTrue(second); XCTAssertEqual(remote.feedbackIDs, [id, id]); XCTAssertEqual(remote.voiceData, [bytes, bytes])
+    }
+    @MainActor func testEmptyVoiceFeedbackIsRejectedBeforeRemotePublication() async throws {
+        let remote = ModerationProbe(), file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try Data().write(to: file); defer { try? FileManager.default.removeItem(at: file) }
+        let library = ModerationLibrary(remote: remote); library.select(UUID())
+        let sent = await library.feedback(remote.supplied[0], id: UUID(), comment: "", voice: file)
+        XCTAssertFalse(sent); XCTAssertTrue(remote.feedbackIDs.isEmpty)
     }
 }
