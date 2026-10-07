@@ -11,7 +11,7 @@ import Supabase
         self.client = client; self.baseURL = baseURL ?? (try? BackendConfiguration.load().url)
         self.directory = directory ?? FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("DailyContentImages")
     }
-    static func privatePath(_ url: URL, base: URL) -> String? {
+    nonisolated static func privatePath(_ url: URL, base: URL) -> String? {
         let prefix = "/storage/v1/object/public/daily-content-media/"
         guard url.scheme == "https", url.host == base.host, url.port == base.port,
               url.user == nil, url.password == nil, url.path.hasPrefix(prefix) else { return nil }
