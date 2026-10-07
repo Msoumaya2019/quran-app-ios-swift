@@ -36,9 +36,10 @@ final class ReaderPagingUITests: XCTestCase {
         screenshot.name = "20 pages et retour — " + source; screenshot.lifetime = .keepAlways; add(screenshot)
     }
     private func turn(_ app: XCUIApplication, to page: Int, forward: Bool) -> Bool {
-        let start = app.coordinate(withNormalizedOffset: CGVector(dx: forward ? 0.3 : 0.8, dy: 0.5))
-        let end = app.coordinate(withNormalizedOffset: CGVector(dx: forward ? 0.8 : 0.3, dy: 0.5))
-        start.press(forDuration: 0.05, thenDragTo: end)
+        let current = app.images["quran.page.\(forward ? page - 1 : page + 1)"]
+        // Use a page swipe, not the slow half-width drag-and-drop gesture.
+        if forward { current.swipeRight(velocity: .fast) }
+        else { current.swipeLeft(velocity: .fast) }
         let image = app.images["quran.page.\(page)"]
         let visible = NSPredicate { _, _ in image.exists && image.isHittable && image.value as? String == "ready" }
         let result = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: visible, object: nil)], timeout: 5)
