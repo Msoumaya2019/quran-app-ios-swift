@@ -10,19 +10,23 @@ actor QuranPageCache {
     private var images: [Key: UIImage] = [:]
     private var pending: [Key: Task<UIImage, Error>] = [:]
     private var retained: Set<Key> = []
+    private var windowVersion: UInt = 0
     private(set) var hits = 0
     private(set) var renders = 0
     private let performanceLog = OSLog(subsystem: "com.coranmemoire.native.ios", category: "QuranReader")
     var decodedBytes: Int { images.values.reduce(0) { total, image in total + (image.cgImage.map { $0.bytesPerRow * $0.height } ?? 0) } }
     private(set) var renderMilliseconds: [Double] = []
     func setWindow(source: QuranSource, page: Int) {
+        windowVersion &+= 1
         retained = Set((max(1, page - 1)...min(source.pageCount, page + 1)).map { Key(source: source.id, page: $0) })
         images = images.filter { retained.contains($0.key) }
     }
     func prepare(source: QuranSource, page: Int) async {
-        retained = Set((max(1, page - 1)...min(source.pageCount, page + 1)).map { Key(source: source.id, page: $0) })
-        images = images.filter { retained.contains($0.key) }
+        setWindow(source: source, page: page)
+        let version = windowVersion
         for number in [page, page - 1, page + 1] where (1...source.pageCount).contains(number) {
+            // Actor reentrancy: a newer page/source can replace the window during decode.
+            guard version == windowVersion, !Task.isCancelled else { return }
             _ = try? await image(source: source, page: number)
         }
     }
@@ -44,7 +48,7 @@ actor QuranPageCache {
         if retained.contains(key) { images[key] = image }
         return image
     }
-    func clear() { images.removeAll(); retained.removeAll() }
+    func clear() { windowVersion &+= 1; images.removeAll(); retained.removeAll() }
     var cachedPageCount: Int { images.count }
     private nonisolated static func render(source: QuranSource, page: Int, lineRoot: URL?) throws -> UIImage {
         switch source.renderingType {

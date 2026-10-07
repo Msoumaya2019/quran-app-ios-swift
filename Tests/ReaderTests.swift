@@ -34,6 +34,29 @@ final class ReaderTests: XCTestCase {
         let times = await cache.renderMilliseconds
         print("[ReaderMetrics] Medina render ms: \(times); cache hits: \(hits); decoded page count: \(await cache.cachedPageCount); decoded image bytes: \(await cache.decodedBytes)")
     }
+    func testRapidPreparationAndSourceChangesKeepOnlyLatestWindow() async throws {
+        let root = try XCTUnwrap(Bundle.main.resourceURL).appendingPathComponent("ReaderTestFixtures")
+        guard FileManager.default.fileExists(atPath: root.path) else { throw XCTSkip("GitHub prepares original 1441 images") }
+        let cache = QuranPageCache(lineRoot: root)
+        await withTaskGroup(of: Void.self) { group in
+            for page in 1...21 {
+                group.addTask { await cache.prepare(source: page.isMultiple(of: 2) ? .medina : .edition1441, page: page) }
+            }
+        }
+        await cache.prepare(source: .edition1441, page: 20)
+        let count = await cache.cachedPageCount
+        XCTAssertEqual(count, 3)
+        let renders = await cache.renders
+        for page in 19...21 {
+            let image = try await cache.image(source: .edition1441, page: page)
+            XCTAssertEqual(image.size, CGSize(width: 1440, height: 2320))
+        }
+        let after = await cache.renders
+        XCTAssertEqual(after, renders, "The entire latest window must already be decoded")
+        await cache.clear()
+        let cleared = await cache.cachedPageCount
+        XCTAssertEqual(cleared, 0)
+    }
     func testSourcePageBounds() {
         for source in QuranSource.available { XCTAssertEqual(source.validPage(0), 1); XCTAssertEqual(source.validPage(605), 604) }
     }
