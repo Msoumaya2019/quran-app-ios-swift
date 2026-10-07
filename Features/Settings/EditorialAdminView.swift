@@ -1,5 +1,7 @@
 import SwiftUI
 import UIKit
+import PhotosUI
+import UniformTypeIdentifiers
 
 struct EditorialAdminView: View {
     @EnvironmentObject var library: EditorialLibrary
@@ -56,6 +58,11 @@ private struct EditorialEditorView: View {
     @State var draft: EditorialDraft
     @State private var scheduled = false
     @State private var day = Date.now
+    @State private var photo: PhotosPickerItem?
+    @State private var audioImporter = false
+    @State private var preparingMedia = false
+    @State private var mediaError: String?
+
     init(initial: EditorialDraft) { _draft = State(initialValue: initial) }
     private var kind: EditorialKind { EditorialKind(rawValue: draft.value["type"].string.orEmpty) ?? .reminder }
     private func text(_ key: String) -> Binding<String> { Binding(get: { draft.value[key].string.orEmpty }, set: { draft.value = draft.value.setting(key, .string($0)) }) }
@@ -76,6 +83,13 @@ private struct EditorialEditorView: View {
                 }
                 Section("Source") { TextField("Source", text: text("source")).accessibilityIdentifier("editorial.source"); TextField("Référence", text: text("reference")) }
                 Section("Médias") {
+                    PhotosPicker(selection: $photo, matching: .images) { Label("Choisir une image", systemImage: "photo") }.disabled(preparingMedia || library.busy)
+                    if draft.image != nil { Text("Nouvelle image prête · envoi à l’enregistrement").font(.caption); Button("Retirer la sélection d’image") { draft.image = nil; photo = nil } }
+                    Button { audioImporter = true } label: { Label("Importer un audio", systemImage: "waveform") }.disabled(preparingMedia || library.busy)
+                    if let audio = draft.audio { Text("Audio prêt · \(ByteCountFormatter.string(fromByteCount: Int64(audio.data.count), countStyle: .file))").font(.caption); Button("Retirer la sélection audio") { draft.audio = nil } }
+                    if preparingMedia { ProgressView("Préparation du média…") }
+                    if let mediaError { Text(mediaError).foregroundStyle(.red) }
+
                     TextField("Lien HTTPS de l’image", text: text("image_url")).textInputAutocapitalization(.never).keyboardType(.URL)
                     TextField("Lien HTTPS de l’audio", text: text("audio_url")).textInputAutocapitalization(.never).keyboardType(.URL)
                 }
@@ -88,12 +102,39 @@ private struct EditorialEditorView: View {
                 Button(library.busy ? "Enregistrement…" : "Enregistrer") {
                     draft.date = scheduled ? LocalCalendar.key(day) : ""
                     Task { if await library.save(draft) { dismiss(); await store.refresh() } }
-                }.disabled(library.busy || library.loading).accessibilityIdentifier("editorial.save")
+                }.disabled(library.busy || library.loading || preparingMedia).accessibilityIdentifier("editorial.save")
             }.navigationTitle(kind == .reminder ? "Rappel" : "Invocation").navigationBarTitleDisplayMode(.inline)
-                .toolbar { Button("Fermer") { dismiss() }.disabled(library.busy) }
+                .toolbar { Button("Fermer") { dismiss() }.disabled(library.busy || preparingMedia) }
                 .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Terminé") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) } } }
         }.tint(theme.accent).presentationDragIndicator(.visible)
+            .interactiveDismissDisabled(library.busy || preparingMedia)
             .onChange(of: store.identity?.id) { _, _ in dismiss() }
+            .task(id: photo) {
+                guard let photo, let owner = store.identity?.id else { return }
+                preparingMedia = true; mediaError = nil
+                defer { preparingMedia = false }
+                do {
+                    guard let raw = try await photo.loadTransferable(type: Data.self) else { throw CocoaError(.fileReadCorruptFile) }
+                    let attachment = try await EditorialAttachment.image(raw)
+                    guard !Task.isCancelled, store.identity?.id == owner else { return }
+                    draft.image = attachment
+                } catch { if !Task.isCancelled, store.identity?.id == owner { mediaError = "L’image n’a pas pu être préparée. Choisis une autre photo." } }
+            }
+            .fileImporter(isPresented: $audioImporter, allowedContentTypes: [.audio]) { result in
+                guard let owner = store.identity?.id else { return }
+                switch result {
+                case .failure: mediaError = "L’import audio n’a pas abouti."
+                case .success(let url): Task {
+                    preparingMedia = true; mediaError = nil
+                    defer { preparingMedia = false }
+                    do {
+                        let attachment = try await EditorialAttachment.audio(url)
+                        guard store.identity?.id == owner else { return }
+                        draft.audio = attachment
+                    } catch { if store.identity?.id == owner { mediaError = "Choisis un audio MP3, M4A ou AAC valide, de 30 Mo maximum." } }
+                }
+                }
+            }
     }
 }
 

@@ -114,7 +114,7 @@ struct HomeView: View {
                     Button { content = item } label: {
                         AppCard {
                             HStack(spacing: 10) {
-                                AsyncImage(url: item.image_url.flatMap(URL.init(string:))) { image in image.resizable().scaledToFill() } placeholder: { RoundedRectangle(cornerRadius: 12).fill(theme.gold.opacity(0.12)) }
+                                DailyContentImage(url: item.image_url)
                                     .frame(width: 88, height: 112).clipShape(RoundedRectangle(cornerRadius: 12))
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(item.type == "invocation" ? "Invocation du jour" : "Rappel du jour").font(theme.title(.subheadline)).foregroundStyle(theme.accent)
@@ -166,7 +166,7 @@ struct DailyContentView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if let url = content.image_url.flatMap(URL.init(string:)) { AsyncImage(url: url) { image in image.resizable().scaledToFit() } placeholder: { ProgressView() }.clipShape(RoundedRectangle(cornerRadius: 18)) }
+                    if content.image_url != nil { DailyContentImage(url: content.image_url, mode: .fit).clipShape(RoundedRectangle(cornerRadius: 18)) }
                     if let arabic = content.arabic_text { Text(arabic).font(.title2).frame(maxWidth: .infinity, alignment: .trailing) }
                     if let phonetic = content.phonetic_text { Text(phonetic).foregroundStyle(theme.muted) }
                     Text(content.french_text)

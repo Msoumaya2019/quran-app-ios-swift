@@ -6,6 +6,7 @@ import SwiftUI
     @StateObject private var friends: FriendsLibrary
     @StateObject private var quiz: QuizLibrary
     @StateObject private var reports: ProblemReportLibrary
+    @StateObject private var media: DailyContentMediaService
     @StateObject private var editorial: EditorialLibrary
     @StateObject private var moderation: ModerationLibrary
     @StateObject private var theme = ThemeManager()
@@ -54,6 +55,7 @@ import SwiftUI
             _quiz = StateObject(wrappedValue: QuizLibrary(client: nil, directory: friendsDirectory.appendingPathComponent("Quiz")))
             _reports = StateObject(wrappedValue: ProblemReportLibrary(directory: friendsDirectory.appendingPathComponent("Reports")))
             _moderation = StateObject(wrappedValue: ModerationLibrary(remote: ProcessInfo.processInfo.arguments.contains("--ui-test-moderation") ? PreviewModeration() : ModerationRepository(client: nil)))
+            _media = StateObject(wrappedValue: DailyContentMediaService(client: nil))
             _editorial = StateObject(wrappedValue: EditorialLibrary(remote: ProcessInfo.processInfo.arguments.contains("--ui-test-editorial") ? PreviewEditorial() : EditorialRepository(client: nil)))
             return
         }
@@ -65,10 +67,11 @@ import SwiftUI
         _reports = StateObject(wrappedValue: ProblemReportLibrary(client: client))
         _moderation = StateObject(wrappedValue: ModerationLibrary(remote: ModerationRepository(client: client)))
         _editorial = StateObject(wrappedValue: EditorialLibrary(remote: EditorialRepository(client: client)))
+        _media = StateObject(wrappedValue: DailyContentMediaService(client: client))
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation).environmentObject(reminders).environmentObject(editorial)
+            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation).environmentObject(reminders).environmentObject(editorial).environmentObject(media)
                 .onOpenURL { url in Task { await store.receive(url) } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh(); await quiz.refresh() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in Task { await recitations.select(user); await recitations.synchronize() } }

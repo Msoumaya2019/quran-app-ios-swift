@@ -28,9 +28,21 @@ import Supabase
         return result
     }
     func save(owner: UUID, draft: EditorialDraft) async throws -> JSONValue {
-        let client = try await authorized(owner), payload = draft.payload
+        let client = try await authorized(owner)
+        var payload = draft.payload
         let categories: [JSONValue] = try await client.from("content_categories").select().execute().value
         guard draft.validation(categories: categories) == nil else { throw URLError(.badURL) }
+        for attachment in [draft.image, draft.audio].compactMap({ $0 }) {
+            _ = try await authorized(owner)
+            let bucket = client.storage.from("daily-content-media"), path = attachment.path(owner: owner)
+            do { try await bucket.upload(path, data: attachment.data, options: FileOptions(contentType: attachment.mime, upsert: false)) }
+            catch {
+                // Retry a confirmed identical object; never overwrite another file.
+                let existing = try await bucket.download(path: path)
+                guard existing == attachment.data else { throw error }
+            }
+            payload = payload.setting(attachment.field, .string(try bucket.getPublicURL(path: path).absoluteString))
+        }
         _ = try await authorized(owner)
         let params: [String: JSONValue] = ["p_content": payload, "p_date": draft.date.isEmpty ? .null : .string(draft.date)]
         _ = try await client.rpc("save_daily_content", params: params).execute()

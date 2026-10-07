@@ -9,6 +9,8 @@ enum EditorialKind: String, CaseIterable, Identifiable {
 struct EditorialDraft {
     var value: JSONValue
     var date = ""
+    var image: EditorialAttachment?
+    var audio: EditorialAttachment?
     init(row: JSONValue = .null, kind: EditorialKind, categories: [JSONValue]) {
         value = row == .null ? .object(["id": .string(UUID().uuidString.lowercased()), "type": .string(kind.rawValue), "is_active": .bool(true), "category_id": .string(categories.first { $0["type"].string == kind.rawValue && $0["is_active"].bool == true }?["id"].string ?? "")]) : row
     }
@@ -41,6 +43,7 @@ struct EditorialDraft {
         if kind == .invocation && (row["arabic_text"].string.orEmpty.isEmpty || row["phonetic_text"].string.orEmpty.isEmpty) { return "Ajoute le texte arabe et la phonétique de l’invocation." }
         guard Self.validMedia(row["image_url"].string), Self.validMedia(row["audio_url"].string) else { return "Les liens d’image et d’audio doivent être des adresses HTTPS valides." }
         guard date.isEmpty || Self.validDate(date) else { return "La date doit être valide, au format AAAA-MM-JJ." }
+        guard image.map({ $0.kind == .image && $0.valid }) ?? true, audio.map({ $0.kind == .audio && $0.valid }) ?? true else { return "Image limitée à 5 Mo ; audio MP3, M4A ou AAC limité à 30 Mo." }
         return nil
     }
     static func validCategory(_ row: JSONValue) -> Bool {
