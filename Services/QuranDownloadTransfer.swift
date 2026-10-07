@@ -6,6 +6,8 @@ import Combine
     @Published var phase = "idle"
     @Published var written: Int64 = 0
     @Published var expected: Int64 = 0
+    @Published var preparedLines = 0
+    var preparationProgress: Double { min(1, max(0, Double(preparedLines) / Double(QuranResourceService.lineCount))) }
     var progress: Double? { expected > 0 ? min(1, max(0, Double(written) / Double(expected))) : nil }
 }
 

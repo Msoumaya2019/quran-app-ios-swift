@@ -1,5 +1,11 @@
 import XCTest
+import ZIPFoundation
 @testable import CoranNative
+
+private actor PreparationProbe {
+    var counts: [Int] = []
+    func append(_ value: Int) { counts.append(value) }
+}
 
 final class QuranDownloadTests: XCTestCase {
     @MainActor func testNativeTransferReportsActualBytesAndRetainsCompletedFile() async throws {
@@ -18,5 +24,25 @@ final class QuranDownloadTests: XCTestCase {
         XCTAssertEqual(QuranResourceService.shared.isReady(.edition1441), installedBefore)
         if status.expected > 0 { XCTAssertEqual(status.expected, size); XCTAssertEqual(status.progress, 1) }
         else { XCTAssertNil(status.progress) }
+        let destination = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: destination) }
+        let probe = PreparationProbe(), start = Date()
+        try await QuranResourceService.prepareArchive(file, into: destination) { await probe.append($0) }
+        let counts = await probe.counts
+        XCTAssertEqual(counts, (1...604).map { $0 * 15 })
+        XCTAssertEqual(try String(contentsOf: destination.appendingPathComponent("ready-v1"), encoding: .utf8), "9060")
+        let images = try FileManager.default.contentsOfDirectory(at: destination, includingPropertiesForKeys: nil).filter { $0.pathExtension == "png" }
+        XCTAssertEqual(images.count, 9060)
+        print("[Quran preparation] 9060 verified images in \(Date().timeIntervalSince(start)) seconds")
+    }
+    func testIncompleteArchiveNeverBecomesReady() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let archiveURL = root.appendingPathComponent("incomplete.zip")
+        _ = try Archive(url: archiveURL, accessMode: .create)
+        let output = root.appendingPathComponent("prepared")
+        do { try await QuranResourceService.prepareArchive(archiveURL, into: output); XCTFail("Incomplete archive accepted") } catch {}
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.appendingPathComponent("ready-v1").path))
     }
 }

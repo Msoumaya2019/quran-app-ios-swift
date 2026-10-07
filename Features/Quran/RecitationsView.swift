@@ -108,6 +108,6 @@ private struct RecitationFeedbackView: View {
             let file = try await library.feedbackPlayable(row, for: item)
             guard visible, store.identity?.id == item.userID, !Task.isCancelled else { return }
             try player.play(file: file, id: row.id)
-        } catch { error = "Cette correction vocale n’est pas encore disponible hors connexion ou n’a pas pu être lue." }
+        } catch { self.error = "Cette correction vocale n’est pas encore disponible hors connexion ou n’a pas pu être lue." }
     }
 }
