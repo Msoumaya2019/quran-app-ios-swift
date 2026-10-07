@@ -2,6 +2,12 @@ import XCTest
 @testable import CoranNative
 
 @MainActor private final class ModerationProbe: ModerationRemote {
+    var suspensionCalls = 0
+    func suspension(owner: UUID, user: UUID, reason: String?, until: Date?) async throws -> JSONValue {
+        suspensionCalls += 1
+        if fail { throw URLError(.notConnectedToInternet) }
+        return reason.map { .object(["user_id": .string(user.uuidString), "reason": .string($0)]) } ?? .null
+    }
     var fail = false
     var hold = false
     var waiting: CheckedContinuation<[JSONValue], Error>?
@@ -34,6 +40,23 @@ import XCTest
     }
 }
 final class ModerationTests: XCTestCase {
+    @MainActor func testSocialSuspensionRequiresServerConfirmationAndProtectsAccounts() async {
+        let remote = ModerationProbe(), library = ModerationLibrary(remote: remote), owner = UUID(), user = UUID()
+        let row: JSONValue = .object(["id": .string(user.uuidString), "suspension": .null, "protected": .bool(false)])
+        remote.supplied = [row]; library.select(owner); await library.load(.members)
+        remote.fail = true
+        let failed = await library.suspension(row, reason: "Test", until: nil)
+        XCTAssertFalse(failed); XCTAssertEqual(library.items[0]["suspension"], .null)
+        remote.fail = false
+        let confirmed = await library.suspension(row, reason: "Test", until: nil)
+        XCTAssertTrue(confirmed); XCTAssertEqual(library.items[0]["suspension"]["reason"].string, "Test")
+        let restored = await library.suspension(row, reason: nil, until: nil)
+        XCTAssertTrue(restored); XCTAssertEqual(library.items[0]["suspension"], .null)
+        let calls = remote.suspensionCalls
+        let protected = await library.suspension(row.setting("protected", .bool(true)), reason: "Test", until: nil)
+        let selfSuspension = await library.suspension(row.setting("id", .string(owner.uuidString)), reason: "Test", until: nil)
+        XCTAssertFalse(protected); XCTAssertFalse(selfSuspension); XCTAssertEqual(remote.suspensionCalls, calls)
+    }
     private var recording: JSONValue { .object(["id": .string("recording"), "recording_type": .string("quran"), "start_verse_id": .number(7), "end_verse_id": .number(10)]) }
     @MainActor func testVerseCorrectionIsLimitedToRecordedPassageAndNotInvocation() async {
         let remote = ModerationProbe(), library = ModerationLibrary(remote: remote); library.select(UUID())

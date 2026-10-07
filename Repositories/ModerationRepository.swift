@@ -1,8 +1,9 @@
 import Foundation
 import Supabase
 
-enum ModerationSection: String, CaseIterable { case recitations, messages, reports }
+enum ModerationSection: String, CaseIterable { case recitations, messages, reports, members }
 @MainActor protocol ModerationRemote {
+    func suspension(owner: UUID, user: UUID, reason: String?, until: Date?) async throws -> JSONValue
     func rows(owner: UUID, section: ModerationSection, offset: Int) async throws -> [JSONValue]
     func profiles(owner: UUID, ids: [String]) async throws -> [JSONValue]
     func recording(owner: UUID, id: String) async throws -> JSONValue
@@ -16,6 +17,7 @@ enum ModerationSection: String, CaseIterable { case recitations, messages, repor
 }
 
 extension ModerationRemote {
+    func suspension(owner: UUID, user: UUID, reason: String?, until: Date?) async throws -> JSONValue { throw URLError(.unsupportedURL) }
     func voiceFeedback(owner: UUID, recitation: String, id: UUID, comment: String, data: Data) async throws { throw URLError(.unsupportedURL) }
     func verseFeedback(owner: UUID, recitation: String, id: UUID, verseID: Int, comment: String, data: Data?) async throws { throw URLError(.unsupportedURL) }
 }
@@ -32,8 +34,37 @@ extension ModerationRemote {
     }
     func rows(owner: UUID, section: ModerationSection, offset: Int) async throws -> [JSONValue] {
         let client = try await authorized(owner)
+        if section == .members {
+            let profiles: [JSONValue] = try await client.from("friend_profiles").select("id,display_name,created_at").order("created_at", ascending: false).order("id", ascending: false).range(from: offset, to: offset + 49).execute().value
+            let ids = profiles.compactMap { $0["id"].string }
+            guard !ids.isEmpty else { return [] }
+            let suspended: [JSONValue] = try await client.from("social_suspensions").select().in("user_id", values: ids).execute().value
+            let admins: [JSONValue] = try await client.from("app_admins").select("user_id").in("user_id", values: ids).execute().value
+            _ = try await authorized(owner)
+            return profiles.map { row in
+                row.setting("suspension", suspended.first { $0["user_id"] == row["id"] } ?? .null)
+                    .setting("protected", .bool(admins.contains { $0["user_id"] == row["id"] } || row["id"].string?.lowercased() == owner.uuidString.lowercased()))
+            }
+        }
         let table = section == .recitations ? "recitations" : section == .messages ? "friend_messages" : "friend_message_reports"
         return try await client.from(table).select().order("created_at", ascending: false).order("id", ascending: false).range(from: offset, to: offset + 49).execute().value
+    }
+    func suspension(owner: UUID, user: UUID, reason: String?, until: Date?) async throws -> JSONValue {
+        let client = try await authorized(owner)
+        guard user != owner else { throw URLError(.noPermissionsToReadFile) }
+        if let reason {
+            let text = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard (2...500).contains(text.count), until == nil || until! > Date() else { throw URLError(.badURL) }
+            struct Args: Encodable { let p_user: UUID; let p_reason: String; let p_until: String? }
+            try await client.rpc("suspend_social_member", params: Args(p_user: user, p_reason: text, p_until: until.map { ISO8601DateFormatter().string(from: $0) })).execute()
+        } else {
+            try await client.rpc("unsuspend_social_member", params: ["p_user": user.uuidString]).execute()
+        }
+        _ = try await authorized(owner)
+        let rows: [JSONValue] = try await client.from("social_suspensions").select().eq("user_id", value: user.uuidString).limit(1).execute().value
+        guard reason == nil ? rows.isEmpty : rows.first?["reason"].string == reason?.trimmingCharacters(in: .whitespacesAndNewlines) else { throw URLError(.cannotParseResponse) }
+        _ = try await authorized(owner)
+        return rows.first ?? .null
     }
     func profiles(owner: UUID, ids: [String]) async throws -> [JSONValue] {
         let client = try await authorized(owner)

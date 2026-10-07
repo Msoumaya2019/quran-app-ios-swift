@@ -22,7 +22,7 @@ import Foundation
         await remote.startUpdates(owner: snapshot.owner, link: snapshot.linkID) { [weak self] in
             guard let self, token == self.generation else { return }
             if self.loading { self.refreshRequested = true }
-            else { Task { await self.refresh() } }
+            else { Task { guard token == self.generation else { return }; await self.refresh() } }
         }
     }
     func stopUpdates() { remote.stopUpdates() }
@@ -35,7 +35,7 @@ import Foundation
                 loading = false
                 if refreshRequested {
                     refreshRequested = false
-                    Task { await self.refresh() }
+                    Task { guard token == self.generation else { return }; await self.refresh() }
                 }
             }
         }

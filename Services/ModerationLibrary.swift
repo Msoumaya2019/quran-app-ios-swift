@@ -68,11 +68,24 @@ import Combine
             switch section {
             case .messages: confirmed = try await remote.deleteMessage(owner: owner, id: id)
             case .reports: confirmed = try await remote.resolveReport(owner: owner, id: id)
+            case .members: return
             case .recitations: confirmed = try await remote.listened(owner: owner, id: id)
             }
             guard generation == token, let index = items.firstIndex(where: { $0["id"].string == id }) else { return }
             items[index] = confirmed
         } catch { if generation == token { message = "L’action n’a pas été confirmée. Réessaie après connexion." } }
+    }
+    func suspension(_ row: JSONValue, reason: String?, until: Date?) async -> Bool {
+        guard let owner, !busy, section == .members, row["protected"].bool != true,
+              let user = row["id"].string.flatMap(UUID.init(uuidString:)), user != owner else { return false }
+        let token = generation; busy = true; message = nil
+        defer { if token == generation { busy = false } }
+        do {
+            let confirmed = try await remote.suspension(owner: owner, user: user, reason: reason, until: until)
+            guard generation == token, let index = items.firstIndex(where: { $0["id"] == row["id"] }) else { return false }
+            items[index] = items[index].setting("suspension", confirmed)
+            return true
+        } catch { if token == generation { message = "La modification de l’accès social n’a pas été confirmée." }; return false }
     }
     func feedback(_ row: JSONValue, id: UUID, comment: String, voice: URL? = nil, verseID: Int? = nil) async -> Bool {
         let text = comment.trimmingCharacters(in: .whitespacesAndNewlines)
