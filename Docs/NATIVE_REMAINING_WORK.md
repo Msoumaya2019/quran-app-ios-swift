@@ -10,11 +10,10 @@ Lecteur Médine/1441 et téléchargement à la demande, cache/préchargement, ce
 
 | Priorité | Fonction | Point d'intégration existant |
 |---|---|---|
-| 1 | Import direct des médias des rappels/invocations et résolution des images du bucket privé | `DailyContent`, `HomeRepository`, tables `daily_contents`, `content_categories`, `daily_content_schedule`, RPC `save_daily_content` |
-| 2 | Favoris des contenus quotidiens, audio éditorial et enregistrement d'invocations | `DailyContentView`, `content_favorites`, `audio_url`, recorder existant ; conserver le type invocation et son snapshot serveur |
-| 3 | Photo du profil ami | `SocialProfileSettingsView`, `friend_profiles`, bucket/policies d'avatars existants |
-| 4 | Actualisation sociale Realtime | `ConversationLibrary` et `FriendsLibrary` ; l'actualisation périodique actuelle reste fonctionnelle |
-| 5 | Administration des comptes | Contrats Supabase administrateur existants à analyser avant mutation privilégiée |
+| 1 | Valider Realtime sur deux comptes réels | Abonnement natif aux messages directs/groupes implémenté, actualisation périodique de secours conservée |
+| 2 | Vérifier les suspensions sociales avec un administrateur réel | Écran comptes et RPC existantes raccordés ; aucun accès administratif à auth.users depuis le client |
+
+Les imports des médias privés, favoris hors ligne, audio éditorial, enregistrements d’invocations et photos de profil ont été ajoutés. Les tests simulateur ne remplacent pas les vérifications Storage/RLS sur Supabase réel.
 
 ## Configuration et tests externes restant nécessaires
 

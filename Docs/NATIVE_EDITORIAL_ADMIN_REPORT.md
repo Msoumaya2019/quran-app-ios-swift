@@ -34,3 +34,14 @@ L’IPA publié `test-corrections-versets-2026-10-07` correspond au commit 9bbd2
 - Premier scénario UI : arrêt lors de la saisie du champ Source après un défilement sous la barre de navigation. Correction dans 3f5c1f6 : fermeture explicite du clavier via « Terminé » et déplacement contrôlé du test.
 - La vérification UI de ce correctif n’a pas pu démarrer : run 37642009645, acquisition du runner macOS échouée cinq fois. Les demandes de relance et de nouveau dispatch ont ensuite retourné HTTP 500. Cette vérification reste à effectuer ; ne pas présenter le module complet comme validé visuellement.
 - Dépôt React Native conservé à f538ae37565abf70032e7e215fe57c8b96c2152f.
+
+
+## Mise à jour — suite du développement
+
+- Imports PhotosPicker et fichiers audio dans `daily-content-media`, lecture des images privées avec cache séparé par compte.
+- Favoris dans `content_favorites`, cache local et file d’intentions persistante, confirmation serveur avant retrait de la file.
+- Audio des contenus via le lecteur existant ; enregistrements d’invocations via `recitations`, `recording_type`, `invocation_id`, `invocation_snapshot`.
+- 156 tests unitaires réussis sur 93b96e4 (run 37651261988). La suite complète de ce commit a également réussi (37651262635).
+- Scénario UI de création et programmation d’un rappel réussi sur e74811a (37650543930), après correction du geste du test.
+- Aucun SQL supplémentaire exécuté et aucune modification du dépôt React Native.
+- Les nouveaux profils/Realtime/modération sociale sont en cours de vérification séparée ; le dernier IPA publié reste celui décrit ci-dessus.
