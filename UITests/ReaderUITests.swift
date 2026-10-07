@@ -13,7 +13,7 @@ final class ReaderUITests: XCTestCase {
         point.press(forDuration: 0.7)
         let translate = app.buttons["Voir la traduction"]; XCTAssertTrue(translate.waitForExistence(timeout: 5)); translate.tap()
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label BEGINSWITH %@", "Au nom d’Allah")).firstMatch.waitForExistence(timeout: 5))
-        app.buttons["Fermer"].firstMatch.tap()
+        app.navigationBars["Traduction"].buttons["Fermer"].tap()
         let learn = app.buttons["Marquer comme appris"]
         for _ in 0..<4 where !learn.isHittable { app.swipeUp() }; learn.tap()
         XCTAssertTrue(app.buttons["Verset déjà appris"].exists)

@@ -16,6 +16,7 @@ struct AudioRepeatSheet: View {
     private var surah: Surah? { catalog.surahs.first { $0.number == surahNumber } }
     private var range: ClosedRange<Int>? {
         switch selection {
+        case "remaining": return audio.verseID...6236
         case "page": return pageRange
         case "session": return sessionRange
         case "surah": return surah.map { $0.start...$0.end }
@@ -38,6 +39,7 @@ struct AudioRepeatSheet: View {
                         Text("Ce verset").tag("verse"); Text("Toute la page").tag("page")
                         if sessionRange != nil { Text("Ma séance").tag("session") }
                         Text("Toute la sourate").tag("surah"); Text("Passage personnalisé").tag("custom")
+                        Text("Continuer depuis ce verset").tag("remaining")
                     }
                     if selection == "surah" || selection == "custom" {
                         Picker("Sourate", selection: $surahNumber) { ForEach(catalog.surahs, id: \.number) { Text($0.name).tag($0.number) } }

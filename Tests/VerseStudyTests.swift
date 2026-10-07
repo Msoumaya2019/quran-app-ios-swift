@@ -13,6 +13,8 @@ final class VerseStudyTests: XCTestCase {
         XCTAssertEqual(result["reviewConsolidations"]["255"]["scheduledDates"]["3"].string, "2026-10-08")
         XCTAssertEqual(change.applying(to: result), result)
         XCTAssertEqual(result["unknown"].string, "keep")
+        var snapshot = HomeSnapshot(); snapshot.state = result
+        XCTAssertEqual(HomeProjection(snapshot: snapshot, now: now, timeZone: .current).weeklyVerseCounts.reduce(0, +), 1)
     }
     func testManualRevisionIsIndependentOfDifficultyAndRequiresKnownVerse() throws {
         let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-05T12:00:00Z"))

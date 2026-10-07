@@ -37,7 +37,7 @@ struct VerseActionsSheet: View {
         notice = store.readerChange(value) ? "Enregistré" : "L’enregistrement a échoué. Réessaie."
     }
     private func play(count: Int, continuous: Bool = false) {
-        var settings = audio.repeatSettings; settings.count = count; settings.mode = .eachVerse; settings.after = .stop
+        var settings = audio.repeatSettings; settings.count = count; settings.mode = .eachVerse; settings.after = .stop; settings.selection = continuous ? "remaining" : "verse"
         audio.start(range: verseID...(continuous ? 6236 : verseID), settings: settings); listen(); dismiss()
     }
     var body: some View {

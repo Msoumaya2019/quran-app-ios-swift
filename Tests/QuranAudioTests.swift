@@ -91,7 +91,8 @@ final class QuranAudioTests: XCTestCase {
         let audio = QuranAudioService(cache: QuranAudioCache(directory: directory, downloader: { _ in wave }))
         defer { audio.pause() }
         audio.play(1)
-        let ready = await waitUntil { audio.timeline.duration > 0 || audio.error != nil }
+        // The first CoreAudio/codec initialization on a fresh CI simulator can exceed five seconds.
+        let ready = await waitUntil(timeout: 20) { audio.timeline.duration > 0 || audio.error != nil }
         XCTAssertTrue(ready); XCTAssertNil(audio.error)
         guard audio.timeline.duration > 0 else { return }
         audio.seek(to: 2.6)
@@ -144,8 +145,8 @@ final class QuranAudioTests: XCTestCase {
         XCTAssertTrue(reached7)
         XCTAssertTrue(audio.playing); XCTAssertEqual(audio.verseID, 1); XCTAssertNil(audio.error)
     }
-    @MainActor private func waitUntil(_ condition: () -> Bool) async -> Bool {
-        for _ in 0..<100 { if condition() { return true }; try? await Task.sleep(nanoseconds: 50_000_000) }
+    @MainActor private func waitUntil(timeout: Double = 5, _ condition: () -> Bool) async -> Bool {
+        for _ in 0..<Int(timeout * 20) { if condition() { return true }; try? await Task.sleep(nanoseconds: 50_000_000) }
         return condition()
     }
     private static func silentWave() -> Data {
