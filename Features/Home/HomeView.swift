@@ -164,6 +164,7 @@ struct DailyContentView: View {
     @EnvironmentObject var store: AppStore
     @EnvironmentObject var theme: ThemeManager
     @StateObject private var player = RecitationPlaybackService()
+    @State private var recordingInvocation = false
     @State private var audioGeneration = UUID()
     @State private var audioLoading = false
     @State private var audioError: String?
@@ -196,6 +197,9 @@ struct DailyContentView: View {
                             HStack { if audioLoading { ProgressView() }; Label(player.activeID == content.id ? "Arrêter l’audio" : "Écouter", systemImage: player.activeID == content.id ? "stop.circle" : "play.circle").frame(minHeight: 44) }
                         }.disabled(audioLoading).accessibilityIdentifier("daily.audio")
                     }
+                    if content.type == "invocation", store.identity != nil {
+                        Button { audioGeneration = UUID(); audioLoading = false; player.stop(); recordingInvocation = true } label: { Label("Enregistrer ma récitation", systemImage: "mic").frame(minHeight: 44) }.accessibilityIdentifier("daily.record")
+                    }
                     if let audioError { Text(audioError).font(.caption).foregroundStyle(theme.muted) }
                     Button {
                         favorites.toggle(content); Task { await favorites.synchronize() }
@@ -209,6 +213,9 @@ struct DailyContentView: View {
                 }.padding(20)
             }.background(theme.background).navigationTitle(content.title ?? (content.type == "invocation" ? "Invocation du jour" : "Rappel du jour")).navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() }.frame(minHeight: 44) } }
         }.presentationDragIndicator(.visible)
+            .sheet(isPresented: $recordingInvocation) {
+                if let user = store.identity?.id { VoiceRecorderView(user: user, catalog: store.catalog, firstVerse: 1, lastVerse: 1, invocation: content) }
+            }
             .onAppear { visible = true }
             .onDisappear { visible = false; audioGeneration = UUID(); audioLoading = false; player.stop() }
             .onChange(of: store.identity?.id) { _, _ in audioGeneration = UUID(); audioLoading = false; player.stop() }

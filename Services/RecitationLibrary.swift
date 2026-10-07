@@ -23,10 +23,10 @@ import Combine
         let cached = try? await storage.reviews(owner: user)
         guard token == generation else { return }; reviews = cached ?? [:]
     }
-    func save(source: URL, start: Int, end: Int, durationMs: Int, user: UUID) async throws {
+    func save(source: URL, start: Int, end: Int, durationMs: Int, user: UUID, invocation: DailyContent? = nil) async throws {
         guard owner == user else { throw URLError(.userAuthenticationRequired) }
         let token = generation
-        _ = try await storage.save(source: source, start: start, end: end, durationMs: durationMs, owner: user)
+        _ = try await storage.save(source: source, start: start, end: end, durationMs: durationMs, owner: user, invocation: invocation)
         let local = try await storage.list(owner: user)
         guard token == generation else { return }
         items = local; message = "Récitation enregistrée sur cet iPhone."

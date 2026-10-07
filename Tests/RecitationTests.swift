@@ -204,6 +204,39 @@ import XCTest
         XCTAssertEqual(value["storage_path"].string, item.storagePath); XCTAssertEqual(value["id"].string, item.id)
         XCTAssertNil(value["localFile"].string)
     }
+    private func invocation() throws -> DailyContent {
+        let row: JSONValue = .object(["id": .string(UUID().uuidString.lowercased()), "type": .string("invocation"), "title": .string("Invocation technique"), "french_text": .string("Texte technique"), "source": .string("Source technique")])
+        return try JSONDecoder().decode(DailyContent.self, from: JSONEncoder().encode(row))
+    }
+    func testInvocationUsesExistingRecordingStoreAndServerSnapshot() async throws {
+        let root = directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let storage = RecitationStorage(directory: root.appendingPathComponent("saved")), user = UUID(), content = try invocation()
+        let item = try await storage.save(source: source(in: root), start: 0, end: 0, durationMs: 2500, owner: user, invocation: content)
+        XCTAssertTrue(item.valid); XCTAssertEqual(item.invocation, content)
+        let payload = try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(RecitationRow(item)))
+        XCTAssertEqual(payload["recording_type"].string, "invocation"); XCTAssertEqual(payload["start_verse_id"], .null); XCTAssertEqual(payload["end_verse_id"], .null)
+        XCTAssertEqual(payload["invocation_id"].string, content.id); XCTAssertEqual(payload["invocation_snapshot"]["source"].string, content.source)
+        let reopened = RecitationStorage(directory: root.appendingPathComponent("saved"))
+        let local = try await reopened.list(owner: user); XCTAssertEqual(local.first?.invocation, content)
+        let canonical = try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(content)).setting("french_text", .string("Texte confirmé par le serveur"))
+        var confirmed = item; confirmed.synced = true; confirmed.invocation = try JSONDecoder().decode(DailyContent.self, from: JSONEncoder().encode(canonical))
+        try await storage.merge([confirmed], owner: user)
+        let updated = try await reopened.list(owner: user)
+        XCTAssertEqual(updated.first?.invocation?.french_text, "Texte confirmé par le serveur"); XCTAssertEqual(updated.first?.localFile, item.localFile)
+    }
+    func testInvocationOfflineRetryKeepsOneRecordingAndGeneralFeedbackOnly() async throws {
+        let root = directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let remote = RecordingRemoteProbe(), content = try invocation(), user = UUID()
+        let library = RecitationLibrary(storage: RecitationStorage(directory: root.appendingPathComponent("saved")), remote: remote)
+        await library.select(user)
+        try await library.save(source: source(in: root), start: 0, end: 0, durationMs: 2500, user: user, invocation: content)
+        remote.failMetadataOnce = true; await library.synchronize(); XCTAssertFalse(library.items[0].synced)
+        await library.synchronize(); XCTAssertEqual(library.items.count, 1); XCTAssertEqual(remote.uploaded.count, 1); XCTAssertTrue(library.items[0].synced)
+        let item = library.items[0]
+        let general = RecitationFeedback(id: UUID().uuidString, recitation_id: item.id, verse_id: nil, comment: "Observation technique", voice_path: nil, created_at: "2026-10-07", resolved_at: nil)
+        let invalidVerse = RecitationFeedback(id: UUID().uuidString, recitation_id: item.id, verse_id: 1, comment: "Test", voice_path: nil, created_at: "2026-10-07", resolved_at: nil)
+        XCTAssertTrue(general.belongs(to: item)); XCTAssertFalse(invalidVerse.belongs(to: item))
+    }
     func testUnsafeLocalFilenameAndInvalidPassageAreRejected() async throws {
         XCTAssertFalse(Recitation.safeFilename("../../other.m4a")); XCTAssertFalse(Recitation.safeFilename("folder/file.m4a"))
         let root = directory(); defer { try? FileManager.default.removeItem(at: root) }

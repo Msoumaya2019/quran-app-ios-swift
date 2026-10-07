@@ -17,8 +17,8 @@ actor RecitationStorage {
         try FileManager.default.createDirectory(at: directory(owner), withIntermediateDirectories: true)
         try JSONEncoder().encode(items).write(to: directory(owner).appendingPathComponent("index.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
-    func save(source: URL, start: Int, end: Int, durationMs: Int, owner: UUID) throws -> Recitation {
-        guard Recitation.validRange(start, end), durationMs > 0 else { throw URLError(.cannotParseResponse) }
+    func save(source: URL, start: Int, end: Int, durationMs: Int, owner: UUID, invocation: DailyContent? = nil) throws -> Recitation {
+        guard invocation.map({ start == 0 && end == 0 && Recitation.validInvocation($0) }) ?? Recitation.validRange(start, end), durationMs > 0 else { throw URLError(.cannotParseResponse) }
         let size = try FileManager.default.attributesOfItem(atPath: source.path)[.size] as? NSNumber
         guard let size, size.intValue > 0, size.intValue <= 52_428_800 else { throw URLError(.dataLengthExceedsMaximum) }
         var items = try list(owner: owner)
@@ -26,7 +26,7 @@ actor RecitationStorage {
         let destination = directory(owner).appendingPathComponent(filename)
         try FileManager.default.createDirectory(at: directory(owner), withIntermediateDirectories: true)
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let item = Recitation(id: id, userID: owner, start: start, end: end, durationMs: durationMs, createdAt: formatter.string(from: .now), storagePath: "\(owner.uuidString.lowercased())/\(filename)", localFile: filename, synced: false)
+        let item = Recitation(id: id, userID: owner, start: start, end: end, durationMs: durationMs, createdAt: formatter.string(from: .now), storagePath: "\(owner.uuidString.lowercased())/\(filename)", localFile: filename, synced: false, invocation: invocation)
         items.append(item)
         do {
             try FileManager.default.copyItem(at: source, to: destination)
@@ -49,7 +49,7 @@ actor RecitationStorage {
     func merge(_ remote: [Recitation], owner: UUID) throws {
         var items = try list(owner: owner)
         for incoming in remote where incoming.userID == owner && incoming.synced {
-            if let index = items.firstIndex(where: { $0.id == incoming.id }) { items[index].synced = true }
+            if let index = items.firstIndex(where: { $0.id == incoming.id }) { items[index].synced = true; items[index].invocation = incoming.invocation }
             else { items.append(incoming) }
         }
         try write(items, owner: owner)

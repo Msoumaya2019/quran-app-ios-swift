@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import CryptoKit
 import Supabase
+import AVFoundation
 
 @MainActor final class DailyContentMediaService: ObservableObject {
     private let client: SupabaseClient?
@@ -36,6 +37,7 @@ import Supabase
         if let cached = await Task.detached(priority: .userInitiated, operation: { try? Data(contentsOf: file) }).value { return cached }
         let (bytes, response) = try await URLSession.shared.data(from: resolved(url))
         guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode), !bytes.isEmpty, bytes.count <= 30 * 1024 * 1024 else { throw URLError(.cannotDecodeContentData) }
+        guard try await Task.detached(priority: .userInitiated, operation: { try AVAudioPlayer(data: bytes).duration > 0 }).value else { throw URLError(.cannotDecodeContentData) }
         let directory = directory
         try? await Task.detached(priority: .utility) {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

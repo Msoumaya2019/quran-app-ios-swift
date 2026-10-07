@@ -18,7 +18,7 @@ struct RecitationsView: View {
                     HStack(spacing: 12) {
                         Group { if loading == item.id { ProgressView() } else { Image(systemName: player.activeID == item.id ? "stop.circle" : "play.circle") } }.font(.title2).frame(width: 44, height: 44)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(store.catalog.reference(VerseRange(json: .object(["start": .number(Double(item.start)), "end": .number(Double(item.end))])))).font(.subheadline)
+                            Text(item.invocation?.title ?? (item.invocation != nil ? "Invocation" : store.catalog.reference(VerseRange(json: .object(["start": .number(Double(item.start)), "end": .number(Double(item.end))]))))).font(.subheadline)
                             Text("\(QuranAudioTimeline.timeLabel(Double(item.durationMs) / 1000)) · \(item.synced ? "Synchronisée" : "À synchroniser")").font(.caption).foregroundStyle(theme.muted)
                         }
                     }.frame(minHeight: 44)
@@ -67,7 +67,7 @@ private struct RecitationFeedbackView: View {
         NavigationStack {
             List {
                 Section {
-                    Text(store.catalog.reference(VerseRange(json: .object(["start": .number(Double(item.start)), "end": .number(Double(item.end))])))).font(.headline)
+                    Text(item.invocation?.title ?? (item.invocation != nil ? "Invocation" : store.catalog.reference(VerseRange(json: .object(["start": .number(Double(item.start)), "end": .number(Double(item.end))]))))).font(.headline)
                 }
                 if rows.isEmpty {
                     if refreshed { Text("Aucun retour disponible pour cette récitation.").foregroundStyle(theme.muted) }

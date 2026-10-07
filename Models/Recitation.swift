@@ -18,7 +18,7 @@ struct RecitationFeedback: Codable, Identifiable, Equatable, Sendable {
         return result.sorted { $0.created_at > $1.created_at }
     }
     func belongs(to item: Recitation) -> Bool {
-        Recitation.validRange(item.start, item.end) && recitation_id == item.id && UUID(uuidString: id) != nil && (verse_id == nil || (item.start...item.end).contains(verse_id!))
+        item.valid && recitation_id == item.id && UUID(uuidString: id) != nil && (verse_id == nil || (item.invocation == nil && (item.start...item.end).contains(verse_id!)))
     }
     static func safeVoicePath(_ path: String) -> Bool {
         let parts = path.split(separator: "/", omittingEmptySubsequences: false)
@@ -36,6 +36,9 @@ struct Recitation: Codable, Identifiable, Equatable, Sendable {
     let storagePath: String
     var localFile: String?
     var synced: Bool
+    var invocation: DailyContent? = nil
+    static func validInvocation(_ content: DailyContent) -> Bool { content.type == "invocation" && UUID(uuidString: content.id) != nil && !content.french_text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !content.source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    var valid: Bool { if let invocation { return start == 0 && end == 0 && Self.validInvocation(invocation) }; return Self.validRange(start, end) }
     static func validRange(_ start: Int, _ end: Int) -> Bool { (1...6236).contains(start) && (start...6236).contains(end) }
     static func safeFilename(_ value: String) -> Bool {
         !value.isEmpty && value.count < 150 && value.unicodeScalars.allSatisfy { CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.").contains($0) } && !value.contains("..")
@@ -45,15 +48,18 @@ struct Recitation: Codable, Identifiable, Equatable, Sendable {
 struct RecitationRow: Codable, Sendable {
     let id: String
     let user_id: UUID
-    let start_verse_id: Int
-    let end_verse_id: Int
+    let start_verse_id: Int?
+    let end_verse_id: Int?
     let duration_ms: Int
     let storage_path: String
     let created_at: String
     var recording_type: String = "quran"
+    var invocation_id: String? = nil
+    var invocation_snapshot: DailyContent? = nil
     init(_ item: Recitation) {
-        id = item.id; user_id = item.userID; start_verse_id = item.start; end_verse_id = item.end
+        id = item.id; user_id = item.userID; start_verse_id = item.invocation == nil ? item.start : nil; end_verse_id = item.invocation == nil ? item.end : nil
+        recording_type = item.invocation == nil ? "quran" : "invocation"; invocation_id = item.invocation?.id; invocation_snapshot = item.invocation
         duration_ms = item.durationMs; storage_path = item.storagePath; created_at = item.createdAt
     }
-    var entry: Recitation { Recitation(id: id, userID: user_id, start: start_verse_id, end: end_verse_id, durationMs: duration_ms, createdAt: created_at, storagePath: storage_path, synced: true) }
+    var entry: Recitation { Recitation(id: id, userID: user_id, start: start_verse_id ?? 0, end: end_verse_id ?? 0, durationMs: duration_ms, createdAt: created_at, storagePath: storage_path, synced: true, invocation: recording_type == "invocation" ? invocation_snapshot : nil) }
 }

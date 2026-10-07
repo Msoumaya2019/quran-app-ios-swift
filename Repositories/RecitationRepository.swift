@@ -21,7 +21,7 @@ extension RecitationRemote {
     }
     func upload(_ item: Recitation, file: URL) async throws {
         let client = try await authenticated(item.userID)
-        guard item.storagePath.hasPrefix(item.userID.uuidString.lowercased() + "/"), Recitation.validRange(item.start, item.end) else { throw URLError(.badURL) }
+        guard item.storagePath.hasPrefix(item.userID.uuidString.lowercased() + "/"), item.valid else { throw URLError(.badURL) }
         let bucket = client.storage.from("recitations")
         do { try await bucket.upload(item.storagePath, fileURL: file, options: FileOptions(contentType: "audio/mp4", upsert: false)) }
         catch {
@@ -29,13 +29,23 @@ extension RecitationRemote {
             guard try await bucket.exists(path: item.storagePath) else { throw error }
         }
         _ = try await authenticated(item.userID)
-        try await client.from("recitations").upsert(RecitationRow(item), onConflict: "id", ignoreDuplicates: true).execute()
+        // The invocation trigger resolves its snapshot at INSERT. A retry must not run
+        // that trigger again if the already saved content has since been deactivated.
+        let fields = "id,user_id,start_verse_id,end_verse_id,duration_ms,storage_path,created_at,recording_type,invocation_id,invocation_snapshot"
+        let existing: [RecitationRow] = try await client.from("recitations").select(fields).eq("id", value: item.id).eq("user_id", value: item.userID.uuidString).execute().value
+        if existing.isEmpty { try await client.from("recitations").upsert(RecitationRow(item), onConflict: "id", ignoreDuplicates: true).execute() }
+        let confirmed: RecitationRow = try await client.from("recitations").select(fields).eq("id", value: item.id).eq("user_id", value: item.userID.uuidString).single().execute().value
+        guard confirmed.user_id == item.userID, confirmed.storage_path == item.storagePath, confirmed.duration_ms == item.durationMs,
+              confirmed.entry.valid, confirmed.recording_type == (item.invocation == nil ? "quran" : "invocation"),
+              item.invocation != nil || (confirmed.start_verse_id == item.start && confirmed.end_verse_id == item.end) else { throw URLError(.cannotParseResponse) }
+        if let invocation = item.invocation { guard confirmed.invocation_snapshot?.id == invocation.id else { throw URLError(.cannotParseResponse) } }
+        _ = try await authenticated(item.userID)
     }
     func list(owner: UUID) async throws -> [Recitation] {
         let client = try await authenticated(owner)
-        let rows: [RecitationRow] = try await client.from("recitations").select("id,user_id,start_verse_id,end_verse_id,duration_ms,storage_path,created_at,recording_type")
-            .eq("user_id", value: owner.uuidString).eq("recording_type", value: "quran").order("created_at", ascending: false).limit(100).execute().value
-        return rows.filter { $0.user_id == owner }.map(\.entry)
+        let rows: [RecitationRow] = try await client.from("recitations").select("id,user_id,start_verse_id,end_verse_id,duration_ms,storage_path,created_at,recording_type,invocation_id,invocation_snapshot")
+            .eq("user_id", value: owner.uuidString).order("created_at", ascending: false).limit(100).execute().value
+        return rows.filter { $0.user_id == owner && ["quran", "invocation"].contains($0.recording_type) }.map(\.entry).filter(\.valid)
     }
     func download(_ item: Recitation) async throws -> Data {
         let client = try await authenticated(item.userID)

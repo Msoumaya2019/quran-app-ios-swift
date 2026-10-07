@@ -4,7 +4,7 @@ struct AccountIdentity: Codable, Equatable, Sendable {
     let id: UUID
     let email: String?
 }
-struct DailyContent: Codable, Identifiable, Sendable {
+struct DailyContent: Codable, Identifiable, Equatable, Sendable {
     let id: String
     let type: String
     let title: String?
