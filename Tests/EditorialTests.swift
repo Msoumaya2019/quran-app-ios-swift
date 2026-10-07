@@ -5,8 +5,10 @@ import XCTest
     var fail = false
     let category: JSONValue = .object(["id": .string("00000000-0000-0000-0000-000000000010"), "type": .string("reminder"), "name": .string("Test"), "display_order": .number(0), "is_active": .bool(true)])
     var rows: [JSONValue] = []
+    var holdSave = false
+    var waiting: CheckedContinuation<Void, Never>?
     func load(owner: UUID, kind: EditorialKind, offset: Int) async throws -> EditorialSnapshot { EditorialSnapshot(categories: [category], contents: rows, schedules: []) }
-    func save(owner: UUID, draft: EditorialDraft) async throws -> JSONValue { if fail { throw URLError(.notConnectedToInternet) }; return draft.payload }
+    func save(owner: UUID, draft: EditorialDraft) async throws -> JSONValue { if holdSave { await withCheckedContinuation { waiting = $0 } }; if fail { throw URLError(.notConnectedToInternet) }; return draft.payload }
     func saveCategory(owner: UUID, row: JSONValue) async throws -> JSONValue { if fail { throw URLError(.notConnectedToInternet) }; return row }
     func delete(owner: UUID, id: String, category: Bool) async throws { if fail { throw URLError(.notConnectedToInternet) } }
     func unschedule(owner: UUID, row: JSONValue) async throws { if fail { throw URLError(.notConnectedToInternet) } }
@@ -36,7 +38,7 @@ final class EditorialTests: XCTestCase {
         XCTAssertNil(draft.validation(categories: [category]))
     }
     @MainActor func testFailedMutationDoesNotChangeContentOrScheduleAndRetryIsStable() async {
-        let remote = EditorialProbe(), library = EditorialLibrary(remote: EditorialProbe())
+        let remote = EditorialProbe()
         let subject = EditorialLibrary(remote: remote)
         subject.select(UUID()); await subject.load(.reminder)
         var draft = EditorialDraft(kind: .reminder, categories: [remote.category])
@@ -51,12 +53,37 @@ final class EditorialTests: XCTestCase {
         await subject.delete(subject.contents[0]); XCTAssertEqual(subject.contents.count, 1)
         await subject.unschedule(subject.schedules[0]); XCTAssertEqual(subject.schedules.count, 1)
         subject.select(UUID()); XCTAssertTrue(subject.contents.isEmpty); XCTAssertTrue(subject.categories.isEmpty)
-        XCTAssertTrue(library.contents.isEmpty)
     }
     @MainActor func testCategoryRejectsFractionAndIntegerOverflow() {
         let category = EditorialProbe().category
         XCTAssertTrue(EditorialDraft.validCategory(category))
         XCTAssertFalse(EditorialDraft.validCategory(category.setting("display_order", .number(1.5))))
         XCTAssertFalse(EditorialDraft.validCategory(category.setting("display_order", .number(Double(Int32.max) + 1))))
+    }
+    @MainActor func testAccountChangeDiscardsLateServerConfirmation() async {
+        let remote = EditorialProbe()
+        let library = EditorialLibrary(remote: remote); library.select(UUID()); await library.load(.reminder)
+        var draft = EditorialDraft(kind: .reminder, categories: [remote.category])
+        draft.value = draft.value.setting("french_text", .string("Test")).setting("source", .string("Test"))
+        remote.holdSave = true
+        let save = Task { await library.save(draft) }
+        while remote.waiting == nil { await Task.yield() }
+        library.select(UUID()); remote.waiting?.resume(); remote.waiting = nil
+        let result = await save.value
+        XCTAssertFalse(result); XCTAssertTrue(library.contents.isEmpty); XCTAssertTrue(library.categories.isEmpty); XCTAssertFalse(library.busy)
+    }
+    @MainActor func testSchedulingReplacesOnlySameDateAndEmptyDatePreservesSchedules() async {
+        let remote = EditorialProbe()
+        let subject = EditorialLibrary(remote: remote); subject.select(UUID()); await subject.load(.reminder)
+        var first = EditorialDraft(kind: .reminder, categories: [remote.category])
+        first.value = first.value.setting("french_text", .string("Test")).setting("source", .string("Test")); first.date = "2026-10-08"
+        let savedFirst = await subject.save(first); XCTAssertTrue(savedFirst)
+        var second = first; second.value = first.value.setting("id", .string(UUID().uuidString)); second.date = "2026-10-09"
+        let savedSecond = await subject.save(second); XCTAssertTrue(savedSecond); XCTAssertEqual(subject.schedules.count, 2)
+        second.date = "2026-10-08"; let replaced = await subject.save(second); XCTAssertTrue(replaced)
+        XCTAssertEqual(subject.schedules.count, 2); XCTAssertTrue(subject.schedules.allSatisfy { $0["content_id"] == second.value["id"] })
+        second.date = ""; second.value = second.value.setting("is_active", .bool(false))
+        let deactivated = await subject.save(second); XCTAssertTrue(deactivated); XCTAssertEqual(subject.schedules.count, 2)
+        await subject.unschedule(subject.schedules[0]); XCTAssertEqual(subject.schedules.count, 1)
     }
 }
