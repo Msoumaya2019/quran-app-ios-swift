@@ -135,7 +135,7 @@ struct QuranReaderView: View {
                         ForEach(QuranSource.available) { value in
                             Button { Task { await changeSource(value) } } label: {
                                 HStack { Text(value.displayName); Spacer(); if value == source { Image(systemName: "checkmark") } }
-                            }.disabled(loading)
+                            }.disabled(loading).accessibilityIdentifier("quran.source.\(value.id)")
                         }
                         Text("Coran 1441 se télécharge uniquement à la sélection (environ 98 Mo). Il reste ensuite disponible hors connexion.").font(.caption)
                         QuranDownloadProgress(retry: { Task { await changeSource(.edition1441) } })
