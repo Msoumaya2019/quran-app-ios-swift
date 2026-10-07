@@ -65,8 +65,8 @@ struct ProgramEdit: Codable, Sendable {
             if days.contains(calendar.component(.weekday, from: date) - 1) {
                 guard let count = chunkSize(remaining, cursor: cursor, catalog: catalog), count > 0 else { return nil }
                 var spans: [(Int, Int)] = []
-                for verse in remaining[cursor..<(cursor + count)] {
-                    if let last = spans.last, last.1 + 1 == verse, catalog.surah(for: last.0)?.number == catalog.surah(for: verse)?.number { spans[spans.count - 1].1 = verse }
+                for verse in remaining[cursor..<(cursor + count)].sorted() {
+                    if let last = spans.last, last.1 + 1 == verse, (!pace.hasPrefix("verse") || catalog.surah(for: last.0)?.number == catalog.surah(for: verse)?.number) { spans[spans.count - 1].1 = verse }
                     else { spans.append((verse, verse)) }
                 }
                 for (a, b) in spans {

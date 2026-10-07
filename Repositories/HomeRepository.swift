@@ -32,7 +32,15 @@ extension HomeRemote {
                 .update(StatePatch(data: merged, updated_at: now))
                 .eq("user_id", value: userID.uuidString).eq("updated_at", value: row.updated_at)
                 .select("data,updated_at").execute().value
-            if !acknowledged.isEmpty { return }
+            if let saved = acknowledged.first {
+                if let patch = NotificationPreferenceChange.serverPatch(owner: userID, state: saved.data, operations: operations) {
+                    guard try await client.auth.session.user.id == userID else { throw URLError(.userAuthenticationRequired) }
+                    let confirmed: [JSONValue] = try await client.from("notification_preferences").upsert(patch).select().execute().value
+                    guard let settings = confirmed.first, patch.object.allSatisfy({ settings[$0.key] == $0.value }),
+                          try await client.auth.session.user.id == userID else { throw URLError(.cannotParseResponse) }
+                }
+                return
+            }
         }
         throw URLError(.cannotWriteToFile)
     }

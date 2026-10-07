@@ -2,6 +2,7 @@ import Foundation
 
 /// Replays against the latest shared state, crediting only the not-yet-validated prefix.
 struct LearningValidation: Codable, Sendable {
+    var sessionIDs: [String]? = nil
     let sessionID: String
     let start: Int
     let end: Int
@@ -13,6 +14,7 @@ struct LearningValidation: Codable, Sendable {
     let page: Int
     init?(context: QuranSessionContext, through: Int, source: String, catalog: QuranCatalog, now: Date = .now, timeZone: TimeZone = .current) {
         guard context.mode == .learning, (context.range.start...context.range.end).contains(through) else { return nil }
+        sessionIDs = context.learningSessionIDs
         sessionID = context.id; start = context.range.start; end = context.range.end; self.through = through
         scheduledDate = context.scheduledDate; completedDate = LocalCalendar.key(now, timeZone: timeZone)
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -20,8 +22,23 @@ struct LearningValidation: Codable, Sendable {
         let selected = QuranSource.available.first { $0.id == source } ?? .medina
         page = QuranSourceMapping.page(source: selected, verseID: through, catalog: catalog)
     }
+    private init(group: Self, row: JSONValue) {
+        sessionID = row["id"].string!; start = row["start"].int!; end = row["end"].int!
+        through = min(group.through, end); scheduledDate = group.scheduledDate
+        completedDate = group.completedDate; completedAt = group.completedAt; source = group.source; page = group.page
+    }
     func applying(to state: JSONValue) -> JSONValue {
         guard (1...6236).contains(start), (start...6236).contains(end), (start...end).contains(through) else { return state }
+        if let sessionIDs, sessionIDs.count > 1 {
+            guard Set(sessionIDs).count == sessionIDs.count else { return state }
+            let rows = sessionIDs.compactMap { id in state["sessions"].array.first { $0["id"].string == id } }.sorted { ($0["start"].int ?? 0) < ($1["start"].int ?? 0) }
+            guard rows.count == sessionIDs.count, rows.first?["start"].int == start, rows.last?["end"].int == end,
+                  rows.allSatisfy({ VerseRange(json: $0) != nil && ($0["scheduledDate"].string ?? $0["date"].string) == scheduledDate }),
+                  zip(rows, rows.dropFirst()).allSatisfy({ $0["end"].int! + 1 == $1["start"].int! }) else { return state }
+            var result = state
+            for row in rows where row["start"].int! <= through { result = Self(group: self, row: row).applying(to: result) }
+            return result
+        }
         var sessions = state["sessions"].array
         guard let index = sessions.firstIndex(where: { $0["id"].string == sessionID }) else { return state }
         let session = sessions[index]
@@ -64,6 +81,13 @@ struct LearningValidation: Codable, Sendable {
             .setting("updatedAt", .string(max(state["updatedAt"].string ?? "", completedAt)))
     }
     static func completedCount(context: QuranSessionContext, state: JSONValue) -> Int {
+        if let ids = context.learningSessionIDs {
+            return min(context.range.count, ids.reduce(0) { count, id in
+                guard let row = state["sessions"].array.first(where: { $0["id"].string == id }), let range = VerseRange(json: row) else { return count }
+                let through = state["studyProgress"]["learning:\(id)"]["through"].int ?? (row["status"].string == "done" ? range.end : range.start - 1)
+                return count + min(range.count, max(0, through - range.start + 1))
+            })
+        }
         let through = state["studyProgress"]["learning:\(context.id)"]["through"].int ?? (context.range.start - 1)
         return min(context.range.count, max(0, through - context.range.start + 1))
     }

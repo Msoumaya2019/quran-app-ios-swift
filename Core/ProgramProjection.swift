@@ -5,6 +5,7 @@ struct QuranSessionContext: Identifiable, Hashable, Sendable {
     let mode: ReadingMode
     let range: VerseRange
     let scheduledDate: String
+    var learningSessionIDs: [String]? = nil
     var consolidationDay: Int? = nil
     var learnedAt: String? = nil
     var revisionCategory: String? = nil
@@ -38,13 +39,27 @@ struct ProgramProjection {
         return LocalCalendar.key(result, timeZone: timeZone)
     }
     var learning: [QuranSessionContext] {
-        snapshot.state["sessions"].array.compactMap { row in
+        let tasks: [QuranSessionContext] = snapshot.state["sessions"].array.compactMap { row in
             guard ["todo", "pending", "partial", "partiallyCompleted"].contains(row["status"].string ?? ""),
                   let range = VerseRange(json: row) else { return nil }
             let date = home.scheduled(row)
             guard Self.addingDays(0, to: date, timeZone: timeZone) != nil else { return nil }
             return QuranSessionContext(id: row["id"].string ?? "learning-\(date)-\(range.start)-\(range.end)", mode: .learning, range: range, scheduledDate: date)
         }.sorted { ($0.scheduledDate, $0.range.start, $0.id) < ($1.scheduledDate, $1.range.start, $1.id) }
+        let units = Set(["page", "page2", "halfPage", "quarter", "halfHizb", "hizb"])
+        func unit(_ task: QuranSessionContext) -> String {
+            snapshot.state["sessions"].array.first { $0["id"].string == task.id }?["unit"].string ?? snapshot.state["pace"].string ?? ""
+        }
+        var grouped: [QuranSessionContext] = []
+        for task in tasks {
+            if let last = grouped.last, units.contains(unit(task)), unit(last) == unit(task),
+               last.scheduledDate == task.scheduledDate, last.range.end + 1 == task.range.start,
+               let range = VerseRange(json: .object(["start": .number(Double(last.range.start)), "end": .number(Double(task.range.end))])) {
+                grouped[grouped.count - 1] = QuranSessionContext(id: last.id, mode: .learning, range: range,
+                    scheduledDate: last.scheduledDate, learningSessionIDs: (last.learningSessionIDs ?? [last.id]) + [task.id])
+            } else { grouped.append(task) }
+        }
+        return grouped
     }
     var todayLearning: QuranSessionContext? { learning.first { $0.scheduledDate == today } }
     var overdue: [QuranSessionContext] { learning.filter { $0.scheduledDate < today } }
@@ -88,10 +103,9 @@ struct ProgramProjection {
             (1...6236).contains($0) && !completed.contains($0) && !reviewed.contains($0) && ["perfect", "review"].contains(state["knowledge"][String($0)].string ?? "")
         }.sorted()
         guard let first = ids.first else { return nil }
-        let catalog = QuranCatalog()
         var end = first
         for id in ids.dropFirst() {
-            guard id == end + 1, catalog.surah(for: first)?.number == catalog.surah(for: id)?.number else { break }
+            guard id == end + 1 else { break }
             end = id
         }
         guard let range = VerseRange(json: .object(["start": .number(Double(first)), "end": .number(Double(end))])) else { return nil }

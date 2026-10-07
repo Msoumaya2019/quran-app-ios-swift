@@ -33,6 +33,17 @@ struct ReminderSettingsView: View {
                 Button("Autoriser les notifications") { Task { await reminders.authorize() } }.frame(minHeight: 44)
                 Button("Ouvrir les réglages iOS") { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }.frame(minHeight: 44)
             }
+            Section("Notifications partagées") {
+                ForEach(NotificationPreferenceChange.Field.allCases) { field in
+                    Toggle(field.title, isOn: Binding(get: { field.value(in: store.snapshot.state) }, set: { value in
+                        var operation = ReaderOperation(kind: .notifications, verseID: 1, page: 1, source: "native")
+                        operation.notification = NotificationPreferenceChange(field: field, enabled: value)
+                        if store.readerChange(operation) { error = nil; Task { await store.refresh() } }
+                        else { error = "La préférence n’a pas pu être enregistrée." }
+                    })).accessibilityIdentifier("notifications." + field.rawValue)
+                }
+                Text("Choix enregistrés sur cet iPhone puis synchronisés avec votre compte. Les notifications distantes sur cette app nécessitent la configuration APNs.").font(.caption).foregroundStyle(theme.muted)
+            }
             Section("Apprentissage") {
                 Toggle("Rappel quotidien d’apprentissage", isOn: enabled(true)).accessibilityIdentifier("reminders.learning")
                 DatePicker("Heure", selection: time(true), displayedComponents: .hourAndMinute).disabled(!preferences.learning)
