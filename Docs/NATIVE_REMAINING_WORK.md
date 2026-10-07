@@ -24,3 +24,9 @@ Les imports des médias privés, favoris hors ligne, audio éditorial, enregistr
 - Instruments et test de vingt pages sur chaque source : aucune mesure de mémoire, CPU ou fluidité physique n'est remplacée par un résultat du simulateur.
 
 Les prochaines étapes doivent compléter ces services et écrans ; aucune nouvelle application, aucun monorepo et aucune suppression du schéma ou des données existantes.
+
+## Compléments du 7 octobre
+
+Les choix de notifications partagées sont modifiables dans les réglages natifs et synchronisés vers les champs existants de `user_state` et `notification_preferences`, via la file locale déjà présente. Cela ne constitue pas une activation du transport APNs.
+
+Les séances par page ou rubu‘ couvrent les petites sourates contiguës du même passage. Les anciens fragments restent enregistrés avec leurs identifiants et dates, et sont regroupés uniquement pour la présentation et la validation. Voir `NATIVE_MULTI_SURAH_LESSONS.md`.
