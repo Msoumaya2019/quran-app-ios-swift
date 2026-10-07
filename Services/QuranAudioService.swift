@@ -63,7 +63,10 @@ import Foundation
         playbackRange = range
         if !range.contains(verseID) {
             if playing || loading { play(range.lowerBound) }
-            else { releasePlayer(); verseID = range.lowerBound; repetition = 1; timeline.update(elapsed: 0, duration: 0) }
+            else {
+                request += 1; transition?.cancel(); transition = nil; pendingRepeat = nil
+                releasePlayer(); verseID = range.lowerBound; repetition = 1; timeline.update(elapsed: 0, duration: 0)
+            }
         }
     }
     func start(range: ClosedRange<Int>, settings: AudioRepeatSettings) {
@@ -168,15 +171,16 @@ import Foundation
             guard let self, self.request == token, self.playing else { return }
             guard let next = self.repeatSettings.next(range: self.playbackRange, current: .init(verse: self.verseID, repetition: self.repetition)) else { self.pendingRepeat = nil; self.pause(); return }
             if !self.playbackRange.contains(next.verse) { self.playbackRange = next.verse...(self.repeatSettings.ending == .nextVerse ? next.verse : 6236) }
-            self.transition = nil
             if next.verse == self.verseID, let player = self.player {
                 await player.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
                 guard self.request == token, self.playing else { return }
-                self.pendingRepeat = nil; self.repetition = next.repetition
+                guard let latest = self.repeatSettings.next(range: self.playbackRange, current: .init(verse: self.verseID, repetition: self.repetition)) else { self.pendingRepeat = nil; self.pause(); return }
+                if latest.verse != self.verseID { self.transition = nil; self.pendingRepeat = nil; self.load(latest.verse, repetition: latest.repetition); return }
+                self.transition = nil; self.pendingRepeat = nil; self.repetition = latest.repetition
                 self.timeline.update(elapsed: 0, duration: self.timeline.duration)
                 if let item = player.currentItem { self.observeEnd(item, token: token) }
                 player.playImmediately(atRate: Float(self.repeatSettings.speed))
-            } else { self.pendingRepeat = nil; self.load(next.verse, repetition: next.repetition) }
+            } else { self.transition = nil; self.pendingRepeat = nil; self.load(next.verse, repetition: next.repetition) }
         }
     }
     func changeReciter(_ id: String) {

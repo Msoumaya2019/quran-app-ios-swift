@@ -63,7 +63,7 @@ struct QuranReaderView: View {
                 }) }
                 HStack(spacing: 0) {
                     action("Accueil", "house.fill") { if let onHome { onHome() } else { dismiss() } }
-                    action("Écouter", "play.fill") { showAudio = true; audio.toggle(start: audio.timeline.duration > 0 ? audio.verseID : verseID) }
+                    action("Écouter", "play.fill") { showAudio = true; audio.toggle(start: audio.timeline.duration > 0 ? audio.verseID : audio.playbackRange.contains(verseID) ? verseID : audio.playbackRange.lowerBound) }
                     action("Enregistrer", "mic.fill") { audio.pause(); recording = true }
                     action("Marque-page", bookmarked ? "bookmark.fill" : "bookmark") { record(bookmarked ? .removeBookmark : .bookmark) }
                     action("Plus", "ellipsis") { jumpPage = page; options = true }
@@ -80,6 +80,7 @@ struct QuranReaderView: View {
         .onAppear {
             guard !initialized else { return }; initialized = true
             audio.configure(AudioRepeatSettings.load(store.snapshot.state))
+            if let session { audio.updateRange(session.range.start...session.range.end) }
             if let reciter = store.snapshot.state["audioPreferences"]["reciterId"].string,
                QuranAudioService.Reciter.available.contains(where: { $0.id == reciter }) { audio.changeReciter(reciter) }
             if let session, session.mode == .learning || session.mode == .revision {
@@ -91,7 +92,7 @@ struct QuranReaderView: View {
         }
         .onChange(of: page) { _, _ in if initialized { record(.reading) } }
         .onChange(of: audio.verseID) { _, current in
-            if store.snapshot.state["reader"]["followAudio"].bool != false {
+            if (audio.playing || audio.loading || audio.timeline.duration > 0), store.snapshot.state["reader"]["followAudio"].bool != false {
                 page = QuranSourceMapping.page(source: source, verseID: current, catalog: store.catalog)
             }
         }

@@ -74,6 +74,8 @@ struct AudioRepeatSheet: View {
                     settings.after = settings.ending
                     if let chapter = catalog.surah(for: audio.verseID) { surahNumber = chapter.number; first = audio.verseID - chapter.start + 1; last = first }
                     selection = settings.selection ?? (audio.playbackRange == pageRange ? "page" : audio.playbackRange == sessionRange ? "session" : "verse")
+                    if selection == "session" && sessionRange == nil { selection = "verse" }
+                    if sessionRange == audio.playbackRange { selection = "session" }
                     if let start = settings.rangeStart, let end = settings.rangeEnd, let chapter = catalog.surah(for: start), catalog.surah(for: end)?.number == chapter.number {
                         surahNumber = chapter.number; first = start - chapter.start + 1; last = end - chapter.start + 1
                     }
