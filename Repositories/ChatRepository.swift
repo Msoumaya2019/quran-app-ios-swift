@@ -3,13 +3,51 @@ import Supabase
 
 struct ChatPage { let messages: [ChatMessage]; let hidden: Set<UUID> }
 @MainActor protocol ChatRemote {
+    func startUpdates(owner: UUID, link: UUID, onChange: @escaping @MainActor @Sendable () -> Void) async
+    func stopUpdates()
     func load(owner: UUID, link: UUID, before: ChatMessage?) async throws -> ChatPage
     func send(owner: UUID, message: ChatMessage) async throws -> ChatMessage
     func markRead(owner: UUID, link: UUID, through: String) async throws
 }
+extension ChatRemote {
+    func startUpdates(owner: UUID, link: UUID, onChange: @escaping @MainActor @Sendable () -> Void) async {}
+    func stopUpdates() {}
+}
 @MainActor final class ChatRepository: ChatRemote {
     let client: SupabaseClient?
     private let group: Bool
+    private var channel: RealtimeChannelV2?
+    private var subscription: RealtimeSubscription?
+    private var updateGeneration = UUID()
+    func stopUpdates() {
+        updateGeneration = UUID()
+        subscription?.cancel(); subscription = nil
+        if let old = channel, let client { Task { await client.removeChannel(old) } }
+        channel = nil
+    }
+    func startUpdates(owner: UUID, link: UUID, onChange: @escaping @MainActor @Sendable () -> Void) async {
+        stopUpdates()
+        let token = updateGeneration
+        do {
+            let client = try await authorized(owner)
+            guard token == updateGeneration, !Task.isCancelled else { return }
+            let next = client.channel("native-chat-" + UUID().uuidString)
+            channel = next
+            subscription = next.onPostgresChange(AnyAction.self, schema: "public", table: "friend_messages",
+                filter: "\(group ? "group_id" : "link_id")=eq.\(link.uuidString.lowercased())") { [weak self] _ in
+                Task { @MainActor in
+                    guard let self, token == self.updateGeneration else { return }
+                    onChange()
+                }
+            }
+            try await next.subscribeWithError()
+            guard token == updateGeneration, !Task.isCancelled else { return }
+            onChange() // Recover anything committed between the initial fetch and subscription.
+        } catch {
+            // Periodic refresh remains available if Realtime is not enabled on this backend.
+            if token == updateGeneration { stopUpdates() }
+        }
+    }
     init(client: SupabaseClient?, group: Bool = false) { self.client = client; self.group = group }
     private func authorized(_ owner: UUID) async throws -> SupabaseClient {
         guard let client, try await client.auth.session.user.id == owner else { throw URLError(.userAuthenticationRequired) }; return client

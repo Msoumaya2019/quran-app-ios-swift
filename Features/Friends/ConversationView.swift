@@ -6,6 +6,7 @@ struct ConversationView: View {
     @StateObject private var library: ConversationLibrary
     @EnvironmentObject var theme: ThemeManager
     @EnvironmentObject var store: AppStore
+    @EnvironmentObject private var network: ConnectivityService
     @Environment(\.scenePhase) private var phase
     @State private var draft = ""
     init(name: String, owner: UUID, link: UUID, remote: ChatRemote, group: Bool = false, senderNames: [UUID: String] = [:]) {
@@ -56,10 +57,12 @@ struct ConversationView: View {
                 }.padding(12).background(theme.background)
             }
             .navigationTitle(name).navigationBarTitleDisplayMode(.inline)
-            .task {
+            .task(id: "\(phase == .active)-\(network.isOffline)-\(store.identity?.id.uuidString ?? "")") {
+                guard phase == .active, !network.isOffline, store.identity?.id == library.snapshot.owner else { library.stopUpdates(); return }
+                await library.startUpdates()
                 while !Task.isCancelled {
                     guard store.identity?.id == library.snapshot.owner else { library.stop(); return }
-                    if phase == .active { await library.refresh() }
+                    if phase == .active && !network.isOffline { await library.refresh() }
                     do { try await Task.sleep(for: .seconds(15)) } catch { return }
                 }
             }

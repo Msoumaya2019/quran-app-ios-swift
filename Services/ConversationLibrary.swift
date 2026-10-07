@@ -8,6 +8,7 @@ import Foundation
     private let remote: ChatRemote
     private let cache: ChatCache
     private var generation = UUID()
+    private var refreshRequested = false
     init(owner: UUID, link: UUID, remote: ChatRemote, cache: ChatCache = ChatCache(), group: Bool = false) {
         self.remote = remote; self.cache = cache
         snapshot = (try? cache.load(owner: owner, link: link, group: group)) ?? ChatSnapshot(owner: owner, linkID: link, groupRoom: group ? true : nil)
@@ -16,11 +17,28 @@ import Foundation
         do { var next = snapshot; _ = try next.enqueue(body); try cache.save(next); snapshot = next; message = nil; return true }
         catch { message = error.localizedDescription; return false }
     }
-    func stop() { generation = UUID(); loading = false }
+    func startUpdates() async {
+        let token = generation
+        await remote.startUpdates(owner: snapshot.owner, link: snapshot.linkID) { [weak self] in
+            guard let self, token == self.generation else { return }
+            if self.loading { self.refreshRequested = true }
+            else { Task { await self.refresh() } }
+        }
+    }
+    func stopUpdates() { remote.stopUpdates() }
+    func stop() { generation = UUID(); loading = false; refreshRequested = false; remote.stopUpdates() }
     func refresh(older: Bool = false) async {
         guard !loading else { return }
         let token = generation; loading = true
-        defer { if token == generation { loading = false } }
+        defer {
+            if token == generation {
+                loading = false
+                if refreshRequested {
+                    refreshRequested = false
+                    Task { await self.refresh() }
+                }
+            }
+        }
         let owner = snapshot.owner, link = snapshot.linkID
         do {
             while let pending = snapshot.pending.first {
