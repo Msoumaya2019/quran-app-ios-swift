@@ -23,9 +23,9 @@ final class ReaderPagingUITests: XCTestCase {
         let ready = NSPredicate { _, _ in first.isHittable && first.value as? String == "ready" }
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: ready, object: nil)], timeout: 10), .completed)
         let original = first.frame
-        for page in 2...21 { turn(app, to: page, forward: true) }
-        for page in stride(from: 20, through: 16, by: -1) { turn(app, to: page, forward: false) }
-        for page in 17...21 { turn(app, to: page, forward: true) }
+        for page in 2...21 { guard turn(app, to: page, forward: true) else { return } }
+        for page in stride(from: 20, through: 16, by: -1) { guard turn(app, to: page, forward: false) else { return } }
+        for page in 17...21 { guard turn(app, to: page, forward: true) else { return } }
         let final = app.images["quran.page.21"].frame
         XCTAssertEqual(final.width, original.width, accuracy: 2)
         XCTAssertEqual(final.height, original.height, accuracy: 2)
@@ -35,13 +35,20 @@ final class ReaderPagingUITests: XCTestCase {
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "20 pages et retour — " + source; screenshot.lifetime = .keepAlways; add(screenshot)
     }
-    private func turn(_ app: XCUIApplication, to page: Int, forward: Bool) {
+    private func turn(_ app: XCUIApplication, to page: Int, forward: Bool) -> Bool {
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: forward ? 0.3 : 0.8, dy: 0.5))
         let end = app.coordinate(withNormalizedOffset: CGVector(dx: forward ? 0.8 : 0.3, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: end)
         let image = app.images["quran.page.\(page)"]
         let visible = NSPredicate { _, _ in image.exists && image.isHittable && image.value as? String == "ready" }
-        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: visible, object: nil)], timeout: 5), .completed, "Page \(page) must be visible after swipe")
+        let result = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: visible, object: nil)], timeout: 5)
+        XCTAssertEqual(result, .completed, "Page \(page) must be visible after swipe")
+        if result != .completed {
+            let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Swipe failed — page \(page)"; screenshot.lifetime = .keepAlways; add(screenshot)
+            print(app.debugDescription)
+            return false
+        }
         XCTAssertFalse(app.staticTexts["La page n’a pas pu être chargée. Réessaie depuis le menu Plus."].exists)
+        return true
     }
 }

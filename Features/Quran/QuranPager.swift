@@ -139,14 +139,14 @@ final class NativeQuranPageController: UIPageViewController, UIGestureRecognizer
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), let content = navigation.interactiveContentPopGestureRecognizer {
             if contentGesture == nil { previousContentDelegate = content.delegate; previousContentEnabled = content.isEnabled }
-            contentGesture = content; content.delegate = self
-            content.isEnabled = navigation.viewControllers.count > 1 && !navigation.isNavigationBarHidden
+            contentGesture = content
+            // The full-width iOS 26 pop gesture competes with the page scroll.
+            // Preserve edge return via readerBackGesture and restore this on exit.
+            content.isEnabled = false
         }
         #endif
         for scroll in scrollViews(view) {
             scroll.panGestureRecognizer.require(toFail: readerBackGesture)
-            scroll.panGestureRecognizer.require(toFail: edge)
-            if let contentGesture { scroll.panGestureRecognizer.require(toFail: contentGesture) }
         }
         print("[ReaderNavigation] native stack \(navigation.viewControllers.count), edge enabled \(edge.isEnabled)")
         (viewControllers?.first as? PageController)?.debugNavigation("stack \(navigation.viewControllers.count), edge \(edge.isEnabled)")
@@ -231,13 +231,6 @@ final class PageController: UIViewController {
         let tap = UITapGestureRecognizer(target: self, action: #selector(tapped)); tap.require(toFail: hold)
         view.addGestureRecognizer(tap); view.addGestureRecognizer(hold)
         spinner.startAnimating()
-    }
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        if let edge = navigationController?.interactivePopGestureRecognizer,
-           let pager = parent as? UIPageViewController {
-            for scroll in pager.view.subviews.compactMap({ $0 as? UIScrollView }) { scroll.panGestureRecognizer.require(toFail: edge) }
-        }
     }
     @objc private func tapped() { onTap() }
     @objc private func held(_ gesture: UILongPressGestureRecognizer) {
