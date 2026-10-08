@@ -32,8 +32,14 @@ Références QUL comparées aux données de test :
 
 La révision `63f9f60` ajoute deux tests : réparation des ressources hors ligne ; rendu WebKit des quatre pages originales, présence des cadres, invariance des rectangles des mots et sélection du verset via le pont existant. Des captures natives sont conservées dans les résultats Xcode.
 
-Compilation, tests et archive en cours : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37766364767 . Le résultat n'est pas annoncé comme réussi avant la fin de cette exécution.
+Compilation, deux tests et archive iPhone réussis sur `a9d939a` : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37767379934 . Le premier test WebKit hors fenêtre ne recevait pas le signal de rendu ; le test est désormais hébergé dans une fenêtre iOS visible, sans modification du moteur pour contourner cet échec.
 
 Limites : comparaison visuelle et mesures sur iPhone physique encore nécessaires. La suite complète de la révision antérieure `19c13c3` comportait trois échecs UI (récitation administrateur, réglages de rythme de révision, accessibilité du bouton de répétition). Aucun succès global de régression n'est annoncé : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37710139654 .
 
 Aucune modification du projet React Native ni de Supabase dans cette étape.
+
+## Captures et distribution
+
+Les quatre captures natives WebKit de la révision a9d939a ont été inspectées : cadres visibles, titres centrés, deux cadres au milieu de la page 600, aucune Basmala sur la page 187 ; couleurs et médaillons QCF visibles. Cette inspection ne prétend pas être une comparaison pixel par pixel sur iPhone physique.
+
+IPA ZIP vérifié : 132 520 177 octets ; SHA256 `5d65adea716c07eabe9b02e1e74e526e1b065a845848e9502796f74c9b343a55`. Archive non signée, nécessitant une signature iOS pour installation. Release de test : https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-mushaf-decorations-2026-10-08 .
