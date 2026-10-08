@@ -69,10 +69,18 @@ actor QuranPageCache {
             }
             let markerURL = Bundle.main.url(forResource: "coran_1441-markers", withExtension: "json")!
             let markers = try JSONDecoder().decode([String: [[Double]]].self, from: Data(contentsOf: markerURL))[String(page)] ?? []
+            let headers = try Mushaf1441Decoration.headers(page: page)
+            guard let headerURL = Bundle.main.url(forResource: "coran_1441-chapter-header", withExtension: "png"),
+                  let originalHeader = UIImage(contentsOfFile: headerURL.path) else { throw URLError(.fileDoesNotExist) }
+            // The official renderer uses the bitmap's alpha, tinted black, not its RGB channels.
+            let header = originalHeader.withTintColor(.black, renderingMode: .alwaysOriginal)
             return UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format).image { context in
                 UIColor.white.setFill(); context.fill(CGRect(x: 0, y: 0, width: width, height: height))
                 for (index, image) in lines.enumerated() {
                     image.draw(in: CGRect(x: 0, y: (height - lineHeight) / 14 * CGFloat(index), width: width, height: lineHeight))
+                }
+                for row in headers {
+                    header.draw(in: Mushaf1441Decoration.rect(row, imageSize: header.size))
                 }
                 for marker in markers where marker.count >= 5 {
                     let diameter = width * 0.05
@@ -81,7 +89,7 @@ actor QuranPageCache {
                     let circle = UIBezierPath(ovalIn: rect)
                     UIColor(red: 0.925, green: 0.992, blue: 0.961, alpha: 1).setFill(); circle.fill()
                     UIColor(red: 0.016, green: 0.471, blue: 0.341, alpha: 1).setStroke(); circle.lineWidth = width * 0.003; circle.stroke()
-                    let text = String(Int(marker[1])).map { "٠١٢٣٤٥٦٧٨٩".map(String.init)[Int(String($0))!] }.joined()
+                    let text = String(Int(marker[1])).map { "Ù Ù¡Ù¢Ù£Ù¤Ù¥Ù¦Ù§Ù¨Ù©".map(String.init)[Int(String($0))!] }.joined()
                     let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: width * 0.025), .foregroundColor: UIColor(red: 0.016, green: 0.471, blue: 0.341, alpha: 1)]
                     let size = (text as NSString).size(withAttributes: attributes)
                     (text as NSString).draw(at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2), withAttributes: attributes)
