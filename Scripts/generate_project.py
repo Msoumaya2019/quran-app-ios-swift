@@ -27,6 +27,8 @@ for name,kind,folders in [('CoranNative','application',['App','Core','Models','F
    ref=add('file:'+path,'PBXFileReference',lastKnownFileType=ft,path=path,sourceTree='<group>');refs.append(ref);resourcefiles.append(add('build:'+path,'PBXBuildFile',fileRef=ref))
  else:
   proxy=add('proxy:'+name,'PBXContainerItemProxy',containerPortal=project,proxyType='1',remoteGlobalIDString=app,remoteInfo='CoranNative');dependencies=[add('dep:'+name,'PBXTargetDependency',target=app,targetProxy=proxy)]
+ if name=='CoranNativeTests':
+  path='Tests/Fixtures';ref=add('file:'+path,'PBXFileReference',lastKnownFileType='folder',path=path,sourceTree='<group>');refs.append(ref);resourcefiles.append(add('build:'+path,'PBXBuildFile',fileRef=ref))
  phases.append(add('frameworks:'+name,'PBXFrameworksBuildPhase',buildActionMask='2147483647',files=frameworks,runOnlyForDeploymentPostprocessing='0'))
  phases.append(add('resources:'+name,'PBXResourcesBuildPhase',buildActionMask='2147483647',files=resourcefiles,runOnlyForDeploymentPostprocessing='0'))
  if name=='CoranNative':

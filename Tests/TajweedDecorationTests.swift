@@ -20,14 +20,12 @@ final class TajweedDecorationTests: XCTestCase {
     }
 
     @MainActor func testWebKitDecorationsPreserveWordGeometryAndVerseSelection() async throws {
-        let cases: [(Int, [TajweedMushafPage.Word], [Int], [Int])] = [
-            (1, [.init(verseKey: "1:1", position: 1, line: 2, glyph: "ﱁ", end: false)], [1], []),
-            (2, [.init(verseKey: "2:1", position: 1, line: 3, glyph: "ﱁ", end: false)], [1], [2]),
-            (187, [.init(verseKey: "9:1", position: 1, line: 2, glyph: "ﱁ", end: false)], [1], []),
-            (600, [.init(verseKey: "101:1", position: 1, line: 6, glyph: "ﱁ", end: false),
-                   .init(verseKey: "102:1", position: 1, line: 13, glyph: "ﱂ", end: false)], [4, 11], [5, 12])
-        ]
-        for (number, words, titleLines, basmalaLines) in cases {
+        let fixture = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "qcf-decor-reference", withExtension: "json", subdirectory: "Fixtures"))
+        let pages = try JSONDecoder().decode([TajweedMushafPage].self, from: Data(contentsOf: fixture))
+        let expected: [Int: ([Int], [Int])] = [1: ([1], []), 2: ([1], [2]), 187: ([1], []), 600: ([4, 11], [5, 12])]
+        for page in pages {
+            let number = page.number, words = page.words
+            let (titleLines, basmalaLines) = try XCTUnwrap(expected[number])
             let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
             let directory = root.appendingPathComponent("page")
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -66,6 +64,11 @@ final class TajweedDecorationTests: XCTestCase {
             // Script-message delivery is asynchronous; yield before checking the existing verse bridge.
             for _ in 0..<20 where bridge.verse == nil { try await Task.sleep(for: .milliseconds(25)) }
             XCTAssertEqual(bridge.verse, words.first?.verseKey)
+            let screenshot = try await web.takeSnapshot(configuration: nil)
+            let attachment = XCTAttachment(image: screenshot)
+            attachment.name = "QCF-V4-page-\(number)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
         }
     }
 }
