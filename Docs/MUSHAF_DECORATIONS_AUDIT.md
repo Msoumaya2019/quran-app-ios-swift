@@ -1,51 +1,39 @@
-# DÃ©corations des Mushaf â€” analyse du 8 octobre 2026
-
-## Ã‰tat : restauration non terminÃ©e
-
-Aucune dÃ©coration approximative n'a Ã©tÃ© ajoutÃ©e. Aucun changement Supabase ou React Native.
+# Décorations des Mushaf — 8 octobre 2026
 
 ## Coran 1441
 
-Le moteur `QuranPageCache` compose les quinze PNG originaux sur un canevas 1440 Ã— 2320. Les lignes restent Ã  `(2320 - 232) / 14 Ã— index`. La calligraphie des noms de sourate et de la Basmala appartient aux PNG. Les numÃ©ros sont actuellement reconstruits sÃ©parÃ©ment Ã  partir de `coran_1441-markers.json` ; ce ne sont pas des mÃ©daillons papier restaurÃ©s.
+Après confirmation du propriétaire, le bandeau original Quran Android est intégré sans modification dans `Resources/coran_1441-chapter-header.png`. Les 114 positions originales sont conservées dans `Resources/coran_1441-headers.json`. `Mushaf1441Decoration` utilise les proportions originales ; `QuranPageCache` superpose seulement le bandeau. Les quinze images de lignes, leur position, la calligraphie et la Basmala restent inchangées. Les cercles numériques existants ne sont pas remplacés par des rosaces inventées.
 
-Les mÃ©tadonnÃ©es dÃ©jÃ  analysÃ©es de l'archive identifient chaque en-tÃªte par `[sourate, page, indexLigne, centreX, centreY]`. Exemples : Fatiha `[1,1,3,.5,.5]`, Baqarah `[2,2,3,.5,.5]`, Tawbah `[9,187,0,.5,.45689654]`, Al-Qariah `[101,600,3,.5,.505665]`, At-Takathur `[102,600,10,.5,.49433497]`. Ne pas substituer les coordonnÃ©es QCF Ã  ces donnÃ©es.
+Source épinglée : https://github.com/quran/quran_android/tree/188355356fce2ca731919611d677c6736ccee24d (dépôt GPL v3 ; autorisation de réutilisation confirmée par le propriétaire dans cette conversation).
 
-La rÃ©fÃ©rence officielle Quran Android utilise `common/drawing/src/main/res/drawable-xxhdpi/chapter_hdr.png`, ajoutÃ©e sÃ©parÃ©ment par `SuraHeader`. Son placement conserve les images : largeur `largeurPage Ã— 1038 / 1080`, hauteur proportionnelle au PNG, centre calculÃ© depuis la ligne et `centreY`. La calligraphie n'est pas redessinÃ©e.
+Compilation et deux tests réussis : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37761450237 . Tests des pages 1, 2, 187, 600 et des 114 coordonnées.
 
-RÃ©fÃ©rence Ã©pinglÃ©e : [Quran Android, rÃ©vision 188355356fce2ca731919611d677c6736ccee24d](https://github.com/quran/quran_android/tree/188355356fce2ca731919611d677c6736ccee24d).
+## Tajweed QCF V4 / Mushaf 19
 
-Le dÃ©pÃ´t indique GPL v3 dans son LICENSE. Aucun fichier de licence distinct autorisant spÃ©cifiquement ce PNG n'a Ã©tÃ© identifiÃ©. Le PNG a Ã©tÃ© tÃ©lÃ©chargÃ© pour inspection en dehors du dÃ©pÃ´t Swift ; il n'est pas intÃ©grÃ© ni distribuÃ© dans l'application. Une autorisation distincte ou une dÃ©cision explicite sur la conformitÃ© de distribution est nÃ©cessaire avant intÃ©gration. Les cercles verts actuels correspondent au lecteur numÃ©rique ; leur remplacement par une rosace arbitraire serait infidÃ¨le.
+Les décorations utilisent les deux ressources originales QUL :
 
-## Coran Tajweed â€” QCF V4 / Mushaf 19
+- https://qul.tarteel.ai/resources/font/459 — `quran-common.ttf`, 125 444 octets.
+- https://qul.tarteel.ai/resources/font/457 — `surah-name-v4.ttf`, 215 592 octets.
 
-Le rendu local WKWebView utilise les glyphes originaux `code_v2`, leurs `line_number`, leurs `verse_key`, la police de chaque page et sa palette COLRv1 claire. Les glyphes de fin de verset sont conservÃ©s dans les mots ; ne pas les remplacer par les marqueurs du 1441.
+Provenance, empreintes SHA256 et URLs originales : `Resources/QCFDecorations/SOURCES.md`. Les fichiers sont conservés sans modification. Les pages QUL décrivent leur intégration dans les applications. Les deux polices totalisent 341 036 octets et sont partagées entre toutes les pages ; les 604 polices de pages restent téléchargées à la demande.
 
-Les noms utilisent `sura_names.woff2` du dÃ©pÃ´t officiel Quran.com (rÃ©vision `aff1a035b09b66f28047b3216edcae4c5c949a49`). Le composant officiel `src/components/chapters/ChapterIcon/index.tsx` affiche le numÃ©ro de sourate sur trois chiffres dans cette police. Ce composant ne fournit pas de cadre papier.
+Le composant officiel QUL `_chapter_name.html.erb` associe le glyphe `header` de la police commune au nom V4 `surahNNN surah-icon`. Le moteur local reprend cette association dans la ligne vide prévue pour le titre, sans déplacer aucun mot. Le cadre original est dessiné depuis son glyphe ; aucun cadre 1441 n'est utilisé. La Basmala conserve ses glyphes QCF, sans cadre ajouté. Les couleurs COLRv1 et les glyphes de fin de verset restent ceux du moteur existant.
 
-Le site fournit `public/bismillah.svg`, rÃ©fÃ©rencÃ© par `src/components/dls/Bismillah/Bismillah.tsx`. Sa prÃ©sence ne dÃ©montre pas qu'il corresponde Ã  l'ornementation de l'Ã©dition QCF V4 ; il n'a pas Ã©tÃ© substituÃ© aux glyphes de la Basmala. Les ressources examinÃ©es ne permettent pas encore d'identifier un bandeau papier QCF V4 et sa licence d'intÃ©gration.
+Références QUL comparées aux données de test :
 
-La documentation [Quran Foundation sur les polices](https://api-docs.quran.com/docs/tutorials/fonts/font-rendering/) dÃ©crit les glyphes et les lignes. Elle ne constitue pas une source identifiÃ©e pour les ornements manquants. Les en-tÃªtes doivent rester dans les lignes vides existantes, y compris les dÃ©buts en milieu de page ; aucune ligne contenant des mots ne doit Ãªtre dÃ©placÃ©e. Tawbah ne doit jamais recevoir une Basmala. Fatiha conserve sa Basmala numÃ©rotÃ©e comme verset.
+- https://qul.tarteel.ai/mushaf_layouts/19?page_number=1 : titre ligne 1, Basmala numérotée dans le texte.
+- https://qul.tarteel.ai/mushaf_layouts/19?page_number=2 : titre ligne 1, Basmala ligne 2.
+- https://qul.tarteel.ai/mushaf_layouts/19?page_number=187 : Tawbah, titre ligne 1, aucune Basmala.
+- https://qul.tarteel.ai/mushaf_layouts/19?page_number=600 : titres lignes 4 et 11, Basmala lignes 5 et 12.
 
-## VÃ©rifications rÃ©ellement disponibles
+`TajweedDecorationResources` vérifie les empreintes et répare les fichiers incomplets. Les pages déjà téléchargées reçoivent les décorations hors connexion depuis les petites ressources embarquées. WKWebView lit uniquement les fichiers locaux autorisés. Le pont de sélection des versets, le lecteur audio, les annotations de séance et les autres moteurs ne sont pas remplacés.
 
-- Compilation et archive de la rÃ©vision `19c13c3` : rÃ©ussies, [exÃ©cution 37710141854](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37710141854), quatre tests Tajweed rÃ©ussis.
-- Suite complÃ¨te de la mÃªme rÃ©vision : Ã©chec, [exÃ©cution 37710139654](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37710139654). Ã‰checs UI : ouverture de la rÃ©citation administrateur (Â« Yassine Â» introuvable), accÃ¨s aux rÃ©glages de rythme de rÃ©vision, bouton d'incrÃ©ment des rÃ©pÃ©titions audio sans rectangle accessible visible. Ne pas prÃ©senter cette suite comme entiÃ¨rement rÃ©ussie.
-- Aucune comparaison visuelle rÃ©elle des pages 1, 2, 600 et Tawbah aprÃ¨s restauration : la restauration n'est pas encore effectuÃ©e.
-- Aucune mesure physique iPhone de cette modification ; aucune validation mode avion supplÃ©mentaire.
+## Vérifications
 
-## Conditions pour terminer
+La révision `63f9f60` ajoute deux tests : réparation des ressources hors ligne ; rendu WebKit des quatre pages originales, présence des cadres, invariance des rectangles des mots et sélection du verset via le pont existant. Des captures natives sont conservées dans les résultats Xcode.
 
-1. Obtenir une ressource originale 1441 autorisÃ©e pour la distribution de cette application.
-2. Identifier le bandeau original correspondant prÃ©cisÃ©ment Ã  QCF V4, avec provenance, licence et proportions.
-3. IntÃ©grer sÃ©parÃ©ment chaque dÃ©cor, Ã  partir de ses coordonnÃ©es propres, sans changer les images ou les mots.
-4. Comparer les pages demandÃ©es avec les rÃ©fÃ©rences correspondantes et vÃ©rifier interactions, audio et lecture hors ligne.
-5. Compiler et corriger les rÃ©gressions constatÃ©es, sans annoncer de tests non exÃ©cutÃ©s.
+Compilation, tests et archive en cours : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37766364767 . Le résultat n'est pas annoncé comme réussi avant la fin de cette exécution.
 
+Limites : comparaison visuelle et mesures sur iPhone physique encore nécessaires. La suite complète de la révision antérieure `19c13c3` comportait trois échecs UI (récitation administrateur, réglages de rythme de révision, accessibilité du bouton de répétition). Aucun succès global de régression n'est annoncé : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37710139654 .
 
-## Intégration 1441 après confirmation du propriétaire
-
-Le 8 octobre, le propriétaire a répondu « oui » à la demande d'autorisation de réutilisation du bandeau. La ressource originale est conservée sans modification dans `Resources/coran_1441-chapter-header.png` ; les 114 positions originales sont dans `Resources/coran_1441-headers.json`. `Mushaf1441Decoration` calcule les rectangles avec les proportions officielles. `QuranPageCache` ajoute seulement le bandeau en noir à partir de son alpha. Les quinze rectangles des images de lignes, les médaillons numériques, les coordonnées des versets et la Basmala intégrée aux PNG restent inchangés. Aucun bandeau 1441 n'est utilisé pour Tajweed.
-
-Des tests couvrent les pages 1, 2, 600, 187 (Tawbah), une page sans titre et les 114 coordonnées. Leur résultat Xcode sera vérifié dans GitHub. Pas de validation visuelle iPhone annoncée avant exécution.
-
-Compilation Xcode et deux tests Mushaf1441DecorationTests réussis sur la révision 52c6ebd : https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/37761450237 . Les 114 positions ont aussi été vérifiées localement (limites verticales 33 à 1981 sur 2320). La comparaison visuelle sur iPhone reste à réaliser ; Tajweed n’a pas reçu de décor supplémentaire.
+Aucune modification du projet React Native ni de Supabase dans cette étape.

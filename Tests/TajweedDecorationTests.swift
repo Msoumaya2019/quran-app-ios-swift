@@ -42,7 +42,22 @@ final class TajweedDecorationTests: XCTestCase {
             let config = WKWebViewConfiguration()
             config.userContentController.add(bridge, name: "mushaf")
             let web = WKWebView(frame: CGRect(x: 0, y: 0, width: 1000, height: 1360), configuration: config)
-            defer { web.stopLoading(); config.userContentController.removeScriptMessageHandler(forName: "mushaf") }
+            // WebKit needs a visible host to avoid suspension during rendering and snapshots.
+            let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+            let previousWindow = scene.windows.first { $0.isKeyWindow }
+            let window = UIWindow(windowScene: scene)
+            let host = UIViewController()
+            window.rootViewController = host
+            window.makeKeyAndVisible()
+            host.view.addSubview(web)
+            web.frame = host.view.bounds
+            web.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            defer {
+                web.stopLoading()
+                config.userContentController.removeScriptMessageHandler(forName: "mushaf")
+                window.isHidden = true
+                previousWindow?.makeKeyAndVisible()
+            }
             web.loadFileURL(file, allowingReadAccessTo: root)
             await fulfillment(of: [bridge.ready], timeout: 20)
             XCTAssertNil(bridge.error)
