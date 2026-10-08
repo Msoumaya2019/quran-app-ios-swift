@@ -21,7 +21,7 @@ final class Mushaf1441DecorationTests: XCTestCase {
                 count += 1
                 let rect = Mushaf1441Decoration.rect(row, imageSize: size)
                 XCTAssertEqual(rect.midX, 720, accuracy: 1)
-                XCTAssertEqual(rect.midY, (2320 - 232) / 14 * row[2] + row[4] * 232, accuracy: 1)
+                XCTAssertEqual(rect.midY, CGFloat((2320.0 - 232.0) / 14.0 * row[2] + row[4] * 232.0), accuracy: 1)
                 XCTAssertGreaterThanOrEqual(rect.minY, 0)
                 XCTAssertLessThanOrEqual(rect.maxY, 2320)
                 XCTAssertEqual(rect.width / rect.height, size.width / size.height, accuracy: 0.1)
