@@ -47,7 +47,7 @@ struct QuranPager: UIViewControllerRepresentable {
             pages[page] = value
             // UIKit may ask for the next candidate before didFinishAnimating
             // moves our three-page window. Never report a false end of Mushaf.
-            if let requestedSource = source {
+            if let requestedSource = source, requestedSource != .tajweed {
                 Task { [weak self, weak value] in
                     do {
                         let image = try await QuranPageCache.shared.image(source: requestedSource, page: page)
@@ -68,6 +68,10 @@ struct QuranPager: UIViewControllerRepresentable {
             for number in range { _ = pageController(number) }
             Task {
                 guard generation == token else { return }
+                if source == .tajweed {
+                    await TajweedMushafResourceService.shared.setWindow(page: page)
+                    return // Each of the three recycled page views prepares its local resources.
+                }
                 await QuranPageCache.shared.setWindow(source: source, page: page)
                 for number in [page, page - 1, page + 1] where range.contains(number) {
                     guard generation == token, !Task.isCancelled else { return }
@@ -198,10 +202,12 @@ final class PageController: UIViewController {
     private let margin = QuranMarginOverlay()
     private let audioHighlight = QuranAudioOverlay()
     private let regions: [QuranVerseRegion]
+    private let source: QuranSource
+    private var tajweedView: TajweedMushafPageView?
     private var annotations = QuranPageAnnotations()
     private static let catalog = QuranCatalog()
     init(page: Int, source: QuranSource = .medina, onTap: @escaping () -> Void, onVerse: @escaping (Int) -> Void = { _ in }) {
-        self.page = page; self.onTap = onTap; self.onVerse = onVerse
+        self.page = page; self.source = source; self.onTap = onTap; self.onVerse = onVerse
         regions = QuranMarginGeometry.regions(source: source, page: page, catalog: Self.catalog)
         super.init(nibName: nil, bundle: nil)
     }
@@ -209,6 +215,15 @@ final class PageController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
+        if source == .tajweed {
+            let renderer = TajweedMushafPageView(page: page, onTap: onTap, onVerse: onVerse)
+            tajweedView = renderer
+            renderer.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview(renderer)
+            NSLayoutConstraint.activate([renderer.leadingAnchor.constraint(equalTo: view.leadingAnchor), renderer.trailingAnchor.constraint(equalTo: view.trailingAnchor), renderer.topAnchor.constraint(equalTo: view.topAnchor), renderer.bottomAnchor.constraint(equalTo: view.bottomAnchor)])
+            renderer.set(annotations: annotations)
+            return
+        }
         imageView.contentMode = .scaleAspectFit
         imageView.accessibilityIdentifier = "quran.page.\(page)"
         imageView.isAccessibilityElement = true
@@ -261,6 +276,7 @@ final class PageController: UIViewController {
         if isViewLoaded { refreshMargin() }
     }
     private func refreshMargin() {
+        if let tajweedView { tajweedView.set(annotations: annotations); return }
         margin.configure(regions: regions, annotations: annotations, imageSize: imageView.image?.size ?? .zero)
         audioHighlight.configure(regions: regions, imageSize: imageView.image?.size ?? .zero, verseID: annotations.audioVerseID, color: annotations.audioColor)
     }

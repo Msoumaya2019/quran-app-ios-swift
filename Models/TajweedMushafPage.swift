@@ -13,6 +13,36 @@ struct TajweedMushafPage: Codable, Sendable {
     let number: Int
     let words: [Word]
     var verseKeys: Set<String> { Set(words.map(\.verseKey)) }
+    /// Documented Content Sync schema v1. Never creates an offline dump from online verse calls.
+    static func decodeSnapshot(_ data: Data) throws -> [Self] {
+        let envelope = try JSONDecoder().decode(JSONValue.self, from: data)
+        guard envelope["resource_group"].string == "mushafs", envelope["resource_id"].int == 19,
+              envelope["schema_version"].int == 1 else { throw URLError(.cannotParseResponse) }
+        let records = envelope["records"].array
+        guard records.contains(where: { $0["record_type"].string == "mushaf" && $0["id"].int == 19 && $0["pages_count"].int == 604 }) else { throw URLError(.cannotParseResponse) }
+        let catalog = QuranCatalog()
+        var rows: [Int: [(Int, Word)]] = [:]
+        var seen = Set<Int>()
+        for record in records where record["record_type"].string == "mushaf_word" {
+            guard record["mushaf_id"].int == 19, let id = record["id"].int, seen.insert(id).inserted,
+                  let verseID = record["source_verse_id"].int, let surah = catalog.surah(for: verseID), verseID >= surah.start, verseID <= surah.end,
+                  let page = record["page_number"].int, (1...604).contains(page),
+                  let line = record["line_number"].int, (1...15).contains(line),
+                  let position = record["position_in_verse"].int, position > 0,
+                  let order = record["position_in_page"].int, order > 0,
+                  let glyph = record["text"].string, !glyph.isEmpty,
+                  glyph.unicodeScalars.allSatisfy({ (0xF000...0xFFFF).contains(Int($0.value)) || $0.value == 32 }) else { throw URLError(.cannotParseResponse) }
+            let word = Word(verseKey: "\(surah.number):\(verseID - surah.start + 1)", position: position, line: line, glyph: glyph, end: record["char_type_name"].string == "end")
+            rows[page, default: []].append((order, word))
+        }
+        return try (1...604).map { number in
+            let positioned = (rows[number] ?? []).sorted { $0.0 < $1.0 }
+            guard !positioned.isEmpty, Set(positioned.map { $0.0 }).count == positioned.count else { throw URLError(.cannotParseResponse) }
+            let words = positioned.map { $0.1 }
+            guard zip(words, words.dropFirst()).allSatisfy({ $0.0.line <= $0.1.line }) else { throw URLError(.cannotParseResponse) }
+            return Self(number: number, words: words)
+        }
+    }
     static func verseID(_ key: String, catalog: QuranCatalog) -> Int? {
         let parts = key.split(separator: ":").compactMap { Int($0) }
         guard parts.count == 2, let surah = catalog.surahs.first(where: { $0.number == parts[0] }), parts[1] > 0,

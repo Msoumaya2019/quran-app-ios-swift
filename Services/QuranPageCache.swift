@@ -52,6 +52,7 @@ actor QuranPageCache {
     var cachedPageCount: Int { images.count }
     private nonisolated static func render(source: QuranSource, page: Int, lineRoot: URL?) throws -> UIImage {
         switch source.renderingType {
+        case .tajweedQCF: throw URLError(.unsupportedURL) // Rendered by the isolated local WKWebView.
         case .pageImage:
             guard let root = Bundle.main.resourceURL,
                   let image = UIImage(contentsOfFile: root.appendingPathComponent(source.resourceLocation).appendingPathComponent("page\(String(format: "%03d", page)).png").path),

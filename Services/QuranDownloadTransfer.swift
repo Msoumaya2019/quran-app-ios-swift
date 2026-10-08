@@ -13,6 +13,8 @@ import Combine
 
 /// The existing resource installer owns this transfer independently of any screen.
 final class QuranDownloadTransfer: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    private let report: (@Sendable (Int64, Int64) -> Void)?
+    init(report: (@Sendable (Int64, Int64) -> Void)? = nil) { self.report = report; super.init() }
     private var continuation: CheckedContinuation<(URL, URLResponse), Error>?
     private var session: URLSession?
     private var result: (URL, URLResponse)?
@@ -32,6 +34,7 @@ final class QuranDownloadTransfer: NSObject, URLSessionDownloadDelegate, @unchec
         let now = Date.timeIntervalSinceReferenceDate
         guard now - lastReport >= 0.1 || totalBytesExpectedToWrite > 0 && totalBytesWritten >= totalBytesExpectedToWrite else { return }
         lastReport = now
+        if let report { report(totalBytesWritten, totalBytesExpectedToWrite); return }
         Task { @MainActor in
             QuranDownloadStatus.shared.written = totalBytesWritten
             QuranDownloadStatus.shared.expected = totalBytesExpectedToWrite
@@ -47,7 +50,8 @@ final class QuranDownloadTransfer: NSObject, URLSessionDownloadDelegate, @unchec
     }
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         let written = task.countOfBytesReceived, expected = task.countOfBytesExpectedToReceive
-        Task { @MainActor in QuranDownloadStatus.shared.written = written; QuranDownloadStatus.shared.expected = expected }
+        if let report { report(written, expected) }
+        else { Task { @MainActor in QuranDownloadStatus.shared.written = written; QuranDownloadStatus.shared.expected = expected } }
         if let error = error ?? failure { continuation?.resume(throwing: error) }
         else if let result { continuation?.resume(returning: result) }
         else { continuation?.resume(throwing: URLError(.cannotCreateFile)) }

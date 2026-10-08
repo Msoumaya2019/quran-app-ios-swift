@@ -78,6 +78,7 @@ struct QuranReaderView: View {
         .toolbarBackground(.white, for: .navigationBar)
         .statusBarHidden(immersive)
         .onAppear {
+            if source == .tajweed { Task { await TajweedMushafResourceService.shared.refreshIfNeeded() } }
             guard !initialized else { return }; initialized = true
             audio.configure(AudioRepeatSettings.load(store.snapshot.state))
             if let session { audio.updateRange(session.range.start...session.range.end) }
@@ -139,6 +140,8 @@ struct QuranReaderView: View {
                         }
                         Text("Coran 1441 se télécharge uniquement à la sélection (environ 98 Mo). Il reste ensuite disponible hors connexion.").font(.caption)
                         QuranDownloadProgress(retry: { Task { await changeSource(.edition1441) } })
+                        Text("Coran Tajweed").font(.headline)
+                        TajweedDownloadProgress()
                     }
                     Section("Aller à une page") {
                         TextField("Numéro de page", value: $jumpPage, format: .number).keyboardType(.numberPad).frame(minHeight: 44)
@@ -205,8 +208,13 @@ struct QuranReaderView: View {
             try await QuranResourceService.shared.ensureReady(next)
             for _ in 0..<3 {
                 let nextPage = next.validPage(page)
-                await QuranPageCache.shared.setWindow(source: next, page: nextPage)
-                _ = try await QuranPageCache.shared.image(source: next, page: nextPage)
+                if next == .tajweed {
+                    await TajweedMushafResourceService.shared.setWindow(page: nextPage)
+                    _ = try await TajweedMushafResourceService.shared.page(nextPage)
+                } else {
+                    await QuranPageCache.shared.setWindow(source: next, page: nextPage)
+                    _ = try await QuranPageCache.shared.image(source: next, page: nextPage)
+                }
                 guard store.identity?.id == owner else { return }
                 guard next.validPage(page) == nextPage else { continue }
                 source = next; page = nextPage; options = false

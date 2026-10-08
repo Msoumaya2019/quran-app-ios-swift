@@ -17,6 +17,7 @@ actor QuranResourceService {
         return directory.appendingPathComponent(String(format: "%03d-%02d.png", page, line))
     }
     nonisolated func isReady(_ source: QuranSource) -> Bool {
+        if source == .tajweed { return true } // Online pages load on demand; offline availability has its own marker.
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--ui-test-reader-fixtures") { return true }
         #endif

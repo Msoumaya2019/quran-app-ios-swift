@@ -19,6 +19,15 @@ struct SettingsView: View {
                 Section("Mes contenus") {
                     NavigationLink("Rappels et invocations favoris") { ContentFavoritesView() }.accessibilityIdentifier("settings.content.favorites")
                 }
+                Section("Corans") {
+                    Picker("Coran sélectionné", selection: Binding(get: { store.snapshot.state["reader"]["mushaf"].string ?? QuranSource.medina.id }, set: { source in
+                        let page = store.snapshot.state["lastRead"]["page"].int ?? 1
+                        _ = store.readerChange(ReaderOperation(kind: .source, verseID: 1, page: page, source: source))
+                    })) { ForEach(QuranSource.available) { source in Text(source.displayName).tag(source.id) } }
+                    Text("Coran Tajweed").font(.headline)
+                    TajweedDownloadProgress()
+                    Text("Les ressources Tajweed ne sont pas incluses dans l’application. En ligne, les pages se chargent à la demande.").font(.caption).foregroundStyle(theme.muted)
+                }
                 Section("Mon programme") {
                     NavigationLink { ProgramEditorView(state: store.snapshot.state) } label: {
                         Label("Modifier mon programme", systemImage: "calendar.badge.clock").frame(minHeight: 44)
