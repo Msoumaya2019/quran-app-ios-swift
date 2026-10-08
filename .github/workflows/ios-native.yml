@@ -33,6 +33,11 @@ jobs:
               for page in range(1,26):
                   for line in range(1,16):
                       (output/f'{page:03d}-{line:02d}.png').write_bytes(archive.read(f'width_1440/{page}/{line}.png'))
+          import urllib.request
+          for page in [1, 2, 187, 600]:
+              font=urllib.request.urlopen(f'https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p{page}.woff2').read()
+              if not font.startswith(b'wOF2'): raise SystemExit('Invalid QCF test font')
+              (output/f'qcf-p{page}.woff2').write_bytes(font)
           with wave.open(str(output/'audio.wav'),'wb') as audio:
               audio.setnchannels(1); audio.setsampwidth(2); audio.setframerate(8000)
               audio.writeframes(bytes(8000*2*60))

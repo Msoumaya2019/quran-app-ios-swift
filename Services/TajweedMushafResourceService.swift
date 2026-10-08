@@ -36,7 +36,8 @@ actor TajweedMushafResourceService {
         let offline = Self.offlineRoot.appendingPathComponent(String(number))
         if Self.installed, let data = try? Data(contentsOf: offline.appendingPathComponent("data.json")),
            let page = try? JSONDecoder().decode(TajweedMushafPage.self, from: data),
-           ["page.woff2", "basmala.woff2", "surahs.woff2"].allSatisfy({ Self.validFont(offline.appendingPathComponent($0)) }) {
+           ["page.woff2", "basmala.woff2"].allSatisfy({ Self.validFont(offline.appendingPathComponent($0)) }) {
+            try TajweedDecorationResources.prepare(in: offline)
             try Data(TajweedMushafHTML.document(page).utf8).write(to: offline.appendingPathComponent("page.html"), options: .atomic)
             return Resource(page: page, directory: offline)
         }
@@ -49,12 +50,11 @@ actor TajweedMushafResourceService {
             let page = try TajweedMushafPage.decodeAPI(data, page: number)
             let directory = root.appendingPathComponent(String(number))
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            // Only the three render candidates use temporary fonts. No offline-ready
+            // Only the three render candidates use temporary page fonts. No offline-ready
             // marker is created until an authorized Content Sync copy is available.
             let fonts = [
                 ("page.woff2", "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p\(number).woff2"),
-                ("basmala.woff2", "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p1.woff2"),
-                ("surahs.woff2", "https://raw.githubusercontent.com/quran/quran.com-frontend-next/aff1a035b09b66f28047b3216edcae4c5c949a49/public/fonts/quran/surah-names/v1/sura_names.woff2")
+                ("basmala.woff2", "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p1.woff2")
             ]
             for (name, path) in fonts {
                 let (font, response) = try await URLSession.shared.data(from: URL(string: path)!)
@@ -62,6 +62,7 @@ actor TajweedMushafResourceService {
                       font.prefix(4) == Data("wOF2".utf8) else { throw URLError(.cannotDecodeContentData) }
                 try font.write(to: directory.appendingPathComponent(name), options: .atomic)
             }
+            try TajweedDecorationResources.prepare(in: directory)
             let html = try TajweedMushafHTML.document(page)
             try Data(html.utf8).write(to: directory.appendingPathComponent("page.html"), options: .atomic)
             return Resource(page: page, directory: directory)
@@ -116,7 +117,7 @@ actor TajweedMushafResourceService {
         let pages = try TajweedMushafPage.decodeSnapshot(snapshot)
         let fm = FileManager.default, common = Self.offlineRoot.appendingPathComponent("common")
         try fm.createDirectory(at: common, withIntermediateDirectories: true)
-        for (name, url) in [("basmala.woff2", "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p1.woff2"), ("surahs.woff2", "https://raw.githubusercontent.com/quran/quran.com-frontend-next/aff1a035b09b66f28047b3216edcae4c5c949a49/public/fonts/quran/surah-names/v1/sura_names.woff2")] {
+        for (name, url) in [("basmala.woff2", "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p1.woff2")] {
             try await Self.downloadFont(url, to: common.appendingPathComponent(name))
         }
         await MainActor.run { TajweedDownloadStatus.shared.phase = "downloading" }
@@ -124,7 +125,7 @@ actor TajweedMushafResourceService {
             let directory = Self.offlineRoot.appendingPathComponent(String(page.number))
             try fm.createDirectory(at: directory, withIntermediateDirectories: true)
             try await Self.downloadFont("https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p\(page.number).woff2", to: directory.appendingPathComponent("page.woff2"), progress: true)
-            for name in ["basmala.woff2", "surahs.woff2"] {
+            for name in ["basmala.woff2"] {
                 let local = directory.appendingPathComponent(name), shared = common.appendingPathComponent(name)
                 if !Self.validFont(local) {
                     try? fm.removeItem(at: local)
@@ -132,6 +133,7 @@ actor TajweedMushafResourceService {
                     catch { try Data(contentsOf: shared).write(to: local, options: .atomic) }
                 }
             }
+            try TajweedDecorationResources.prepare(in: directory)
             try JSONEncoder().encode(page).write(to: directory.appendingPathComponent("data.json"), options: .atomic)
             try Data(TajweedMushafHTML.document(page).utf8).write(to: directory.appendingPathComponent("page.html"), options: .atomic)
             await MainActor.run { let s = TajweedDownloadStatus.shared; s.completed = page.number; s.fileProgress = 0 }

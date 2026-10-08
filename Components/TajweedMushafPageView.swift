@@ -58,7 +58,7 @@ import UIKit
                 let value = try await TajweedMushafResourceService.shared.page(page)
                 guard !Task.isCancelled, let self else { return }
                 resource = value
-                web.loadFileURL(value.directory.appendingPathComponent("page.html"), allowingReadAccessTo: value.directory)
+                web.loadFileURL(value.directory.appendingPathComponent("page.html"), allowingReadAccessTo: value.directory.deletingLastPathComponent())
             } catch { guard !Task.isCancelled else { return }; self?.showError(error) }
         }
     }
