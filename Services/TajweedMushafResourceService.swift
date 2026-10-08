@@ -54,7 +54,7 @@ actor TajweedMushafResourceService {
             let fonts = [
                 ("page.woff2", "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p\(number).woff2"),
                 ("basmala.woff2", "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p1.woff2"),
-                ("surahs.woff2", "https://quran.com/fonts/quran/surah-names/v1/sura_names.woff2")
+                ("surahs.woff2", "https://raw.githubusercontent.com/quran/quran.com-frontend-next/aff1a035b09b66f28047b3216edcae4c5c949a49/public/fonts/quran/surah-names/v1/sura_names.woff2")
             ]
             for (name, path) in fonts {
                 let (font, response) = try await URLSession.shared.data(from: URL(string: path)!)
@@ -116,7 +116,7 @@ actor TajweedMushafResourceService {
         let pages = try TajweedMushafPage.decodeSnapshot(snapshot)
         let fm = FileManager.default, common = Self.offlineRoot.appendingPathComponent("common")
         try fm.createDirectory(at: common, withIntermediateDirectories: true)
-        for (name, url) in [("basmala.woff2", "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p1.woff2"), ("surahs.woff2", "https://quran.com/fonts/quran/surah-names/v1/sura_names.woff2")] {
+        for (name, url) in [("basmala.woff2", "https://verses.quran.foundation/fonts/quran/hafs/v4/colrv1/woff2/p1.woff2"), ("surahs.woff2", "https://raw.githubusercontent.com/quran/quran.com-frontend-next/aff1a035b09b66f28047b3216edcae4c5c949a49/public/fonts/quran/surah-names/v1/sura_names.woff2")] {
             try await Self.downloadFont(url, to: common.appendingPathComponent(name))
         }
         await MainActor.run { TajweedDownloadStatus.shared.phase = "downloading" }
