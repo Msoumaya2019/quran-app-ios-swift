@@ -14,15 +14,17 @@ enum MushafNightImage {
         guard let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: space, bitmapInfo: info) else { return image }
         context.draw(cg, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
         for i in stride(from: 0, to: buffer.count, by: 4) {
-            let r = Double(buffer[i]), g = Double(buffer[i+1]), b = Double(buffer[i+2])
+            let alpha = Double(buffer[i+3]) / 255
+            guard alpha > 0 else { continue }
+            let r = Double(buffer[i]) / alpha, g = Double(buffer[i+1]) / alpha, b = Double(buffer[i+2]) / alpha
             if greenMarkers && r < 30 && g > 90 && g < 160 && b > 50 && b < 140 {
                 // The 1441 renderer's own green marker ink needs a lighter shade on dark paper.
-                buffer[i] = 107; buffer[i+1] = 211; buffer[i+2] = 161
+                buffer[i] = UInt8(107 * alpha); buffer[i+1] = UInt8(211 * alpha); buffer[i+2] = UInt8(161 * alpha)
             } else if max(r,max(g,b)) - min(r,min(g,b)) <= 25 {
                 let coverage = 1 - (r+g+b)/765
-                buffer[i] = UInt8(21 + 216 * coverage)
-                buffer[i+1] = UInt8(24 + 209 * coverage)
-                buffer[i+2] = UInt8(23 + 198 * coverage)
+                buffer[i] = UInt8(max(0,min(255,(21 + 216 * coverage) * alpha)))
+                buffer[i+1] = UInt8(max(0,min(255,(24 + 209 * coverage) * alpha)))
+                buffer[i+2] = UInt8(max(0,min(255,(23 + 198 * coverage) * alpha)))
             }
         }
         guard let output = context.makeImage() else { return image }

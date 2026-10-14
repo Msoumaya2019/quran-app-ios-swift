@@ -49,6 +49,22 @@ final class NativeImprovementsTests: XCTestCase {
         XCTAssertLessThan(bytes[0], 30); XCTAssertGreaterThan(bytes[4], 220)
         XCTAssertEqual(Array(bytes[8...10]), [0,255,0])
     }
+    func testNightImagePreservesTransparentAntialiasing() throws {
+        let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = false
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 2,height: 1),format: format).image { ctx in
+            UIColor.black.withAlphaComponent(0.5).setFill(); ctx.fill(CGRect(x: 1,y: 0,width: 1,height: 1))
+        }
+        let result = MushafNightImage.render(image)
+        let cg = try XCTUnwrap(result.cgImage)
+        var pixels = [UInt8](repeating: 0,count: 8)
+        pixels.withUnsafeMutableBytes { bytes in
+            let context = CGContext(data: bytes.baseAddress,width: 2,height: 1,bitsPerComponent: 8,bytesPerRow: 8,space: CGColorSpaceCreateDeviceRGB(),bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)!
+            context.draw(cg,in: CGRect(x: 0,y: 0,width: 2,height: 1))
+        }
+        XCTAssertEqual(pixels[3],0); XCTAssertEqual(pixels[0],0)
+        XCTAssertEqual(Double(pixels[7]),128,accuracy: 1)
+        XCTAssertGreaterThan(pixels[4],100); XCTAssertLessThanOrEqual(pixels[4],pixels[7])
+    }
     func testActualMedinaAnd1441PagesInBothAppearances() async throws {
         let fixtures = try XCTUnwrap(Bundle.main.resourceURL?.appendingPathComponent("ReaderTestFixtures"))
         let cache = QuranPageCache(lineRoot: fixtures)
