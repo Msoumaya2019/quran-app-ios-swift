@@ -48,4 +48,15 @@ do $$ begin
  begin perform public.native_activity_status(); raise exception 'Anonymous access allowed'; exception when insufficient_privilege then null; end;
 end $$;
 reset role;
+delete from public.app_admins where user_id='00000000-0000-0000-0000-000000000001';
+set role authenticated;
+set request.jwt.claim.sub='00000000-0000-0000-0000-000000000003';
+do $$ begin
+ if (public.native_activity_status()->>'enabled')::boolean then raise exception 'Collection enabled without an authorized owner'; end if;
+end $$;
+reset role;
+delete from auth.users where id='00000000-0000-0000-0000-000000000001';
+do $$ begin
+ if exists(select from public.native_activity_settings where admin_user_id is not null) then raise exception 'Owner deletion blocked or dangling configuration'; end if;
+end $$;
 select 'Activity security tests passed' as result;

@@ -3,7 +3,7 @@
 begin;
 create table if not exists public.native_activity_settings (
  singleton boolean primary key default true check(singleton),
- admin_user_id uuid references auth.users(id),
+ admin_user_id uuid references auth.users(id) on delete set null,
  enabled boolean not null default false,
  privacy_version text not null default 'usage-2026-10-14',
  legal_review_confirmed boolean not null default false,
@@ -29,7 +29,7 @@ revoke all on public.native_activity_settings,public.native_activity_consents,pu
 
 create or replace function public.native_activity_status() returns jsonb
 language sql security definer set search_path = public, pg_temp as $$
- select jsonb_build_object('enabled', enabled and legal_review_confirmed and retention_job_confirmed,
+ select jsonb_build_object('enabled', enabled and legal_review_confirmed and retention_job_confirmed and exists(select 1 from public.app_admins a where a.user_id=s.admin_user_id),
  'consenting', exists(select 1 from public.native_activity_consents c where c.user_id=auth.uid() and c.privacy_version=s.privacy_version))
  from public.native_activity_settings s where singleton and auth.uid() is not null;
 $$;
@@ -43,7 +43,7 @@ begin
   delete from public.native_activity_consents where user_id=auth.uid();
   delete from public.native_activity_chunks where user_id=auth.uid(); return;
  end if;
- if not(s.enabled and s.legal_review_confirmed and s.retention_job_confirmed) then raise exception 'Collection disabled' using errcode='42501'; end if;
+ if not(s.enabled and s.legal_review_confirmed and s.retention_job_confirmed and exists(select 1 from public.app_admins a where a.user_id=s.admin_user_id)) then raise exception 'Collection disabled' using errcode='42501'; end if;
  insert into public.native_activity_consents(user_id,privacy_version) values(auth.uid(),s.privacy_version)
  on conflict(user_id) do update set privacy_version=excluded.privacy_version,consented_at=now();
 end; $$;
@@ -53,7 +53,7 @@ declare v jsonb; s public.native_activity_settings; start_time timestamptz; seco
 begin
  if auth.uid() is null then raise exception 'Authentication required' using errcode='42501'; end if;
  select * into s from public.native_activity_settings where singleton;
- if not(s.enabled and s.legal_review_confirmed and s.retention_job_confirmed) or not exists(select 1 from public.native_activity_consents c where c.user_id=auth.uid() and c.privacy_version=s.privacy_version) then
+ if not(s.enabled and s.legal_review_confirmed and s.retention_job_confirmed and exists(select 1 from public.app_admins a where a.user_id=s.admin_user_id)) or not exists(select 1 from public.native_activity_consents c where c.user_id=auth.uid() and c.privacy_version=s.privacy_version) then
   raise exception 'Collection disabled or consent missing' using errcode='42501';
  end if;
  if jsonb_typeof(p_chunks)<>'array' or jsonb_array_length(p_chunks)>100 then raise exception 'Invalid batch'; end if;
