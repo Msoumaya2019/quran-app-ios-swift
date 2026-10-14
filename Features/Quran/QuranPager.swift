@@ -226,6 +226,7 @@ final class PageController: UIViewController {
         if let night { overrideUserInterfaceStyle = night ? .dark : .light }
     }
     required init?(coder: NSCoder) { fatalError("Programmatic page") }
+    deinit { nightTask?.cancel() }
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = dark ? MushafNightImage.paper : .white
@@ -283,7 +284,7 @@ final class PageController: UIViewController {
         if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { imageView.accessibilityLabel = "Page \(page) · \(status)" }
         #endif
     }
-    func set(image: UIImage) { loadViewIfNeeded(); if originalImage === image, imageView.image != nil { return }; originalImage = image; nightImage = nil; applyImageAppearance(); imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil; refreshMargin() }
+    func set(image: UIImage) { loadViewIfNeeded(); if originalImage === image { return }; originalImage = image; nightImage = nil; applyImageAppearance() }
     func setNightMode(_ night: Bool) {
         let style: UIUserInterfaceStyle = night ? .dark : .light
         if overrideUserInterfaceStyle != style { overrideUserInterfaceStyle = style }
@@ -296,14 +297,19 @@ final class PageController: UIViewController {
         nightTask?.cancel(); imageGeneration = UUID()
         view.backgroundColor = dark ? MushafNightImage.paper : .white
         guard let originalImage else { return }
-        if !dark { imageView.image = originalImage; refreshMargin(); return }
-        if let nightImage { imageView.image = nightImage; refreshMargin(); return }
+        if !dark { display(originalImage); return }
+        if let nightImage { display(nightImage); return }
+        spinner.startAnimating()
         let token = imageGeneration, greenMarkers = source == .edition1441
         nightTask = Task { [weak self] in
             let rendered = await MushafNightImageWorker.shared.render(originalImage, greenMarkers: greenMarkers)
             guard !Task.isCancelled, let self, token == imageGeneration else { return }
-            nightImage = rendered; imageView.image = rendered; refreshMargin()
+            nightImage = rendered; display(rendered)
         }
+    }
+    private func display(_ image: UIImage) {
+        imageView.image = image; imageView.accessibilityValue = "ready"
+        spinner.stopAnimating(); errorLabel.text = nil; refreshMargin()
     }
     func set(annotations: QuranPageAnnotations) {
         guard self.annotations != annotations else { return }
