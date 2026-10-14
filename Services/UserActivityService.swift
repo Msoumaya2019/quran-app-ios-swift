@@ -18,7 +18,7 @@ import Supabase
     private var foreground = false
     private var syncing = false
     private var generation = UUID()
-    init() { client = try? BackendConfiguration.load().client() }
+    init(client: SupabaseClient?) { self.client = client }
     private var file: URL? {
         guard let owner else { return nil }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("CoranNative/Usage/\(owner.uuidString.lowercased()).json")

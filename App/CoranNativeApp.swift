@@ -10,13 +10,14 @@ import SwiftUI
     @StateObject private var media: DailyContentMediaService
     @StateObject private var editorial: EditorialLibrary
     @StateObject private var moderation: ModerationLibrary
-    @StateObject private var usage = UserActivityService()
+    @StateObject private var usage: UserActivityService
     @StateObject private var theme = ThemeManager()
     @StateObject private var network = ConnectivityService()
     @StateObject private var reminders = LocalReminderService()
     @Environment(\.scenePhase) private var scenePhase
     init() {
         let client = try? BackendConfiguration.load().client()
+        _usage = StateObject(wrappedValue: UserActivityService(client: client))
         if let client, let configuration = try? BackendConfiguration.load() {
             let repository = TajweedMushafRepository(client: client, configuration: configuration)
             Task { await TajweedMushafResourceService.shared.configure(repository: repository) }
