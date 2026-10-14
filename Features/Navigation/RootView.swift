@@ -28,8 +28,8 @@ struct RootView: View {
     @EnvironmentObject var friends: FriendsLibrary
     @EnvironmentObject var reminders: LocalReminderService
     @State private var tab: MainTab = .home
-    @State private var settings = false
-    @State private var profile = false
+    private enum AccountSheet: String, Identifiable { case profile, settings; var id: String { rawValue } }
+    @State private var accountSheet: AccountSheet?
     var body: some View {
         Group {
             if store.identity == nil { AuthView() }
@@ -50,11 +50,9 @@ struct RootView: View {
                                 ToolbarItem(placement: .topBarLeading) {
                                     HStack(spacing: 7) { Image(systemName: "book.closed").foregroundStyle(theme.gold); Text("Apprendre le Coran").font(theme.title(.headline)).foregroundStyle(theme.accent).lineLimit(1) }.fixedSize(horizontal: true, vertical: false)
                                 }
-                                ToolbarItem(placement: .topBarTrailing) {
-                                    HStack(spacing: 0) {
-                                        Button { profile = true } label: { Text(String(HomeProjection(snapshot: store.snapshot).name.prefix(1))).font(.headline).frame(width: 32, height: 32).background(theme.accent, in: Circle()).foregroundStyle(theme.onAccent) }.frame(width: 44, height: 44).accessibilityLabel("Mon profil").accessibilityIdentifier("profile.open")
-                                        Button { settings = true } label: { Image(systemName: "gearshape").frame(width: 44, height: 44) }.accessibilityLabel("Réglages").accessibilityIdentifier("settings.open")
-                                    }
+                                ToolbarItemGroup(placement: .topBarTrailing) {
+                                        Button { accountSheet = .profile } label: { Text(String(HomeProjection(snapshot: store.snapshot).name.prefix(1))).font(.headline).frame(width: 32, height: 32).background(theme.accent, in: Circle()).foregroundStyle(theme.onAccent) }.frame(width: 44, height: 44).accessibilityLabel("Mon profil").accessibilityIdentifier("profile.open")
+                                        Button { accountSheet = .settings } label: { Image(systemName: "gearshape").frame(width: 44, height: 44) }.accessibilityLabel("Réglages").accessibilityIdentifier("settings.open")
                                 }
                                 }
                             }
@@ -67,8 +65,10 @@ struct RootView: View {
                 .safeAreaInset(edge: .top, spacing: 0) {
                     if network.isOffline { Text("Mode hors connexion — tes données locales restent disponibles").font(.caption).foregroundStyle(theme.muted).padding(8).frame(maxWidth: .infinity).background(theme.background).accessibilityIdentifier("offline.banner") }
                 }
-                .sheet(isPresented: $settings) { SettingsView() }
-                .sheet(isPresented: $profile) { NavigationStack { MyProfileView() } }
+                .sheet(item: $accountSheet) { destination in
+                    if destination == .settings { SettingsView() }
+                    else { NavigationStack { MyProfileView() } }
+                }
             }
         }
         .tint(theme.accent)
@@ -82,7 +82,7 @@ struct RootView: View {
             if let id = store.identity?.id { theme.importPreferences(state: state, userID: id) }
             reminders.update(owner: store.identity?.id, settings: ReminderSettings.load(state))
         }
-        .onChange(of: reminders.programRequest) { _, request in if request != nil { settings = false; tab = .program; reminders.programRequest = nil } }
+        .onChange(of: reminders.programRequest) { _, request in if request != nil { accountSheet = nil; tab = .program; reminders.programRequest = nil } }
         .onAppear {
             if let id = store.identity?.id { theme.importPreferences(state: store.snapshot.state, userID: id) }
             reminders.update(owner: store.identity?.id, settings: ReminderSettings.load(store.snapshot.state), force: true)
