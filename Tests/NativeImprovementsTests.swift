@@ -21,6 +21,15 @@ final class NativeImprovementsTests: XCTestCase {
         XCTAssertEqual(pages["600"]?.filter { $0[0] == 102 }.map { Int($0[1]) }, Array(1...8))
         XCTAssertEqual(MushafVerseNumber.text(255), "\u{0662}\u{0665}\u{0665}")
     }
+    func testProfileCountsCanonicalKnowledgeWithoutInventingProgress() {
+        let catalog = QuranCatalog()
+        var knowledge = Dictionary(uniqueKeysWithValues: (1...6236).map { (String($0),JSONValue.string("perfect")) })
+        XCTAssertEqual(ProgressProjection(state: .object(["knowledge": .object(knowledge)])).completeSurahs(catalog: catalog),114)
+        knowledge["2"] = .string("unknown")
+        let partial = ProgressProjection(state: .object(["knowledge": .object(knowledge)]))
+        XCTAssertEqual(partial.known.count,6235)
+        XCTAssertEqual(partial.completeSurahs(catalog: catalog),113)
+    }
     func testForegroundMeterDoesNotCountBackgroundOrCatchUpAfterSuspension() {
         var meter = ForegroundUsageMeter()
         XCTAssertEqual(meter.checkpoint(uptime: 10), 0)

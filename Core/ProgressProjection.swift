@@ -9,6 +9,10 @@ struct ProgressProjection {
     }
     var goalIDs: Set<Int> { state["goal"]["ranges"].array.reduce(into: Set<Int>()) { result, row in if let range = VerseRange(json: row) { result.formUnion(range.start...range.end) } } }
     var goalRatio: Double { let ids = goalIDs; return ids.isEmpty ? 0 : Double(known.intersection(ids).count) / Double(ids.count) }
+    func completeSurahs(catalog: QuranCatalog) -> Int {
+        let learned = known
+        return catalog.surahs.filter { ($0.start...$0.end).allSatisfy { learned.contains($0) } }.count
+    }
     func completePages(catalog: QuranCatalog) -> Int {
         let starts = catalog.pageStarts
         let learned = known

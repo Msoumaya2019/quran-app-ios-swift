@@ -8,7 +8,7 @@ struct MyProfileView: View {
     @Environment(\.dismiss) private var dismiss
     private var progress: ProgressProjection { ProgressProjection(state: store.snapshot.state) }
     private var name: String { friends.snapshot?.profile["display_name"].string ?? HomeProjection(snapshot: store.snapshot).name }
-    private var completeSurahs: Int { store.catalog.surahs.filter { ($0.start...$0.end).allSatisfy { progress.known.contains($0) } }.count }
+    private var completeSurahs: Int { progress.completeSurahs(catalog: store.catalog) }
     var body: some View {
         Form {
             Section {
