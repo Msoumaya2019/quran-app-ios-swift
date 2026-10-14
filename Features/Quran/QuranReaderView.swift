@@ -70,12 +70,12 @@ struct QuranReaderView: View {
                 }.padding(.vertical, 8).background(theme.surface)
             }
         }
-        .background(.white)
+        .background(theme.background)
         .navigationTitle(source.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(immersive ? .hidden : .visible, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
-        .toolbarBackground(.white, for: .navigationBar)
+        .toolbarBackground(theme.surface, for: .navigationBar)
         .statusBarHidden(immersive)
         .onAppear {
             if source == .tajweed { Task { await TajweedMushafResourceService.shared.refreshIfNeeded() } }
@@ -140,8 +140,7 @@ struct QuranReaderView: View {
                         }
                         Text("Coran 1441 se télécharge uniquement à la sélection (environ 98 Mo). Il reste ensuite disponible hors connexion.").font(.caption)
                         QuranDownloadProgress(retry: { Task { await changeSource(.edition1441) } })
-                        Text("Coran Tajweed").font(.headline)
-                        TajweedDownloadProgress()
+                        NavigationLink("Téléchargements et sources") { QuranDownloadsView() }
                     }
                     Section("Aller à une page") {
                         TextField("Numéro de page", value: $jumpPage, format: .number).keyboardType(.numberPad).frame(minHeight: 44)

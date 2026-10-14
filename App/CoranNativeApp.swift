@@ -10,6 +10,7 @@ import SwiftUI
     @StateObject private var media: DailyContentMediaService
     @StateObject private var editorial: EditorialLibrary
     @StateObject private var moderation: ModerationLibrary
+    @StateObject private var usage = UserActivityService()
     @StateObject private var theme = ThemeManager()
     @StateObject private var network = ConnectivityService()
     @StateObject private var reminders = LocalReminderService()
@@ -78,7 +79,10 @@ import SwiftUI
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation).environmentObject(reminders).environmentObject(editorial).environmentObject(media).environmentObject(contentFavorites)
+            RootView().environmentObject(usage).environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation).environmentObject(reminders).environmentObject(editorial).environmentObject(media).environmentObject(contentFavorites)
+                .onChange(of: store.identity?.id, initial: true) { _, user in Task { await usage.select(user); usage.phase(active: scenePhase == .active) } }
+                .onChange(of: scenePhase) { _, phase in usage.phase(active: phase == .active) }
+                .preferredColorScheme(theme.preferredScheme)
                 .onOpenURL { url in Task { await store.receive(url) } }
                 .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await store.refresh(); await recitations.synchronize(); await friends.refresh(); await quiz.refresh() } } }
                 .onChange(of: store.identity?.id, initial: true) { _, user in Task { await recitations.select(user); await recitations.synchronize() } }

@@ -51,7 +51,7 @@ struct ConversationView: View {
                         TextField("Ton message…", text: $draft, axis: .vertical).lineLimit(1...5).padding(10).background(theme.surface, in: RoundedRectangle(cornerRadius: 14)).accessibilityIdentifier("chat.composer")
                         Button {
                             if library.enqueue(draft) { draft = ""; Task { await library.refresh() } }
-                        } label: { Image(systemName: "arrow.up").frame(width: 44, height: 44).background(theme.accent, in: Circle()).foregroundStyle(.white) }
+                        } label: { Image(systemName: "arrow.up").frame(width: 44, height: 44).background(theme.accent, in: Circle()).foregroundStyle(theme.onAccent) }
                             .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draft.unicodeScalars.count > 2000).accessibilityLabel("Envoyer le message").accessibilityIdentifier("chat.send")
                     }
                 }.padding(12).background(theme.background)

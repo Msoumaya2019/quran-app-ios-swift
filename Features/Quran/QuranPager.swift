@@ -197,6 +197,10 @@ final class PageController: UIViewController {
     private let onTap: () -> Void
     private let onVerse: (Int) -> Void
     private let imageView = UIImageView()
+    private var originalImage: UIImage?
+    private var nightTask: Task<Void, Never>?
+    private var imageGeneration = UUID()
+    private var dark: Bool { traitCollection.userInterfaceStyle == .dark }
     private let spinner = UIActivityIndicatorView(style: .medium)
     private let errorLabel = UILabel()
     private let margin = QuranMarginOverlay()
@@ -214,7 +218,7 @@ final class PageController: UIViewController {
     required init?(coder: NSCoder) { fatalError("Programmatic page") }
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        view.backgroundColor = dark ? MushafNightImage.paper : .white
         if source == .tajweed {
             let renderer = TajweedMushafPageView(page: page, onTap: onTap, onVerse: onVerse)
             tajweedView = renderer
@@ -269,7 +273,23 @@ final class PageController: UIViewController {
         if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { imageView.accessibilityLabel = "Page \(page) · \(status)" }
         #endif
     }
-    func set(image: UIImage) { loadViewIfNeeded(); imageView.image = image; imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil; refreshMargin() }
+    func set(image: UIImage) { loadViewIfNeeded(); originalImage = image; applyImageAppearance(); imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil; refreshMargin() }
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle { applyImageAppearance() }
+    }
+    private func applyImageAppearance() {
+        nightTask?.cancel(); imageGeneration = UUID()
+        view.backgroundColor = dark ? MushafNightImage.paper : .white
+        guard let originalImage else { return }
+        if !dark { imageView.image = originalImage; refreshMargin(); return }
+        let token = imageGeneration
+        nightTask = Task { [weak self] in
+            let rendered = await Task.detached(priority: .userInitiated) { MushafNightImage.render(originalImage) }.value
+            guard !Task.isCancelled, let self, token == imageGeneration else { return }
+            imageView.image = rendered; refreshMargin()
+        }
+    }
     func set(annotations: QuranPageAnnotations) {
         guard self.annotations != annotations else { return }
         self.annotations = annotations

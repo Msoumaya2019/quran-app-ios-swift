@@ -89,7 +89,7 @@ actor QuranPageCache {
                     let circle = UIBezierPath(ovalIn: rect)
                     UIColor(red: 0.925, green: 0.992, blue: 0.961, alpha: 1).setFill(); circle.fill()
                     UIColor(red: 0.016, green: 0.471, blue: 0.341, alpha: 1).setStroke(); circle.lineWidth = width * 0.003; circle.stroke()
-                    let text = String(Int(marker[1])).map { "Ù Ù¡Ù¢Ù£Ù¤Ù¥Ù¦Ù§Ù¨Ù©".map(String.init)[Int(String($0))!] }.joined()
+                    let text = MushafVerseNumber.text(Int(marker[1]))
                     let attributes: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: width * 0.025), .foregroundColor: UIColor(red: 0.016, green: 0.471, blue: 0.341, alpha: 1)]
                     let size = (text as NSString).size(withAttributes: attributes)
                     (text as NSString).draw(at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2), withAttributes: attributes)

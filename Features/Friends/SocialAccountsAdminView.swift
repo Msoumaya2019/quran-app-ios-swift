@@ -34,12 +34,35 @@ private struct SocialAccountDetail: View {
     @State private var confirmation = false
     @State private var openingOwner: UUID?
     private var current: JSONValue { library.items.first { $0["id"] == row["id"] } ?? row }
+    private func dateLabel(_ text: String?) -> String {
+        guard let text else { return "Non disponible" }
+        let parser = ISO8601DateFormatter(); parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = parser.date(from: text) ?? ISO8601DateFormatter().date(from: text) else { return "Non disponible" }
+        return date.formatted(date: .abbreviated, time: .shortened)
+    }
+    private func duration(_ seconds: Int) -> String { "\(seconds / 3600) h \((seconds % 3600) / 60) min" }
     var body: some View {
         Form {
             if openingOwner == library.account, openingOwner != nil {
                 Section("Compte") {
                     Text(current["display_name"].string ?? "Utilisateur")
                     Text(current["id"].string ?? "").font(.caption).textSelection(.enabled)
+                }
+                Section("Activité · 7 jours calendaires") {
+                    if current["activity"] == .null {
+                        Text("Statistiques indisponibles : migration ou autorisation du compte administrateur désigné nécessaire.").font(.caption)
+                    } else {
+                        let a = current["activity"]
+                        LabeledContent("Dernière authentification", value: dateLabel(a["last_sign_in_at"].string))
+                        LabeledContent("Vu pour la dernière fois", value: dateLabel(a["last_seen"].string))
+                        if a["tracked"].bool == true {
+                            LabeledContent("Temps actif aujourd’hui", value: duration(a["today_seconds"].int ?? 0))
+                            LabeledContent("Temps actif sur 7 jours", value: duration(a["week_seconds"].int ?? 0))
+                            LabeledContent("Sessions sur 7 jours", value: String(a["sessions_7_days"].int ?? 0))
+                            Text("Du \(dateLabel(a["period_start"].string)) au \(dateLabel(a["period_end"].string)). Fuseau : \(a["time_zone"].string ?? "").").font(.caption)
+                        } else { Text("Suivi non activé pour ce compte. Aucune activité antérieure n’est reconstituée.").font(.caption) }
+                        Text("L’authentification est fournie par Supabase ; une réouverture de l’app n’est pas une connexion.").font(.caption)
+                    }
                 }
                 if current["protected"].bool == true { Text("Ce compte est protégé.") }
                 else {

@@ -41,8 +41,12 @@ extension ModerationRemote {
             let suspended: [JSONValue] = try await client.from("social_suspensions").select().in("user_id", values: ids).execute().value
             let admins: [JSONValue] = try await client.from("app_admins").select("user_id").in("user_id", values: ids).execute().value
             _ = try await authorized(owner)
+            struct ActivityArgs: Encodable { let p_users: [String]; let p_zone: String }
+            // Server denies every administrator except the designated owner. Never fall back to raw tables.
+            let stats: JSONValue? = try? await client.rpc("native_activity_summary", params: ActivityArgs(p_users: ids, p_zone: TimeZone.current.identifier)).execute().value
             return profiles.map { row in
-                row.setting("suspension", suspended.first { $0["user_id"] == row["id"] } ?? .null)
+                row.setting("activity", stats?.array.first { $0["user_id"] == row["id"] } ?? .null)
+                    .setting("suspension", suspended.first { $0["user_id"] == row["id"] } ?? .null)
                     .setting("protected", .bool(admins.contains { $0["user_id"] == row["id"] } || row["id"].string?.lowercased() == owner.uuidString.lowercased()))
             }
         }

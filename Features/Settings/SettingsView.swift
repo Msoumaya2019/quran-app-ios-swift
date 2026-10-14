@@ -14,6 +14,7 @@ struct SettingsView: View {
                     Text(store.identity?.email ?? "Compte connecté")
                     if let id = store.identity?.id { Text(id.uuidString).font(.caption).textSelection(.enabled) }
                     Button("Actualiser mes données") { Task { await store.refresh() } }.disabled(store.isRefreshing)
+                    NavigationLink("Confidentialité · utilisation") { ActivityPrivacyView() }
                     NavigationLink("Profil ami et confidentialité") { SocialProfileSettingsView() }.accessibilityIdentifier("settings.social.open")
                 }
                 Section("Mes contenus") {
@@ -24,9 +25,7 @@ struct SettingsView: View {
                         let page = store.snapshot.state["lastRead"]["page"].int ?? 1
                         _ = store.readerChange(ReaderOperation(kind: .source, verseID: 1, page: page, source: source))
                     })) { ForEach(QuranSource.available) { source in Text(source.displayName).tag(source.id) } }
-                    Text("Coran Tajweed").font(.headline)
-                    TajweedDownloadProgress()
-                    Text("Les ressources Tajweed ne sont pas incluses dans l’application. En ligne, les pages se chargent à la demande.").font(.caption).foregroundStyle(theme.muted)
+                    NavigationLink("Téléchargements et sources") { QuranDownloadsView() }
                 }
                 Section("Mon programme") {
                     NavigationLink { ProgramEditorView(state: store.snapshot.state) } label: {
@@ -37,16 +36,15 @@ struct SettingsView: View {
                     }.accessibilityIdentifier("settings.revision.open")
                 }
                 Section("Apparence") {
+                    Picker("Mode d’affichage", selection: $theme.appearance) {
+                        Text("Clair").tag("light"); Text("Sombre").tag("dark"); Text("Automatique (système)").tag("system")
+                    }.accessibilityIdentifier("settings.appearance.mode")
                     Picker("Thème de l’application", selection: $theme.name) {
                         Text("Thème blanc").tag("white"); Text("Thème vert").tag("classic"); Text("Thème rose").tag("feminine"); Text("Lilas & Perle").tag("lilac"); Text("Bleu Nuit & Or").tag("night")
                     }
                     Picker("Couleur d’accent", selection: $theme.accentName) { Text("Prune").tag("prune"); Text("Rose").tag("rose"); Text("Vert").tag("green"); Text("Doré").tag("gold") }
                     Picker("Police d’interface", selection: $theme.fontName) { Text("Système iOS").tag("system"); Text("Élégante").tag("elegant"); Text("Classique").tag("classic") }
                     Text("Les choix d’apparence de cette version de test sont conservés sur cet appareil. Ils ne modifient pas l’application React Native.").font(.caption).foregroundStyle(theme.muted)
-                }
-                Section("Version native") {
-                    Text("Lecteur natif • SwiftUI et UIKit • iOS 17 et versions ultérieures")
-                    Text("Coran de Médine, Coran 1441, apprentissage, révisions, amis, messagerie et Quiz natif.").font(.caption).foregroundStyle(theme.muted)
                 }
                 Section("Notifications") {
                     NavigationLink("Notifications et rappels") { ReminderSettingsView() }.accessibilityIdentifier("settings.reminders.open")

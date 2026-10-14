@@ -29,7 +29,7 @@ import UIKit
         configuration.userContentController.add(bridge, name: "mushaf")
         bridge.owner = self
         web = WKWebView(frame: .zero, configuration: configuration)
-        web.navigationDelegate = self; web.isOpaque = false; web.backgroundColor = .white
+        web.navigationDelegate = self; web.isOpaque = false; web.backgroundColor = .systemBackground; web.scrollView.backgroundColor = .systemBackground
         web.scrollView.isScrollEnabled = false; web.scrollView.bounces = false
         web.accessibilityIdentifier = "quran.tajweed.page.\(page)"; web.accessibilityValue = "loading"
         retry.setTitle("Impossible de charger cette page. Réessayer", for: .normal)

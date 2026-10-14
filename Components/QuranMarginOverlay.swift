@@ -62,7 +62,7 @@ final class QuranMarginOverlay: UIView {
             badge.adjustsFontSizeToFitWidth = true; badge.minimumScaleFactor = 0.75
             badge.layer.cornerRadius = size / 2; badge.clipsToBounds = true
             badge.layer.borderWidth = 0.8; badge.layer.borderColor = color.withAlphaComponent(0.75).cgColor
-            badge.backgroundColor = marker.completed || diameter < 16 ? color : .white
+            badge.backgroundColor = marker.completed || diameter < 16 ? color : .secondarySystemBackground
             badge.textColor = marker.completed ? .white : color
             badge.isAccessibilityElement = true
             badge.accessibilityIdentifier = "quran.margin.\(marker.ids.first ?? 0)"

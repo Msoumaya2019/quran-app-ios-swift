@@ -29,6 +29,7 @@ struct RootView: View {
     @EnvironmentObject var reminders: LocalReminderService
     @State private var tab: MainTab = .home
     @State private var settings = false
+    @State private var profile = false
     var body: some View {
         Group {
             if store.identity == nil { AuthView() }
@@ -51,7 +52,7 @@ struct RootView: View {
                                 }
                                 ToolbarItem(placement: .topBarTrailing) {
                                     HStack(spacing: 0) {
-                                        Button { settings = true } label: { Text(String(HomeProjection(snapshot: store.snapshot).name.prefix(1))).font(.headline).frame(width: 32, height: 32).background(theme.accent, in: Circle()).foregroundStyle(.white) }.frame(width: 44, height: 44).accessibilityLabel("Mon compte")
+                                        Button { profile = true } label: { Text(String(HomeProjection(snapshot: store.snapshot).name.prefix(1))).font(.headline).frame(width: 32, height: 32).background(theme.accent, in: Circle()).foregroundStyle(theme.onAccent) }.frame(width: 44, height: 44).accessibilityLabel("Mon profil").accessibilityIdentifier("profile.open")
                                         Button { settings = true } label: { Image(systemName: "gearshape").frame(width: 44, height: 44) }.accessibilityLabel("Réglages").accessibilityIdentifier("settings.open")
                                     }
                                 }
@@ -67,6 +68,7 @@ struct RootView: View {
                     if network.isOffline { Text("Mode hors connexion — tes données locales restent disponibles").font(.caption).foregroundStyle(theme.muted).padding(8).frame(maxWidth: .infinity).background(theme.background).accessibilityIdentifier("offline.banner") }
                 }
                 .sheet(isPresented: $settings) { SettingsView() }
+                .sheet(isPresented: $profile) { NavigationStack { MyProfileView() } }
             }
         }
         .tint(theme.accent)

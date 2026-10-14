@@ -23,6 +23,7 @@ final class TajweedDecorationTests: XCTestCase {
         let fixture = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "qcf-decor-reference", withExtension: "json", subdirectory: "Fixtures"))
         let pages = try JSONDecoder().decode([TajweedMushafPage].self, from: Data(contentsOf: fixture))
         let expected: [Int: ([Int], [Int])] = [1: ([1], []), 2: ([1], [2]), 187: ([1], []), 600: ([4, 11], [5, 12])]
+        for dark in [false, true] {
         for page in pages {
             let number = page.number, words = page.words
             let (titleLines, basmalaLines) = try XCTUnwrap(expected[number])
@@ -47,6 +48,7 @@ final class TajweedDecorationTests: XCTestCase {
             let previousWindow = scene.windows.first { $0.isKeyWindow }
             let window = UIWindow(windowScene: scene)
             let host = UIViewController()
+            window.overrideUserInterfaceStyle = dark ? .dark : .light
             window.rootViewController = host
             window.makeKeyAndVisible()
             host.view.addSubview(web)
@@ -61,6 +63,8 @@ final class TajweedDecorationTests: XCTestCase {
             web.loadFileURL(file, allowingReadAccessTo: root)
             await fulfillment(of: [bridge.ready], timeout: 20)
             XCTAssertNil(bridge.error)
+            let night = try await web.evaluateJavaScript("matchMedia('(prefers-color-scheme:dark)').matches") as? Bool
+            XCTAssertEqual(night, dark)
             let result = try await web.evaluateJavaScript("""
             (()=>{const regions=()=>[...document.querySelectorAll('.word')].map(e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height]});
               const before=regions();for(const e of document.querySelectorAll('.title'))e.style.display='none';const after=regions();
@@ -81,9 +85,10 @@ final class TajweedDecorationTests: XCTestCase {
             XCTAssertEqual(bridge.verse, words.first?.verseKey)
             let screenshot = try await web.takeSnapshot(configuration: nil)
             let attachment = XCTAttachment(image: screenshot)
-            attachment.name = "QCF-V4-page-\(number)"
+            attachment.name = "QCF-V4-page-\(number)-\(dark ? "dark" : "light")"
             attachment.lifetime = .keepAlways
             add(attachment)
+        }
         }
     }
 }

@@ -22,6 +22,6 @@ struct SectionHeader: View {
 struct PrimaryButtonStyle: ButtonStyle {
     @EnvironmentObject var theme: ThemeManager
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label.font(.subheadline.weight(.semibold)).foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 44).background(theme.accent, in: RoundedRectangle(cornerRadius: 14)).opacity(configuration.isPressed ? 0.8 : 1)
+        configuration.label.font(.subheadline.weight(.semibold)).foregroundStyle(theme.onAccent).frame(maxWidth: .infinity, minHeight: 44).background(theme.accent, in: RoundedRectangle(cornerRadius: 14)).opacity(configuration.isPressed ? 0.8 : 1)
     }
 }

@@ -17,6 +17,9 @@ enum TajweedMushafHTML {
         @font-face{font-family:Surahs;src:url('../common/surah-name-v4.ttf') format('truetype');font-display:block}
         @font-face{font-family:Ornaments;src:url('../common/quran-common.ttf') format('truetype');font-display:block}
         @font-palette-values --Light{font-family:Page;base-palette:0}
+        @font-palette-values --Dark{font-family:Page;base-palette:1}
+        @font-palette-values --BasmalaLight{font-family:Basmala;base-palette:0}
+        @font-palette-values --BasmalaDark{font-family:Basmala;base-palette:1}
         *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
         html,body{margin:0;width:100%;height:100%;overflow:hidden;background:white;-webkit-text-size-adjust:none}
         body{display:flex;align-items:center;justify-content:center}
@@ -29,6 +32,8 @@ enum TajweedMushafHTML {
         .title .name{position:relative;font-family:Surahs;font-size:48px;white-space:pre;pointer-events:none}
         .basmala{font-family:Basmala;justify-content:center;font-size:47px}
         #footer{position:absolute;top:1320px;width:100%;text-align:center;font:18px system-ui;color:#555}
+        .basmala{font-palette:--BasmalaLight}
+        @media(prefers-color-scheme:dark){html,body{background:#151817;color:#ede9dd}.line{font-palette:--Dark}.basmala{font-palette:--BasmalaDark}#footer{color:#bcb8c1}}
         </style></head><body><div id="fit"><div id="canvas"></div></div><script>
         const page=\#(json), canvas=document.getElementById('canvas');
         const centered={255:[2],528:[9],534:[6],545:[6],586:[1],593:[2],594:[5],600:[10],602:[5,15],603:[10,15],604:[4,9,14,15]};
@@ -51,7 +56,7 @@ enum TajweedMushafHTML {
           // Paint the original QUL 'header' ligature; no handmade SVG or 1441 image.
           // Fit decoration ink within its existing empty row without moving any word.
           for(const title of canvas.querySelectorAll('.title')){
-            const ctx=title.querySelector('.frame').getContext('2d');ctx.scale(3,3);ctx.font='100px Ornaments';
+            const ctx=title.querySelector('.frame').getContext('2d');ctx.scale(3,3);ctx.font='100px Ornaments';ctx.fillStyle=matchMedia('(prefers-color-scheme:dark)').matches?'#ede9dd':'#000';
             const m=ctx.measureText('header'),inkWidth=m.actualBoundingBoxLeft+m.actualBoundingBoxRight,inkHeight=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
             if(!(inkWidth>0&&inkHeight>0))throw Error('ornament unavailable');
             const size=100*Math.min(900/inkWidth,80/inkHeight);ctx.font=size+'px Ornaments';const f=ctx.measureText('header');
@@ -61,6 +66,14 @@ enum TajweedMushafHTML {
             const panelWidth=(f.actualBoundingBoxLeft+f.actualBoundingBoxRight)*0.487;
             name.style.fontSize=(48*Math.min(1,panelWidth/nameWidth))+'px';
           }
+          matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{
+            for(const frame of canvas.querySelectorAll('.frame')){
+              const ctx=frame.getContext('2d');const data=ctx.getImageData(0,0,frame.width,frame.height);
+              const rgb=matchMedia('(prefers-color-scheme:dark)').matches?[237,233,221]:[0,0,0];
+              for(let i=0;i<data.data.length;i+=4){data.data[i]=rgb[0];data.data[i+1]=rgb[1];data.data[i+2]=rgb[2];}
+              ctx.putImageData(data,0,0);
+            }
+          });
           fit();canvas.style.visibility='visible';requestAnimationFrame(()=>{
             const c=canvas.getBoundingClientRect();const regions=[...canvas.querySelectorAll('.word')].map(el=>{const r=el.getBoundingClientRect();return {key:el.dataset.verseKey,line:Number(el.dataset.line),x:(r.x-c.x)/c.width,y:(r.y-c.y)/c.height,width:r.width/c.width,height:r.height/c.height};});post('ready',regions);
           });
