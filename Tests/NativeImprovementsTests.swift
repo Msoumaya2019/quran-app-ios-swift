@@ -1,5 +1,6 @@
 import XCTest
 import UIKit
+import SwiftUI
 @testable import CoranNative
 
 final class NativeImprovementsTests: XCTestCase {

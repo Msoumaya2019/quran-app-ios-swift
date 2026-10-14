@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 @MainActor final class ThemeManager: ObservableObject {
     @AppStorage("native.theme") var name = "white" { willSet { objectWillChange.send() } }

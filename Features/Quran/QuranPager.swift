@@ -287,7 +287,7 @@ final class PageController: UIViewController {
         if let nightImage { imageView.image = nightImage; refreshMargin(); return }
         let token = imageGeneration, greenMarkers = source == .edition1441
         nightTask = Task { [weak self] in
-            let rendered = await Task.detached(priority: .userInitiated) { MushafNightImage.render(originalImage, greenMarkers: greenMarkers) }.value
+            let rendered = await MushafNightImageWorker.shared.render(originalImage, greenMarkers: greenMarkers)
             guard !Task.isCancelled, let self, token == imageGeneration else { return }
             nightImage = rendered; imageView.image = rendered; refreshMargin()
         }

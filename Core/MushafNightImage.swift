@@ -12,13 +12,13 @@ enum MushafNightImage {
         let info = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
         return pixels.withUnsafeMutableBytes { buffer in
         guard let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: space, bitmapInfo: info) else { return image }
-        context.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+        context.draw(cg, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
         for i in stride(from: 0, to: buffer.count, by: 4) {
             let r = Double(buffer[i]), g = Double(buffer[i+1]), b = Double(buffer[i+2])
             if greenMarkers && r < 30 && g > 90 && g < 160 && b > 50 && b < 140 {
                 // The 1441 renderer's own green marker ink needs a lighter shade on dark paper.
                 buffer[i] = 107; buffer[i+1] = 211; buffer[i+2] = 161
-            } else if max(r,g,b) - min(r,g,b) <= 25 {
+            } else if max(r,max(g,b)) - min(r,min(g,b)) <= 25 {
                 let coverage = 1 - (r+g+b)/765
                 buffer[i] = UInt8(21 + 216 * coverage)
                 buffer[i+1] = UInt8(24 + 209 * coverage)
@@ -28,5 +28,15 @@ enum MushafNightImage {
         guard let output = context.makeImage() else { return image }
         return UIImage(cgImage: output, scale: image.scale, orientation: image.imageOrientation)
         }
+    }
+}
+
+/// Serializes raster conversion so preloading three pages does not allocate three
+/// temporary pixel buffers at once. PageController retains only its own result.
+actor MushafNightImageWorker {
+    static let shared = MushafNightImageWorker()
+    func render(_ image: UIImage, greenMarkers: Bool) -> UIImage {
+        guard !Task.isCancelled else { return image }
+        return MushafNightImage.render(image, greenMarkers: greenMarkers)
     }
 }
