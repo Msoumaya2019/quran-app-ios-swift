@@ -40,7 +40,7 @@ private struct SocialAccountDetail: View {
         guard let date = parser.date(from: text) ?? ISO8601DateFormatter().date(from: text) else { return "Non disponible" }
         return date.formatted(date: .abbreviated, time: .shortened)
     }
-    private func duration(_ seconds: Int) -> String { "\(seconds / 3600) h \((seconds % 3600) / 60) min" }
+    private func duration(_ seconds: Int) -> String { if seconds < 60 { return "\(seconds) s" }; return "\(seconds / 3600) h \((seconds % 3600) / 60) min" }
     var body: some View {
         Form {
             if openingOwner == library.account, openingOwner != nil {

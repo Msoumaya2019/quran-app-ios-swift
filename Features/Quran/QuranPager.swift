@@ -198,6 +198,7 @@ final class PageController: UIViewController {
     private let onVerse: (Int) -> Void
     private let imageView = UIImageView()
     private var originalImage: UIImage?
+    private var nightImage: UIImage?
     private var nightTask: Task<Void, Never>?
     private var imageGeneration = UUID()
     private var dark: Bool { traitCollection.userInterfaceStyle == .dark }
@@ -273,7 +274,7 @@ final class PageController: UIViewController {
         if ProcessInfo.processInfo.arguments.contains("--ui-test-authenticated") { imageView.accessibilityLabel = "Page \(page) · \(status)" }
         #endif
     }
-    func set(image: UIImage) { loadViewIfNeeded(); originalImage = image; applyImageAppearance(); imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil; refreshMargin() }
+    func set(image: UIImage) { loadViewIfNeeded(); if originalImage === image, imageView.image != nil { return }; originalImage = image; nightImage = nil; applyImageAppearance(); imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil; refreshMargin() }
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle { applyImageAppearance() }
@@ -283,11 +284,12 @@ final class PageController: UIViewController {
         view.backgroundColor = dark ? MushafNightImage.paper : .white
         guard let originalImage else { return }
         if !dark { imageView.image = originalImage; refreshMargin(); return }
-        let token = imageGeneration
+        if let nightImage { imageView.image = nightImage; refreshMargin(); return }
+        let token = imageGeneration, greenMarkers = source == .edition1441
         nightTask = Task { [weak self] in
-            let rendered = await Task.detached(priority: .userInitiated) { MushafNightImage.render(originalImage) }.value
+            let rendered = await Task.detached(priority: .userInitiated) { MushafNightImage.render(originalImage, greenMarkers: greenMarkers) }.value
             guard !Task.isCancelled, let self, token == imageGeneration else { return }
-            imageView.image = rendered; refreshMargin()
+            nightImage = rendered; imageView.image = rendered; refreshMargin()
         }
     }
     func set(annotations: QuranPageAnnotations) {

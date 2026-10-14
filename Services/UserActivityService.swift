@@ -23,34 +23,56 @@ import Supabase
         guard let owner else { return nil }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.appendingPathComponent("CoranNative/Usage/\(owner.uuidString.lowercased()).json")
     }
+    private var preferencePrefix: String { "native.usage.\(owner?.uuidString.lowercased() ?? "none")." }
+    private var revokeKey: String { "native.usage.revoke.\(owner?.uuidString.lowercased() ?? "none")" }
     func select(_ user: UUID?) async {
         if owner != user {
             phase(active: false); generation = UUID(); owner = user; available = false; consenting = false; chunks = []
             if let file, let data = try? Data(contentsOf: file) { chunks = (try? JSONDecoder().decode([UserActivityChunk].self, from: data)) ?? [] }
+            let checked = UserDefaults.standard.double(forKey: preferencePrefix + "checked")
+            available = Date().timeIntervalSince1970 - checked < 86400 && UserDefaults.standard.bool(forKey: preferencePrefix + "enabled")
+            consenting = !UserDefaults.standard.bool(forKey: revokeKey) && UserDefaults.standard.bool(forKey: preferencePrefix + "consent")
             chunks.removeAll { $0.startedAt < Date().addingTimeInterval(-30 * 86400) }; persist()
         }
         let token = generation
         guard let user, let client, (try? await client.auth.session.user.id) == user else { return }
         do {
+            if UserDefaults.standard.bool(forKey: revokeKey) {
+                _ = try await client.rpc("native_activity_consent", params: ["p_consent": false]).execute()
+                guard generation == token else { return }
+                UserDefaults.standard.removeObject(forKey: revokeKey)
+            }
             let status: JSONValue = try await client.rpc("native_activity_status").execute().value
             guard generation == token else { return }
             available = status["enabled"].bool == true
             consenting = status["consenting"].bool == true
+            UserDefaults.standard.set(available, forKey: preferencePrefix + "enabled")
+            UserDefaults.standard.set(consenting, forKey: preferencePrefix + "consent")
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: preferencePrefix + "checked")
             if !available || !consenting { phase(active: false); chunks = []; persist() }
         } catch { if generation == token { message = "Suivi non activé ou connexion indisponible." } }
     }
     func consent(_ value: Bool) async {
+        if !value {
+            consenting = false; phase(active: false); chunks = []; persist()
+            UserDefaults.standard.set(true, forKey: revokeKey)
+            UserDefaults.standard.set(false, forKey: preferencePrefix + "consent")
+            message = "Suivi désactivé sur cet appareil. Effacement serveur en attente de connexion."
+        }
         guard let client, let owner, (try? await client.auth.session.user.id) == owner else { return }
         let token = generation
         do {
             _ = try await client.rpc("native_activity_consent", params: ["p_consent": value]).execute()
             guard generation == token else { return }
             consenting = value
+            UserDefaults.standard.set(value, forKey: preferencePrefix + "consent")
+            UserDefaults.standard.removeObject(forKey: revokeKey)
             if !value { phase(active: false); chunks = []; persist() }
             message = value ? "Participation enregistrée." : "Participation désactivée et données de suivi effacées."
-        } catch { if generation == token { message = "Modification non confirmée. Réessaie avec une connexion." } }
+        } catch { if generation == token { message = value ? "Modification non confirmée. Réessaie avec une connexion." : "Suivi désactivé sur cet appareil. Effacement serveur en attente de connexion." } }
     }
     func phase(active: Bool) {
+        if active && foreground && tick != nil { return }
         foreground = active
         tick?.cancel(); tick = nil
         if !active { checkpoint(); meter.pause(); current = nil; Task { await synchronize() }; return }

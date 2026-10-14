@@ -53,7 +53,7 @@ final class NativeImprovementsTests: XCTestCase {
         let cache = QuranPageCache(lineRoot: fixtures)
         for source in [QuranSource.medina, .edition1441] { for page in [1,42,600] {
             let light = try await cache.image(source: source,page: page)
-            let dark = MushafNightImage.render(light)
+            let dark = MushafNightImage.render(light, greenMarkers: source == .edition1441)
             XCTAssertEqual(dark.size,light.size)
             for (name,image) in [("light",light),("dark",dark)] {
                 let attachment = XCTAttachment(image: image)

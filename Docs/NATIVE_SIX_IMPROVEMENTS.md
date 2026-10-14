@@ -24,3 +24,7 @@ La dernière authentification provient exclusivement de auth.users.last_sign_in_
 Tests Swift : tous les marqueurs 1441, conversion des chiffres, temps premier plan sans arrière-plan, transformations de pixels, persistance du mode sombre. Tests WebKit et UI de navigation existants/ajoutés. Résultats Xcode à consigner après exécution. Pas de Xcode ni d’iPhone physique sur cet environnement Windows.
 
 Tests SQL en base PostgreSQL jetable : collecte désactivée, refus membre/autre administrateur/anonyme, refus tables brutes, double synchronisation, retrait de participation et absence de fausse authentification. Aucun secret ni compte réel utilisé.
+
+Retrait de participation hors ligne : arrêt local immédiat, purge locale et demande d’effacement serveur conservée jusqu’au retour de connexion. Les données déjà envoyées ne peuvent être effacées du serveur sans réseau.
+
+Au démarrage hors ligne, une autorisation serveur précédemment confirmée et la participation confirmée sont utilisables pendant 24 h au maximum. Après ce délai, aucun nouveau suivi ne démarre avant vérification serveur. Les sessions sont des passages au premier plan avec du temps actif mesuré, pas des connexions.
