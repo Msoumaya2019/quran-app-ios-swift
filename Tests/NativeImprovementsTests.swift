@@ -79,6 +79,15 @@ final class NativeImprovementsTests: XCTestCase {
             }
         } }
     }
+    @MainActor func testPreloadedPageHasNightTraitsBeforeEnteringPager() {
+        let page = PageController(page: 600, source: .medina, night: true, onTap: {})
+        page.loadViewIfNeeded()
+        XCTAssertEqual(page.traitCollection.userInterfaceStyle,.dark)
+        XCTAssertEqual(page.view.backgroundColor,MushafNightImage.paper)
+        page.setNightMode(false)
+        XCTAssertEqual(page.traitCollection.userInterfaceStyle,.light)
+        XCTAssertEqual(page.view.backgroundColor,.white)
+    }
     @MainActor func testAppearancePersistsAndUsesReadableDarkAccent() {
         let theme = ThemeManager(), old = theme.appearance
         defer { theme.appearance = old }

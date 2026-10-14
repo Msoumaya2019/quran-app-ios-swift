@@ -2,15 +2,20 @@ import SwiftUI
 import UIKit
 
 struct QuranPager: UIViewControllerRepresentable {
+    @Environment(\.colorScheme) private var scheme
     let source: QuranSource
     @Binding var page: Int
     let onTap: () -> Void
     var onVerse: (Int) -> Void = { _ in }
     var annotations = QuranPageAnnotations()
+    init(source: QuranSource, page: Binding<Int>, onTap: @escaping () -> Void, onVerse: @escaping (Int) -> Void = { _ in }, annotations: QuranPageAnnotations = QuranPageAnnotations()) {
+        self.source = source; self._page = page; self.onTap = onTap; self.onVerse = onVerse; self.annotations = annotations
+    }
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIViewController(context: Context) -> UIPageViewController {
         let controller = NativeQuranPageController(transitionStyle: .scroll, navigationOrientation: .horizontal)
         controller.dataSource = context.coordinator; controller.delegate = context.coordinator
+        context.coordinator.night = scheme == .dark
         context.coordinator.controller = controller
         context.coordinator.present(page: page, source: source)
         return controller
@@ -18,6 +23,8 @@ struct QuranPager: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIPageViewController, context: Context) {
         let annotationsChanged = context.coordinator.parent.annotations != annotations
         context.coordinator.parent = self
+        context.coordinator.night = scheme == .dark
+        context.coordinator.pages.values.forEach { $0.setNightMode(scheme == .dark) }
         if annotationsChanged { context.coordinator.pages.values.forEach { $0.set(annotations: annotations) } }
         (controller as? NativeQuranPageController)?.refreshNativeBack()
         if context.coordinator.source != source || context.coordinator.current != page {
@@ -28,6 +35,7 @@ struct QuranPager: UIViewControllerRepresentable {
         var parent: QuranPager
         weak var controller: UIPageViewController?
         var source: QuranSource?
+        var night = false
         var current = 0
         var pages: [Int: PageController] = [:]
         private var generation = 0
@@ -42,7 +50,7 @@ struct QuranPager: UIViewControllerRepresentable {
         }
         private func pageController(_ page: Int) -> PageController {
             if let existing = pages[page] { return existing }
-            let value = PageController(page: page, source: source ?? parent.source, onTap: { [weak self] in self?.parent.onTap() }, onVerse: { [weak self] id in self?.parent.onVerse(id) })
+            let value = PageController(page: page, source: source ?? parent.source, night: night, onTap: { [weak self] in self?.parent.onTap() }, onVerse: { [weak self] id in self?.parent.onVerse(id) })
             value.set(annotations: parent.annotations)
             pages[page] = value
             // UIKit may ask for the next candidate before didFinishAnimating
@@ -211,10 +219,11 @@ final class PageController: UIViewController {
     private var tajweedView: TajweedMushafPageView?
     private var annotations = QuranPageAnnotations()
     private static let catalog = QuranCatalog()
-    init(page: Int, source: QuranSource = .medina, onTap: @escaping () -> Void, onVerse: @escaping (Int) -> Void = { _ in }) {
+    init(page: Int, source: QuranSource = .medina, night: Bool? = nil, onTap: @escaping () -> Void, onVerse: @escaping (Int) -> Void = { _ in }) {
         self.page = page; self.source = source; self.onTap = onTap; self.onVerse = onVerse
         regions = QuranMarginGeometry.regions(source: source, page: page, catalog: Self.catalog)
         super.init(nibName: nil, bundle: nil)
+        if let night { overrideUserInterfaceStyle = night ? .dark : .light }
     }
     required init?(coder: NSCoder) { fatalError("Programmatic page") }
     override func viewDidLoad() {
@@ -275,6 +284,10 @@ final class PageController: UIViewController {
         #endif
     }
     func set(image: UIImage) { loadViewIfNeeded(); if originalImage === image, imageView.image != nil { return }; originalImage = image; nightImage = nil; applyImageAppearance(); imageView.accessibilityValue = "ready"; spinner.stopAnimating(); errorLabel.text = nil; refreshMargin() }
+    func setNightMode(_ night: Bool) {
+        let style: UIUserInterfaceStyle = night ? .dark : .light
+        if overrideUserInterfaceStyle != style { overrideUserInterfaceStyle = style }
+    }
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
         if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle { applyImageAppearance() }
