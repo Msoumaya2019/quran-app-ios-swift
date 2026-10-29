@@ -1,6 +1,15 @@
 import XCTest
 
 final class ExpoUpdatesUITests: XCTestCase {
+    func testRoqyaOpensWithoutBlockingOnCatalogueOrAddingTab() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
+        let roqya = app.buttons["home.roqya"]
+        for _ in 0..<4 { if roqya.exists && roqya.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(roqya.waitForExistence(timeout: 10)); roqya.tap()
+        XCTAssertTrue(app.navigationBars["Roqya"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.tabBars.buttons.count, 5)
+        let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = "Roqya-catalogue-natif"; attachment.lifetime = .keepAlways; add(attachment)
+    }
     func testSoloQuestionCorrectionAndResultWithoutExtraTab() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated", "--ui-test-quiz-solo"]

@@ -16,6 +16,9 @@ import Combine
     @Published private(set) var paused = false
     private var speed: Float = 1
     private func claimFocus() { NativeAudioFocus.shared.claim(focusID) { [weak self] in self?.stop() } }
+    func reserveFocus(onInterrupt: @escaping () -> Void) {
+        NativeAudioFocus.shared.claim(focusID) { [weak self] in self?.stop(); onInterrupt() }
+    }
     func playStream(url: URL, id: String, position: Double = 0) throws {
         stop(); claimFocus()
         try AVAudioSession.sharedInstance().setCategory(.playback)
@@ -37,8 +40,8 @@ import Combine
                 if let id = self.activeID { self.onCheckpoint?(id, self.elapsed, self.duration) }
             }
         }
-        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: value.currentItem, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.stop() }
+        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: value.currentItem, queue: .main) { [weak self, weak value] _ in
+            Task { @MainActor in guard let self, let value, self.stream === value else { return }; self.stop() }
         }
         if position.isFinite && position > 0 { value.seek(to: CMTime(seconds: position, preferredTimescale: 600)) }
         value.playImmediately(atRate: speed)

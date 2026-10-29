@@ -58,6 +58,11 @@ struct QuizResponsesAdminView: View {
                         let answer = row["question"]["answers"].array.first { $0["id"].string == row["answer_id"].string }
                         Label(answer?["text"].string ?? "Réponse indisponible", systemImage: row["is_correct"].bool == true ? "checkmark.circle" : "xmark.circle")
                             .foregroundStyle(row["is_correct"].bool == true ? Color.green : Color.red)
+                        if row["is_correct"].bool == false {
+                            let correct = row["question"]["answers"].array.first { $0["id"].string == row["question"]["correctAnswerId"].string }
+                            Text("Correction : " + (correct?["text"].string ?? "Indisponible")).font(.caption)
+                        }
+                        Text("Compte : \(row["user_id"].string ?? "")").font(.caption2).foregroundStyle(.secondary)
                         Text("Quiz : \(row["quiz_id"].string ?? "")").font(.caption2).foregroundStyle(.secondary)
                     }.padding(.vertical, 4)
                 }

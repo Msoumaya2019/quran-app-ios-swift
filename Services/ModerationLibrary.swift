@@ -52,6 +52,7 @@ import Combine
         guard let owner, let id = row["id"].string else { return }
         if playback.activeID == id { stopAudio(); return }
         stopAudio(); let token = generation, audioToken = audioGeneration; loadingAudio = id; message = nil
+        playback.reserveFocus { [weak self] in self?.stopAudio() }
         defer { if audioGeneration == audioToken { loadingAudio = nil } }
         do {
             let data = try await remote.audio(owner: owner, row: row)

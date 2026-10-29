@@ -37,6 +37,14 @@ import XCTest
         XCTAssertNil(library.localFile(audio.setting("file_size", .number(4))))
         try Data([1]).write(to: file); XCTAssertNil(library.localFile(audio))
     }
+    func testPendingAudioIsInvalidatedWhenAnotherPlayerTakesFocus() {
+        let playback = RecitationPlaybackService(), other = UUID()
+        var invalidated = false
+        playback.reserveFocus { invalidated = true }
+        NativeAudioFocus.shared.claim(other) {}
+        XCTAssertTrue(invalidated)
+        NativeAudioFocus.shared.release(other)
+    }
     func testAudioFocusOnlyInterruptsPreviousOwner() {
         let focus = NativeAudioFocus(), first = UUID(), second = UUID()
         var interrupted = 0

@@ -195,6 +195,7 @@ struct DailyContentView: View {
                             let owner = store.identity?.id
                             let token = UUID(); audioGeneration = token
                             audioLoading = true; audioError = nil
+                            player.reserveFocus { audioGeneration = UUID(); audioLoading = false }
                             Task {
                                 defer { if audioGeneration == token { audioLoading = false } }
                                 do {

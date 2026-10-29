@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import AVFoundation
 
 /// Uses the Expo catalogue and private storage bucket; downloads reuse the Mushaf transfer engine.
 @MainActor final class RoqyaLibrary: ObservableObject {
@@ -8,6 +9,7 @@ import Supabase
     @Published private(set) var loading = false
     @Published private(set) var downloads: [String: Double] = [:]
     @Published private(set) var favorites: Set<String> = []
+    @Published private(set) var selected: [String: String] = [:]
     @Published private(set) var listens: [String: JSONValue] = [:]
     let playback = RecitationPlaybackService()
     @Published private(set) var adminRows: [String: [JSONValue]] = [:]
@@ -32,9 +34,9 @@ import Supabase
     func select(_ owner: UUID?) {
         guard self.owner != owner else { return }
         checkpoint(); playback.stop(); self.owner = owner; generation = UUID(); opening = UUID()
-        favorites = []; listens = [:]; adminRows = [:]; message = nil
+        favorites = []; listens = [:]; selected = [:]; adminRows = [:]; message = nil
         if let file = preferencesFile, let data = try? Data(contentsOf: file), let value = try? JSONDecoder().decode(JSONValue.self, from: data) {
-            favorites = Set(value["favorites"].array.compactMap(\.string)); listens = value["listens"].object
+            favorites = Set(value["favorites"].array.compactMap(\.string)); listens = value["listens"].object; selected = value["selected"].object.compactMapValues(\.string)
         }
     }
     private var preferencesFile: URL? { owner.map { directory.appendingPathComponent("\($0.uuidString.lowercased()).json") } }
@@ -44,10 +46,12 @@ import Supabase
     }
     private func save() {
         guard let file = preferencesFile else { return }
-        do { try write(JSONValue.object(["favorites": .array(favorites.sorted().map(JSONValue.string)), "listens": .object(listens)]), to: file) }
+        do { try write(JSONValue.object(["favorites": .array(favorites.sorted().map(JSONValue.string)), "listens": .object(listens), "selected": .object(selected.mapValues(JSONValue.string))]), to: file) }
         catch { message = "Les préférences Roqya n’ont pas pu être enregistrées." }
     }
     func toggleFavorite(_ id: String) { if favorites.contains(id) { favorites.remove(id) } else { favorites.insert(id) }; save() }
+    func selectAudio(roqya: String, audio: String) { selected[roqya] = audio; save() }
+    func closePlayback() { opening = UUID(); checkpoint(); playback.stop() }
     func checkpoint() {
         guard let id = playback.activeID, playback.elapsed > 0 else { return }
         listens[id] = .object(["position": .number(playback.elapsed), "duration": .number(playback.duration)])
@@ -71,7 +75,8 @@ import Supabase
     }
     private func filename(_ audio: JSONValue) -> URL? {
         guard let id = audio["id"].string, UUID(uuidString: id) != nil else { return nil }
-        return directory.appendingPathComponent(id.lowercased() + ".m4a")
+        let ext = URL(fileURLWithPath: audio["storage_path"].string ?? URL(string: audio["audio_url"].string ?? "")?.path ?? "audio.mp3").pathExtension.lowercased()
+        return directory.appendingPathComponent(id.lowercased() + (["mp3", "m4a"].contains(ext) ? "." + ext : ".mp3"))
     }
     private func source(_ audio: JSONValue) -> String { "\(audio["storage_path"].string ?? audio["audio_url"].string ?? ""):\(audio["file_size"].int ?? 0)" }
     func localFile(_ audio: JSONValue) -> URL? {
@@ -89,7 +94,8 @@ import Supabase
         guard let url = Self.validMediaURL(audio["audio_url"].string) else { throw URLError(.badURL) }; return url
     }
     func play(_ audio: JSONValue) async {
-        checkpoint(); opening = UUID(); let token = opening, account = generation
+        checkpoint(); playback.stop(); opening = UUID(); let token = opening, account = generation
+        playback.reserveFocus { [weak self] in self?.opening = UUID() }
         do {
             let url: URL
             if let file = localFile(audio) { url = file } else { url = try await remoteURL(audio) }
@@ -111,11 +117,16 @@ import Supabase
             let (temporary, response) = try await transfer.download(url)
             defer { try? FileManager.default.removeItem(at: temporary) }
             let size = (try temporary.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? 0
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode), size > 0,
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200, size > 0,
                   audio["file_size"].int == nil || audio["file_size"].int == size else { throw URLError(.badServerResponse) }
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let staged = directory.appendingPathComponent(UUID().uuidString + "." + file.pathExtension)
+            try FileManager.default.moveItem(at: temporary, to: staged)
+            defer { try? FileManager.default.removeItem(at: staged) }
+            guard try await AVURLAsset(url: staged).load(.isPlayable) else { throw URLError(.cannotDecodeContentData) }
+            try? FileManager.default.removeItem(at: file.appendingPathExtension("json"))
             if FileManager.default.fileExists(atPath: file.path) { try FileManager.default.removeItem(at: file) }
-            try FileManager.default.moveItem(at: temporary, to: file)
+            try FileManager.default.moveItem(at: staged, to: file)
             try write(JSONValue.object(["source": .string(source(audio)), "size": .number(Double(size))]), to: file.appendingPathExtension("json"))
             message = nil
         } catch { message = "Le téléchargement a échoué. Vérifie la connexion et l’espace disponible, puis réessaie." }

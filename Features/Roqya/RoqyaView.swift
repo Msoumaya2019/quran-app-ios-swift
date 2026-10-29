@@ -29,7 +29,7 @@ struct RoqyaView: View {
             .searchable(text: $search, prompt: "Rechercher une Roqya")
             .task { library.select(store.identity?.id); await library.refresh() }
             .refreshable { await library.refresh() }
-            .onDisappear { library.checkpoint() }
+            .onDisappear { library.closePlayback() }
     }
 }
 
@@ -37,11 +37,10 @@ private struct RoqyaCard: View {
     let row: JSONValue
     @EnvironmentObject private var library: RoqyaLibrary
     @EnvironmentObject private var theme: ThemeManager
-    @State private var selected = ""
     @State private var speed = 1.0
     @State private var opening = false
     private var audios: [JSONValue] { RoqyaLibrary.audios(row) }
-    private var audio: JSONValue { audios.first { $0["id"].string == selected } ?? audios.first ?? .null }
+    private var audio: JSONValue { audios.first { $0["id"].string == library.selected[row.roqyaID] } ?? audios.first ?? .null }
     var body: some View {
         AppCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -57,11 +56,11 @@ private struct RoqyaCard: View {
                     Spacer()
                     Button { library.toggleFavorite(row.roqyaID) } label: { Image(systemName: library.favorites.contains(row.roqyaID) ? "heart.fill" : "heart").frame(width: 44, height: 44) }.accessibilityLabel("Favori")
                 }
-                Picker("Récitateur", selection: Binding(get: { audio.roqyaID }, set: { selected = $0 })) {
+                Picker("Récitateur", selection: Binding(get: { audio.roqyaID }, set: { library.selectAudio(roqya: row.roqyaID, audio: $0) })) {
                     ForEach(audios, id: \.roqyaID) { a in Text(a["roqya_reciters"]["name"].string ?? "Récitateur").tag(a.roqyaID) }
                 }
                 RoqyaPlaybackControls(player: library.playback, audioID: audio.roqyaID, opening: opening) {
-                    opening = true
+                    opening = true; library.playback.setSpeed(speed)
                     Task { await library.play(audio); opening = false }
                 }
                 Picker("Vitesse", selection: $speed) { ForEach([0.75, 1, 1.25, 1.5, 2], id: \.self) { value in Text("\(value.formatted())×").tag(value) } }
