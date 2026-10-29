@@ -183,14 +183,41 @@ import AVFoundation
             let client = try await adminClient()
             let fields = ["enabled", "sort_order"] + (table == "roqyas" ? ["title", "description", "category", "image_url"] : table == "roqya_reciters" ? ["name", "description", "photo_url"] : ["roqya_id", "reciter_id", "storage_path", "audio_url", "duration_seconds", "file_size"])
             let value = JSONValue.object(Dictionary(uniqueKeysWithValues: fields.map { ($0, row[$0]) }))
+            let confirmed: [JSONValue]
             if let id = row["id"].string {
-                let _: [JSONValue] = try await client.from(table).update(value).eq("id", value: id).select("id").execute().value
+                confirmed = try await client.from(table).update(value).eq("id", value: id).select("id").execute().value
             } else {
-                let _: [JSONValue] = try await client.from(table).insert(value).select("id").execute().value
+                confirmed = try await client.from(table).insert(value).select("id").execute().value
             }
-            guard account == generation else { return false }; message = nil; return true
+            guard account == generation else { return false }
+            guard Self.confirmsAdminSave(confirmed, expectedID: row["id"].string) else { throw URLError(.badServerResponse) }
+            message = nil; return true
         } catch { if account == generation { message = "Enregistrement Roqya non confirmé. Réessaie après avoir vérifié la connexion et les droits." }; return false }
     }
+    static func confirmsAdminSave(_ rows: [JSONValue], expectedID: String?) -> Bool {
+        guard rows.count == 1, let id = rows.first?["id"].string, UUID(uuidString: id) != nil else { return false }
+        return expectedID.map { $0.lowercased() == id.lowercased() } ?? true
+    }
+
+    /// Only newly imported, unassociated media may be removed. Storage RLS remains authoritative:
+    /// a file referenced by a saved row (including an ambiguously confirmed save) is protected.
+    func discardAdminUpload(_ upload: JSONValue) async {
+        guard let owner, upload["upload_owner"].string == owner.uuidString.lowercased(),
+              let bucket = upload["upload_bucket"].string, ["roqya-audio", "roqya-images"].contains(bucket),
+              let path = upload["upload_path"].string,
+              path.hasPrefix(owner.uuidString.lowercased() + "/"), !path.contains(".."),
+              path.split(separator: "/").count == 2 else { return }
+        let account = generation
+        do {
+            let client = try await adminClient()
+            guard account == generation else { return }
+            try await client.storage.from(bucket).remove(paths: [path])
+        } catch {
+            // Never bypass RLS or remove a catalogue row to force cleanup.
+            // Referenced files, offline requests and revoked access are intentionally retained.
+        }
+    }
+
     static func validAdminRow(table: String, row: JSONValue) -> Bool {
         guard row["sort_order"].int != nil, row["enabled"].bool != nil else { return false }
         for field in ["image_url", "photo_url", "audio_url"] { if let url = row[field].string, !url.isEmpty, validMediaURL(url) == nil { return false } }
@@ -211,9 +238,10 @@ import AVFoundation
         let mime = audio ? (ext == "mp3" ? "audio/mpeg" : "audio/mp4") : (ext == "png" ? "image/png" : ext == "webp" ? "image/webp" : "image/jpeg")
         try await client.storage.from(bucket).upload(path, fileURL: file, options: FileOptions(contentType: mime, upsert: false))
         guard account == generation else { throw CancellationError() }
-        if audio { return .object(["storage_path": .string(path), "file_size": .number(Double(size))]) }
+        let metadata: [String: JSONValue] = ["upload_owner": .string(owner.uuidString.lowercased()), "upload_bucket": .string(bucket), "upload_path": .string(path)]
+        if audio { return .object(metadata.merging(["storage_path": .string(path), "file_size": .number(Double(size))]) { _, new in new }) }
         let url = try client.storage.from(bucket).getPublicURL(path: path)
-        return .object(["url": .string(url.absoluteString)])
+        return .object(metadata.merging(["url": .string(url.absoluteString)]) { _, new in new })
     }
 
 }

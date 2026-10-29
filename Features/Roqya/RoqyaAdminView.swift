@@ -44,6 +44,9 @@ private struct RoqyaEditor: View {
     @State private var draft: JSONValue
     @State private var importing = false
     @State private var uploading = false
+    @State private var saving = false
+    @State private var closed = false
+    @State private var importedFiles: [JSONValue] = []
     @State private var error: String?
     init(table: String, row: JSONValue) {
         self.table = table
@@ -77,19 +80,34 @@ private struct RoqyaEditor: View {
             if let error { Text(error).foregroundStyle(.red).font(.caption) }
             if let message = library.message { Text(message).font(.caption) }
             Button("Enregistrer") {
-                Task { if await library.saveAdmin(table: table, row: draft) { dismiss(); await library.refreshAdmin(); await library.refresh() } }
-            }.disabled(uploading || library.adminBusy || !RoqyaLibrary.validAdminRow(table: table, row: draft))
+                Task {
+                    saving = true
+                    let saved = await library.saveAdmin(table: table, row: draft)
+                    saving = false
+                    if saved { dismiss(); await library.refreshAdmin(); await library.refresh() }
+                    await cleanupIfClosed()
+                }
+            }.disabled(uploading || saving || library.adminBusy || !RoqyaLibrary.validAdminRow(table: table, row: draft))
         }.navigationTitle("Modifier le catalogue").navigationBarTitleDisplayMode(.inline)
+            .onAppear { closed = false }
+            .onDisappear { closed = true; Task { await cleanupIfClosed() } }
             .fileImporter(isPresented: $importing, allowedContentTypes: table == "roqya_audios" ? [.audio] : [.image]) { result in
                 Task { await upload(result) }
             }
+    }
+    @MainActor private func cleanupIfClosed() async {
+        guard closed, !uploading, !saving else { return }
+        let files = importedFiles
+        importedFiles = []
+        for file in files { await library.discardAdminUpload(file) }
     }
     @MainActor private func upload(_ result: Result<URL, Error>) async {
         do {
             let file = try result.get(), access = file.startAccessingSecurityScopedResource()
             defer { if access { file.stopAccessingSecurityScopedResource() } }
-            uploading = true; defer { uploading = false }
+            uploading = true; defer { uploading = false; Task { await cleanupIfClosed() } }
             let value = try await library.uploadAdmin(file: file, audio: table == "roqya_audios")
+            importedFiles.append(value)
             if table == "roqya_audios" { draft = draft.setting("storage_path", value["storage_path"]).setting("file_size", value["file_size"]).setting("audio_url", .null) }
             else { draft = draft.setting(table == "roqyas" ? "image_url" : "photo_url", value["url"]) }
             error = nil

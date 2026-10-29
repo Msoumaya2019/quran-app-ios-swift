@@ -2,6 +2,16 @@ import XCTest
 @testable import CoranNative
 
 @MainActor final class RoqyaTests: XCTestCase {
+    func testAdminSaveRequiresExactlyOneConfirmedMatchingRow() {
+        let id = UUID().uuidString
+        let row: JSONValue = .object(["id": .string(id)])
+        XCTAssertTrue(RoqyaLibrary.confirmsAdminSave([row], expectedID: id.lowercased()))
+        XCTAssertTrue(RoqyaLibrary.confirmsAdminSave([row], expectedID: nil))
+        XCTAssertFalse(RoqyaLibrary.confirmsAdminSave([], expectedID: id))
+        XCTAssertFalse(RoqyaLibrary.confirmsAdminSave([row, row], expectedID: nil))
+        XCTAssertFalse(RoqyaLibrary.confirmsAdminSave([row], expectedID: UUID().uuidString))
+        XCTAssertFalse(RoqyaLibrary.confirmsAdminSave([.object(["id": .string("invalid")])], expectedID: nil))
+    }
     func testMediaURLRejectsInsecureAndCredentialURLs() {
         XCTAssertNil(RoqyaLibrary.validMediaURL("http://example.com/a.mp3"))
         XCTAssertNil(RoqyaLibrary.validMediaURL("https://user:secret@example.com/a.mp3"))
