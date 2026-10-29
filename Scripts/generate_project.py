@@ -36,7 +36,7 @@ for name,kind,folders in [('CoranNative','application',['App','Core','Models','F
  configurations=[]
  for config in ['Debug','Release']:
   settings={'PRODUCT_NAME':name,'PRODUCT_BUNDLE_IDENTIFIER':'com.coranmemoire.native.'+('ios' if name=='CoranNative' else name),'SWIFT_VERSION':'5.0','IPHONEOS_DEPLOYMENT_TARGET':'17.0','TARGETED_DEVICE_FAMILY':'1','CODE_SIGN_STYLE':'Automatic','GENERATE_INFOPLIST_FILE':'YES','SWIFT_OPTIMIZATION_LEVEL':'-Onone' if config=='Debug' else '-O','SWIFT_ACTIVE_COMPILATION_CONDITIONS':'DEBUG' if config=='Debug' else '', 'ENABLE_TESTABILITY':'YES' if config=='Debug' else 'NO','ONLY_ACTIVE_ARCH':'YES' if config=='Debug' else 'NO'}
-  if name=='CoranNative':settings.update({'INFOPLIST_FILE':'Config/Info.plist','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1','ENABLE_USER_SCRIPT_SANDBOXING':'NO','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks']})
+  if name=='CoranNative':settings.update({'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','INFOPLIST_FILE':'Config/Info.plist','MARKETING_VERSION':'0.1.0','CURRENT_PROJECT_VERSION':'1','ENABLE_USER_SCRIPT_SANDBOXING':'NO','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks']})
   elif name=='CoranNativeTests':settings.update({'TEST_HOST':'$(BUILT_PRODUCTS_DIR)/CoranNative.app/CoranNative','BUNDLE_LOADER':'$(TEST_HOST)'})
   else:settings['TEST_TARGET_NAME']='CoranNative'
   configurations.append(add('config:'+name+config,'XCBuildConfiguration',name=config,buildSettings=settings))
