@@ -1,5 +1,6 @@
 import AVFoundation
 import Combine
+import UIKit
 
 @MainActor protocol VoiceCaptureDevice {
     var currentTime: Double { get }
@@ -37,6 +38,7 @@ import Combine
     private var preview: AVAudioPlayer?
     private var generation = 0
     private var interruption: NSObjectProtocol?
+    private var background: NSObjectProtocol?
     init(directory: URL? = nil, permission: @escaping @MainActor () async -> Bool = { await AVAudioApplication.requestRecordPermission() }, factory: Factory? = nil) {
         self.directory = directory ?? FileManager.default.temporaryDirectory.appendingPathComponent("NativeRecitationDrafts")
         self.permission = permission
@@ -47,6 +49,12 @@ import Combine
             self.testCapture = true
         }
         #endif
+        background = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.generation += 1; self.requesting = false; self.interruptAudio()
+            }
+        }
         interruption = NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] notification in
             guard let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt, raw == AVAudioSession.InterruptionType.began.rawValue else { return }
             Task { @MainActor [weak self] in self?.stop() }
@@ -130,6 +138,7 @@ import Combine
     deinit {
         timer?.invalidate()
         if let interruption { NotificationCenter.default.removeObserver(interruption) }
+        if let background { NotificationCenter.default.removeObserver(background) }
     }
 }
 #if DEBUG

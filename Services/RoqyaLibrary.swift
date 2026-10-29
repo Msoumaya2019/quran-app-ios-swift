@@ -24,6 +24,13 @@ import AVFoundation
         self.client = client
         self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("CoranNative/Roqya")
         if let data = try? Data(contentsOf: self.directory.appendingPathComponent("catalog.json")), let cached = try? JSONDecoder().decode([JSONValue].self, from: data) { catalog = cached }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-roqya") {
+            let reciter: JSONValue = .object(["id": .string("00000000-0000-0000-0000-000000000007"), "enabled": .bool(true), "name": .string("Audio technique de test")])
+            let audio: JSONValue = .object(["id": .string("00000000-0000-0000-0000-000000000006"), "roqya_id": .string("00000000-0000-0000-0000-000000000005"), "storage_path": .string("technical-fixture.m4a"), "enabled": .bool(true), "roqya_reciters": reciter])
+            catalog = [.object(["id": .string("00000000-0000-0000-0000-000000000005"), "enabled": .bool(true), "title": .string("Roqya technique de test"), "roqya_audios": .array([audio])])]
+        }
+        #endif
         playback.onCheckpoint = { [weak self] id, position, duration in
             guard let self, self.owner != nil, position > 0 else { return }
             let previous = Double(self.listens[id]?["position"].int ?? 0)
@@ -65,6 +72,9 @@ import AVFoundation
             .sorted { ($0["sort_order"].int ?? 0) < ($1["sort_order"].int ?? 0) }
     }
     func refresh() async {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-roqya") { return }
+        #endif
         guard !loading, let client else { return }
         loading = true; defer { loading = false }
         do {
@@ -87,6 +97,10 @@ import AVFoundation
         return file
     }
     private func remoteURL(_ audio: JSONValue) async throws -> URL {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-roqya"), audio["id"].string == "00000000-0000-0000-0000-000000000006",
+           let url = Bundle.main.resourceURL?.appendingPathComponent("ReaderTestFixtures/audio.wav") { return url }
+        #endif
         if let path = audio["storage_path"].string, !path.isEmpty {
             guard let client, !path.contains(".."), !path.hasPrefix("/") else { throw URLError(.badURL) }
             return try await client.storage.from("roqya-audio").createSignedURL(path: path, expiresIn: 21600)
@@ -102,7 +116,7 @@ import AVFoundation
             guard token == opening, account == generation else { return }
             let id = audio["id"].string ?? ""
             let saved = listens[id], position = Double(saved?["position"].int ?? 0), duration = Double(saved?["duration"].int ?? 0)
-            try playback.playStream(url: url, id: id, position: duration > 0 && position >= duration - 2 ? 0 : position); message = nil
+            try playback.playStream(url: url, id: id, position: duration > 0 && position >= duration - 2 ? 0 : position, title: catalog.first { $0["id"] == audio["roqya_id"] }?["title"].string ?? "Roqya", artist: audio["roqya_reciters"]["name"].string ?? ""); message = nil
         } catch { if token == opening && account == generation { message = "Audio indisponible. Réessaie ou choisis une Roqya téléchargée." } }
     }
     func download(_ audio: JSONValue) async {

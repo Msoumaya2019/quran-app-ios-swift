@@ -4,6 +4,7 @@ struct RoqyaView: View {
     @EnvironmentObject private var library: RoqyaLibrary
     @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var theme: ThemeManager
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selection = "Tous"
     @State private var search = ""
     var body: some View {
@@ -30,6 +31,10 @@ struct RoqyaView: View {
             .task { library.select(store.identity?.id); await library.refresh() }
             .refreshable { await library.refresh() }
             .onDisappear { library.closePlayback() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .background { library.checkpoint() }
+                else if phase == .active { library.playback.checkSleepTimer() }
+            }
     }
 }
 
@@ -86,13 +91,28 @@ private struct RoqyaPlaybackControls: View {
             HStack {
                 Button { if player.activeID == audioID { player.togglePause() } else { play() } } label: {
                     Label(player.activeID == audioID && !player.paused ? "Pause" : "Écouter", systemImage: player.activeID == audioID && !player.paused ? "pause.fill" : "play.fill").frame(minHeight: 44)
-                }.disabled(opening)
+                }.disabled(opening).accessibilityIdentifier("roqya.play." + audioID)
                 if opening { ProgressView() }
                 Spacer()
                 if player.activeID == audioID { Text("\(Int(player.elapsed) / 60):\(String(format: "%02d", Int(player.elapsed) % 60)) / \(Int(player.duration) / 60):\(String(format: "%02d", Int(player.duration) % 60))").font(.caption).monospacedDigit() }
             }
             if player.activeID == audioID && player.duration > 0 {
-                Slider(value: Binding(get: { player.elapsed }, set: { player.seekStream($0) }), in: 0...max(1, player.duration)).accessibilityLabel("Position de lecture")
+                HStack {
+                    Button { player.handleRemote(.backward) } label: { Image(systemName: "gobackward.15").frame(width: 44, height: 44) }.accessibilityLabel("Reculer de 15 secondes")
+                    Slider(value: Binding(get: { player.elapsed }, set: { player.seekStream($0) }), in: 0...max(1, player.duration)).accessibilityLabel("Position de lecture")
+                    Button { player.handleRemote(.forward) } label: { Image(systemName: "goforward.15").frame(width: 44, height: 44) }.accessibilityLabel("Avancer de 15 secondes")
+                }
+            }
+            if player.activeID == audioID {
+                Picker("Minuterie", selection: Binding(get: { player.sleepTimer.option }, set: { player.setSleepTimer($0) })) {
+                    ForEach(PlaybackSleepTimer.Option.allCases) { option in Text(option.title).tag(option) }
+                }.accessibilityIdentifier("roqya.timer")
+                if player.sleepTimer.deadline != nil {
+                    TimelineView(.periodic(from: .now, by: 1)) { _ in
+                        let remaining = player.sleepTimer.remaining(now: ProcessInfo.processInfo.systemUptime) ?? 0
+                        Text("Arrêt dans \(remaining / 60):\(String(format: "%02d", remaining % 60))").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
         }
     }
