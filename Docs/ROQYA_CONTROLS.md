@@ -17,3 +17,7 @@ Tests physiques du verrouillage, écouteurs/Bluetooth et écoute prolongée à r
 Références Apple : [MPRemoteCommand](https://developer.apple.com/documentation/mediaplayer/mpremotecommand), [MPRemoteCommandCenter](https://developer.apple.com/documentation/mediaplayer/mpremotecommandcenter).
 
 Horloge : [ContinuousClock](https://developer.apple.com/documentation/swift/continuousclock).
+
+## Stabilité de l’interface
+
+Le sélecteur de minuterie est un panneau de confirmation iOS explicite. La progression temporelle réutilise `QuranAudioTimeline` dans une sous-vue dédiée : les ticks audio ne reconstruisent plus les commandes ni le panneau de minuterie. Les métadonnées système sont mises à jour aux changements utiles (lecture/pause, durée, déplacement, vitesse), iOS interpolant la position entre ces changements. Un test protège cette séparation. La longue fixture UI est technique, locale et copiée uniquement en Debug ; elle n’est pas incluse dans l’IPA Release.

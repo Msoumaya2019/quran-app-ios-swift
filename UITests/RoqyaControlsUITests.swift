@@ -2,6 +2,7 @@ import XCTest
 
 final class RoqyaControlsUITests: XCTestCase {
     func testTimerPlaybackAndReturningFromBackground() {
+        continueAfterFailure = false
         let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated", "--ui-test-roqya"]; app.launch()
         let open = app.buttons["home.roqya"]
         for _ in 0..<4 { if open.exists && open.isHittable { break }; app.swipeUp() }
@@ -10,7 +11,8 @@ final class RoqyaControlsUITests: XCTestCase {
         XCTAssertTrue(play.waitForExistence(timeout: 5)); play.tap()
         let timer = app.buttons["roqya.timer"]
         XCTAssertTrue(timer.waitForExistence(timeout: 8)); timer.tap()
-        app.buttons["5 minutes"].tap()
+        let choice = app.buttons["5 minutes"]
+        XCTAssertTrue(choice.waitForExistence(timeout: 5)); choice.tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Arrêt dans")).firstMatch.waitForExistence(timeout: 5))
         XCUIDevice.shared.press(.home); app.activate()
         XCTAssertTrue(timer.waitForExistence(timeout: 5))

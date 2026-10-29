@@ -12,8 +12,9 @@ import MediaPlayer
     private var timeObserver: Any?
     private var endObserver: NSObjectProtocol?
     private let focusID = UUID()
-    @Published private(set) var elapsed = 0.0
-    @Published private(set) var duration = 0.0
+    let timeline = QuranAudioTimeline()
+    var elapsed: Double { timeline.elapsed }
+    var duration: Double { timeline.duration }
     @Published private(set) var paused = false
     private var speed: Float = 1
     @Published private(set) var sleepTimer = PlaybackSleepTimer()
@@ -140,9 +141,10 @@ import MediaPlayer
             Task { @MainActor in
                 guard let self, let value, self.stream === value else { return }
                 let length = value.currentItem?.duration.seconds ?? 0
-                self.elapsed = time.seconds.isFinite ? max(0, time.seconds) : 0
-                self.duration = length.isFinite ? max(0, length) : 0
-                self.checkSleepTimer(); self.updateNowPlaying()
+                let previousDuration = self.duration
+                self.timeline.update(elapsed: time.seconds, duration: length)
+                self.checkSleepTimer()
+                if self.duration != previousDuration { self.updateNowPlaying() }
                 if let id = self.activeID { self.onCheckpoint?(id, self.elapsed, self.duration) }
             }
         }
@@ -163,7 +165,7 @@ import MediaPlayer
     }
     func seekStream(_ seconds: Double) {
         guard seconds.isFinite, duration > 0 else { return }
-        elapsed = min(duration, max(0, seconds))
+        timeline.update(elapsed: seconds, duration: duration)
         stream?.seek(to: CMTime(seconds: elapsed, preferredTimescale: 600)); updateNowPlaying()
     }
     func stop() {
@@ -173,7 +175,7 @@ import MediaPlayer
         player?.stop(); player = nil
         if let timeObserver { stream?.removeTimeObserver(timeObserver) }; timeObserver = nil
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }; endObserver = nil
-        stream?.pause(); stream = nil; activeID = nil; paused = false; elapsed = 0; duration = 0
+        stream?.pause(); stream = nil; activeID = nil; paused = false; timeline.update(elapsed: 0, duration: 0)
         NativeAudioFocus.shared.release(focusID)
     }
     func play(file: URL, id: String) throws {

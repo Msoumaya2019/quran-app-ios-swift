@@ -99,7 +99,7 @@ import AVFoundation
     private func remoteURL(_ audio: JSONValue) async throws -> URL {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--ui-test-roqya"), audio["id"].string == "00000000-0000-0000-0000-000000000006",
-           let url = Bundle.main.resourceURL?.appendingPathComponent("ReaderTestFixtures/audio.wav") { return url }
+           let url = Bundle.main.resourceURL?.appendingPathComponent("ReaderTestFixtures/roqya.wav") { return url }
         #endif
         if let path = audio["storage_path"].string, !path.isEmpty {
             guard let client, !path.contains(".."), !path.hasPrefix("/") else { throw URLError(.badURL) }

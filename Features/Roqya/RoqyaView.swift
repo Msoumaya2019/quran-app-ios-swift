@@ -85,6 +85,7 @@ private struct RoqyaPlaybackControls: View {
     let audioID: String
     let opening: Bool
     let play: () -> Void
+    @State private var timerSheet = false
     var body: some View {
         VStack {
             if let error = player.playbackError { Text(error).font(.caption).foregroundStyle(.secondary) }
@@ -94,19 +95,19 @@ private struct RoqyaPlaybackControls: View {
                 }.disabled(opening).accessibilityIdentifier("roqya.play." + audioID)
                 if opening { ProgressView() }
                 Spacer()
-                if player.activeID == audioID { Text("\(Int(player.elapsed) / 60):\(String(format: "%02d", Int(player.elapsed) % 60)) / \(Int(player.duration) / 60):\(String(format: "%02d", Int(player.duration) % 60))").font(.caption).monospacedDigit() }
-            }
-            if player.activeID == audioID && player.duration > 0 {
-                HStack {
-                    Button { player.handleRemote(.backward) } label: { Image(systemName: "gobackward.15").frame(width: 44, height: 44) }.accessibilityLabel("Reculer de 15 secondes")
-                    Slider(value: Binding(get: { player.elapsed }, set: { player.seekStream($0) }), in: 0...max(1, player.duration)).accessibilityLabel("Position de lecture")
-                    Button { player.handleRemote(.forward) } label: { Image(systemName: "goforward.15").frame(width: 44, height: 44) }.accessibilityLabel("Avancer de 15 secondes")
-                }
+
             }
             if player.activeID == audioID {
-                Picker("Minuterie", selection: Binding(get: { player.sleepTimer.option }, set: { player.setSleepTimer($0) })) {
-                    ForEach(PlaybackSleepTimer.Option.allCases) { option in Text(option.title).tag(option) }
+                RoqyaStreamTimeline(timeline: player.timeline, player: player)
+                Button { timerSheet = true } label: {
+                    HStack { Label("Minuterie", systemImage: "timer"); Spacer(); Text(player.sleepTimer.option.title).foregroundStyle(.secondary); Image(systemName: "chevron.up.chevron.down").font(.caption) }.frame(minHeight: 44)
                 }.accessibilityIdentifier("roqya.timer")
+                    .confirmationDialog("Minuterie", isPresented: $timerSheet, titleVisibility: .visible) {
+                        ForEach(PlaybackSleepTimer.Option.allCases) { option in
+                            Button(option.title) { player.setSleepTimer(option) }
+                        }
+                        Button("Annuler", role: .cancel) {}
+                    }
                 if player.sleepTimer.deadline != nil {
                     TimelineView(.periodic(from: .now, by: 1)) { _ in
                         let remaining = player.sleepTimer.remaining(now: PlaybackMonotonicClock.now) ?? 0
@@ -119,3 +120,21 @@ private struct RoqyaPlaybackControls: View {
 }
 
 extension JSONValue { var roqyaID: String { self["id"].string ?? "" } }
+
+/// Playback ticks update only the timeline, keeping transport and timer dialogs stable.
+private struct RoqyaStreamTimeline: View {
+    @ObservedObject var timeline: QuranAudioTimeline
+    let player: RecitationPlaybackService
+    var body: some View {
+        VStack {
+            Text("\(QuranAudioTimeline.timeLabel(timeline.elapsed)) / \(QuranAudioTimeline.timeLabel(timeline.duration))").font(.caption).monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
+            if timeline.duration > 0 {
+                HStack {
+                    Button { player.handleRemote(.backward) } label: { Image(systemName: "gobackward.15").frame(width: 44, height: 44) }.accessibilityLabel("Reculer de 15 secondes")
+                    Slider(value: Binding(get: { timeline.elapsed }, set: { player.seekStream($0) }), in: 0...max(1, timeline.duration)).accessibilityLabel("Position de lecture")
+                    Button { player.handleRemote(.forward) } label: { Image(systemName: "goforward.15").frame(width: 44, height: 44) }.accessibilityLabel("Avancer de 15 secondes")
+                }
+            }
+        }
+    }
+}

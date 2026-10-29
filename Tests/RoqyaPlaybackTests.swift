@@ -1,6 +1,7 @@
 import XCTest
 import AVFoundation
 import MediaPlayer
+import Combine
 @testable import CoranNative
 
 @MainActor final class RoqyaPlaybackTests: XCTestCase {
@@ -10,6 +11,14 @@ import MediaPlayer
     private func ready(_ service: RecitationPlaybackService) async throws {
         for _ in 0..<60 { if service.duration > 0 { return }; try await Task.sleep(for: .milliseconds(100)) }
         XCTFail("Local test audio should have a duration")
+    }
+    func testTimelineTicksDoNotInvalidateTransportAndTimerControls() {
+        let service = RecitationPlaybackService()
+        var updates = 0
+        let observer = service.objectWillChange.sink { updates += 1 }
+        service.timeline.update(elapsed: 5, duration: 60)
+        XCTAssertEqual(updates, 0); XCTAssertEqual(service.elapsed, 5)
+        withExtendedLifetime(observer) {}
     }
     func testSleepTimerUsesElapsedTimeAndClearsWhenReconfigured() {
         var timer = PlaybackSleepTimer()
