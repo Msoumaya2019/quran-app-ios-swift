@@ -43,7 +43,13 @@ import MediaPlayer
     }
     func setStreamPaused(_ pause: Bool) {
         guard let stream else { return }
-        if pause { stream.pause() } else { claimFocus(); stream.playImmediately(atRate: speed) }
+        if pause { stream.pause() }
+        else {
+            claimFocus()
+            do { try AVAudioSession.sharedInstance().setActive(true) }
+            catch { paused = true; playbackError = "La sortie audio est indisponible. Réessaie après l’interruption."; updateNowPlaying(); return }
+            playbackError = nil; stream.playImmediately(atRate: speed)
+        }
         paused = pause; updateNowPlaying()
     }
     func handleRemote(_ action: RemoteAction) {
