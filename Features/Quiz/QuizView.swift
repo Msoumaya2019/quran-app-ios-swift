@@ -17,6 +17,13 @@ struct QuizView: View {
                         Text(quiz.cache?.response(day: today) != nil ? "✓ Terminée aujourd’hui" : quiz.cache?.data["day"].string == today && quiz.cache?.data["daily"] != .null ? "Disponible aujourd’hui" : "À actualiser").font(.caption).foregroundStyle(theme.review)
                     }.frame(maxWidth: .infinity, alignment: .leading) }
                 }.buttonStyle(.plain).accessibilityIdentifier("quiz.daily")
+                NavigationLink { QuizSoloView() } label: {
+                    AppCard { VStack(alignment: .leading, spacing: 8) {
+                        Label("Jouer en solo", systemImage: "person.fill").font(theme.title()).foregroundStyle(theme.review)
+                        Text("10 questions aléatoires").font(.subheadline)
+                        Text("Correction après chaque question").font(.caption).foregroundStyle(theme.muted)
+                    }.frame(maxWidth: .infinity, alignment: .leading) }
+                }.buttonStyle(.plain).accessibilityIdentifier("quiz.solo")
                 NavigationLink { QuizChallengesView() } label: {
                     AppCard { VStack(alignment: .leading, spacing: 8) {
                         Label("Défis entre amis", systemImage: "person.2.fill").font(theme.title())

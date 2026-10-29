@@ -8,6 +8,9 @@ struct QuizAdminView: View {
     var body: some View {
         List {
             if quiz.isAdmin {
+                Section("Réponses des utilisateurs") {
+                    NavigationLink("Consulter les réponses") { QuizResponsesAdminView(questionID: nil) }
+                }
                 Section("Questions") {
                     NavigationLink("+ Nouvelle question") { QuizQuestionEditor(question: .null) }
                     ForEach(quiz.adminQuestions, id: \.adminID) { row in
@@ -51,7 +54,7 @@ struct QuizQuestionEditor: View {
     private func flag(_ key: String) -> Binding<Bool> { Binding(get: { draft[key].bool ?? false }, set: { draft = draft.setting(key, .bool($0)) }) }
     private func number(_ key: String) -> Binding<String> { Binding(get: { draft[key].string ?? draft[key].int.map(String.init) ?? "" }, set: { draft = draft.setting(key, .string($0)) }) }
     private var valid: Bool {
-        !draft["question"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !draft["sourceTitle"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (draft["sourceUrl"].string.orEmpty.isEmpty || draft["sourceUrl"].string.orEmpty.hasPrefix("https://")) && (draft["isDailyQuestion"].bool != true || !draft["publicationDate"].string.orEmpty.isEmpty) && answers.filter { !$0["text"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count >= 3 && answers.contains { $0["id"].string == draft["correctAnswerId"].string && !$0["text"].string.orEmpty.isEmpty }
+        !draft["question"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (draft["sourceUrl"].string.orEmpty.isEmpty || draft["sourceUrl"].string.orEmpty.hasPrefix("https://")) && (draft["isDailyQuestion"].bool != true || !draft["publicationDate"].string.orEmpty.isEmpty) && answers.filter { !$0["text"].string.orEmpty.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count >= 3 && answers.contains { $0["id"].string == draft["correctAnswerId"].string && !$0["text"].string.orEmpty.isEmpty }
     }
     var body: some View {
         Form {
@@ -64,10 +67,10 @@ struct QuizQuestionEditor: View {
                 Picker("Bonne réponse", selection: text("correctAnswerId")) { ForEach(answers, id: \.adminID) { row in Text(row["text"].string.orEmpty.isEmpty ? "Réponse " + row.adminID : row["text"].string.orEmpty).tag(row.adminID) } }
             }
             Section("Correction et source") {
-                TextField("Explication", text: text("explanation"), axis: .vertical).lineLimit(3...8)
+                TextField("Explication facultative", text: text("explanation"), axis: .vertical).lineLimit(3...8)
                 TextField("Texte arabe facultatif", text: text("arabic"), axis: .vertical)
                 TextField("Traduction", text: text("translation"), axis: .vertical)
-                TextField("Source", text: text("sourceTitle"))
+                TextField("Source facultative", text: text("sourceTitle"))
                 TextField("Référence", text: text("sourceReference"))
                 TextField("Lien source", text: text("sourceUrl")).textInputAutocapitalization(.never).keyboardType(.URL)
                 TextField("Sourate facultative", text: number("surah")).keyboardType(.numberPad)
@@ -85,6 +88,7 @@ struct QuizQuestionEditor: View {
                 Task { if await quiz.adminSave(value) { dismiss() } }
             }.disabled(!valid || quiz.actionBusy)
             if !isNew {
+                NavigationLink("Voir les réponses") { QuizResponsesAdminView(questionID: draft["id"].string) }
                 NavigationLink("Dupliquer") { QuizQuestionEditor(question: draft.setting("id", .string(UUID().uuidString)).setting("publicationDate", .null).setting("isDailyQuestion", .bool(false)).setting("answers", .array(answers))) }
             }
         }.navigationTitle(isNew ? "Nouvelle question" : "Modifier la question").navigationBarTitleDisplayMode(.inline)

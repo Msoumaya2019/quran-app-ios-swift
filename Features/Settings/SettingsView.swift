@@ -54,6 +54,7 @@ struct SettingsView: View {
                     NavigationLink("Récitations à écouter") { ModerationView(section: .recitations) }.accessibilityIdentifier("settings.admin.recitations")
                     NavigationLink("Comptes · espace amis") { SocialAccountsAdminView() }
                     NavigationLink("Modération des messages") { ModerationView(section: .messages) }.accessibilityIdentifier("settings.admin.messages")
+                    NavigationLink("Roqya · Catalogue et récitateurs") { RoqyaAdminView() }
                     NavigationLink("Quiz · Questions et thèmes") { QuizAdminView() }
                     NavigationLink("Signalements") { ProblemReportsAdminView() }
                 } }

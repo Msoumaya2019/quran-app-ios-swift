@@ -8,7 +8,7 @@ enum MainTab: String, CaseIterable, Identifiable {
     }
 }
 enum HomeRoute: String, Identifiable {
-    case reading = "Lecture", learning = "Apprentissage", revision = "Révision", quiz = "Quiz", objective = "Mon objectif", report = "Signaler un problème"
+    case roqya = "Roqya", reading = "Lecture", learning = "Apprentissage", revision = "Révision", quiz = "Quiz", objective = "Mon objectif", report = "Signaler un problème"
     var id: String { rawValue }
 }
 struct PhasePlaceholder: View {
@@ -19,6 +19,7 @@ struct PhasePlaceholder: View {
     }
 }
 struct RootView: View {
+    @EnvironmentObject private var roqya: RoqyaLibrary
     @EnvironmentObject var quiz: QuizLibrary
     @EnvironmentObject var reports: ProblemReportLibrary
     @EnvironmentObject var store: AppStore
@@ -75,6 +76,7 @@ struct RootView: View {
         .sheet(isPresented: $store.passwordRecovery) { PasswordRecoveryView() }
         .task { network.onAvailable = { Task { await reports.synchronize() }; Task { await store.refresh(); await recitations.synchronize(); await friends.refresh(); await quiz.refresh() } }; await store.start() }
         .onChange(of: store.identity?.id) { _, id in
+            roqya.select(id)
             if let id { theme.importPreferences(state: store.snapshot.state, userID: id) }
             reminders.update(owner: id, settings: ReminderSettings.load(store.snapshot.state), force: true)
         }

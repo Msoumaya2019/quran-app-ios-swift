@@ -26,6 +26,8 @@ import Foundation
     private var durationObserver: NSKeyValueObservation?
     private var pendingSeek: UUID?
     private var prefetch: Task<Void, Never>?
+    private let focusID = UUID()
+    private func claimFocus() { NativeAudioFocus.shared.claim(focusID) { [weak self] in self?.pause() } }
     private var request = 0
     init(cache: QuranAudioCache? = nil) {
         #if DEBUG
@@ -40,6 +42,7 @@ import Foundation
     }
     func pause() { request += 1; player?.pause(); playing = false; loading = false; prefetch?.cancel(); transition?.cancel(); transition = nil }
     func toggle(start: Int) {
+        if !playing && !loading { claimFocus() }
         if playing || loading { pause() }
         else if pendingRepeat != nil, verseID == start {
             playing = true; scheduleTransition(token: request)
@@ -77,6 +80,7 @@ import Foundation
     func play(_ id: Int) { load(id, repetition: 1) }
     private func load(_ id: Int, repetition nextRepetition: Int) {
         guard (1...6236).contains(id) else { return }
+        claimFocus()
         request += 1; let token = request
         releasePlayer(); prefetch?.cancel(); transition?.cancel(); transition = nil; pendingRepeat = nil
         playing = false; loading = true; verseID = id; repetition = nextRepetition; error = nil

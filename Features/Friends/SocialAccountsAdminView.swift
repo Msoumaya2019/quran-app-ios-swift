@@ -64,6 +64,14 @@ private struct SocialAccountDetail: View {
                         Text("L’authentification est fournie par Supabase ; une réouverture de l’app n’est pas une connexion.").font(.caption)
                     }
                 }
+                if current["last_usage"] != .null {
+                    Section("Dernière session Expo") {
+                        LabeledContent("Début", value: dateLabel(current["last_usage"]["started_at"].string))
+                        LabeledContent("Temps actif", value: duration(current["last_usage"]["seconds"].int ?? 0))
+                        Text(current["last_usage"]["ended"].bool == true ? "Session terminée" : "Dernier état reçu · fin non confirmée").font(.caption)
+                        Text("Cette durée provient de l’application Expo ; elle n’est pas une authentification et n’est pas additionnée aux statistiques natives.").font(.caption)
+                    }
+                }
                 if current["protected"].bool == true { Text("Ce compte est protégé.") }
                 else {
                     if current["suspension"] != .null {

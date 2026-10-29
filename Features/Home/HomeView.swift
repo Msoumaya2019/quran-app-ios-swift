@@ -22,6 +22,15 @@ struct HomeView: View {
                     taskCard(title: "Quiz", icon: "trophy.fill", color: theme.gold, passage: quizStatus, detail: "Teste tes connaissances") { route = .quiz }
                     taskCard(title: "Amis", icon: "person.2.fill", color: theme.review, passage: "Défie tes amis", detail: "Apprenez ensemble") { tab = .friends }
                 }
+                Button { route = .roqya } label: {
+                    AppCard { HStack(spacing: 12) {
+                        Image(systemName: "waveform").foregroundStyle(theme.gold).font(.title2)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Roqya").font(theme.title(.headline)).foregroundStyle(theme.review)
+                            Text("Écouter · Récitateurs · Hors connexion").font(.caption).foregroundStyle(theme.muted)
+                        }; Spacer(); Image(systemName: "chevron.right").font(.caption)
+                    } }
+                }.buttonStyle(.plain).accessibilityIdentifier("home.roqya")
                 dailyContents
                 SectionHeader(title: "Ma semaine", action: "Voir mes progrès") { tab = .progress }
                 weekCard
@@ -44,6 +53,7 @@ struct HomeView: View {
                     QuranReaderView(sourceID: store.snapshot.state["reader"]["mushaf"].string, mode: task.mode, session: task)
                 } else { ProgramView() }
             }
+            else if item == .roqya { RoqyaView() }
             else if item == .quiz { QuizView() }
             else if item == .objective { ProgramEditorView(state: store.snapshot.state) }
             else { PhasePlaceholder(title: item.rawValue) }

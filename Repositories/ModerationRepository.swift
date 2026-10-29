@@ -44,11 +44,21 @@ extension ModerationRemote {
             struct ActivityArgs: Encodable { let p_users: [String]; let p_zone: String }
             // Server denies every administrator except the designated owner. Never fall back to raw tables.
             let stats: JSONValue? = try? await client.rpc("native_activity_summary", params: ActivityArgs(p_users: ids, p_zone: TimeZone.current.identifier)).execute().value
+            struct LatestUsageArgs: Encodable { let p_users: [String] }
+            // Only request Expo session summaries after the native designated-owner gate succeeds.
+            let latest: JSONValue? = stats == nil ? nil : (try? await client.rpc("admin_last_app_usage", params: LatestUsageArgs(p_users: ids)).execute().value)
             return profiles.map { row in
-                row.setting("activity", stats?.array.first { $0["user_id"] == row["id"] } ?? .null)
+                row.setting("last_usage", latest?.array.first { $0["user_id"] == row["id"] } ?? .null).setting("activity", stats?.array.first { $0["user_id"] == row["id"] } ?? .null)
                     .setting("suspension", suspended.first { $0["user_id"] == row["id"] } ?? .null)
                     .setting("protected", .bool(admins.contains { $0["user_id"] == row["id"] } || row["id"].string?.lowercased() == owner.uuidString.lowercased()))
             }
+        }
+        if section == .messages {
+            if let result: JSONValue = try? await client.rpc("admin_messages_with_recipients").execute().value {
+                _ = try await authorized(owner)
+                return Array(result.array.dropFirst(offset).prefix(50))
+            }
+            // Older backends retain the existing, RLS-protected moderation list.
         }
         let table = section == .recitations ? "recitations" : section == .messages ? "friend_messages" : "friend_message_reports"
         return try await client.from(table).select().order("created_at", ascending: false).order("id", ascending: false).range(from: offset, to: offset + 49).execute().value

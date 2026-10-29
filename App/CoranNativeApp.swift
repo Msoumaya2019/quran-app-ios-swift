@@ -4,6 +4,7 @@ import SwiftUI
     @StateObject private var store: AppStore
     @StateObject private var recitations: RecitationLibrary
     @StateObject private var friends: FriendsLibrary
+    @StateObject private var roqya: RoqyaLibrary
     @StateObject private var quiz: QuizLibrary
     @StateObject private var reports: ProblemReportLibrary
     @StateObject private var contentFavorites: ContentFavoritesLibrary
@@ -17,6 +18,7 @@ import SwiftUI
     @Environment(\.scenePhase) private var scenePhase
     init() {
         let client = try? BackendConfiguration.load().client()
+        _roqya = StateObject(wrappedValue: RoqyaLibrary(client: client))
         _usage = StateObject(wrappedValue: UserActivityService(client: client))
         if let client, let configuration = try? BackendConfiguration.load() {
             let repository = TajweedMushafRepository(client: client, configuration: configuration)
@@ -59,7 +61,7 @@ import SwiftUI
                 try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
                 if let bytes = try? JSONEncoder().encode(cached) { try? bytes.write(to: directory.appendingPathComponent(owner.uuidString.lowercased() + ".json")) }
             }
-            _quiz = StateObject(wrappedValue: QuizLibrary(client: nil, directory: friendsDirectory.appendingPathComponent("Quiz")))
+            _quiz = StateObject(wrappedValue: QuizLibrary(client: nil, directory: friendsDirectory.appendingPathComponent("Quiz"), soloRemote: ProcessInfo.processInfo.arguments.contains("--ui-test-quiz-solo") ? SoloQuizPreviewRemote() : nil))
             _reports = StateObject(wrappedValue: ProblemReportLibrary(directory: friendsDirectory.appendingPathComponent("Reports")))
             _moderation = StateObject(wrappedValue: ModerationLibrary(remote: ProcessInfo.processInfo.arguments.contains("--ui-test-moderation") ? PreviewModeration() : ModerationRepository(client: nil)))
             _contentFavorites = StateObject(wrappedValue: ContentFavoritesLibrary(remote: ContentFavoritesRepository(client: nil), directory: friendsDirectory.appendingPathComponent("ContentFavorites")))
@@ -80,7 +82,7 @@ import SwiftUI
     }
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(usage).environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation).environmentObject(reminders).environmentObject(editorial).environmentObject(media).environmentObject(contentFavorites)
+            RootView().environmentObject(roqya).environmentObject(usage).environmentObject(store).environmentObject(theme).environmentObject(network).environmentObject(recitations).environmentObject(friends).environmentObject(quiz).environmentObject(reports).environmentObject(moderation).environmentObject(reminders).environmentObject(editorial).environmentObject(media).environmentObject(contentFavorites)
                 .onChange(of: store.identity?.id, initial: true) { _, user in Task { await usage.select(user); usage.phase(active: scenePhase == .active) } }
                 .onChange(of: scenePhase) { _, phase in usage.phase(active: phase == .active) }
                 .onChange(of: network.isOffline) { _, offline in if !offline { Task { await usage.select(store.identity?.id); usage.phase(active: scenePhase == .active) } } }

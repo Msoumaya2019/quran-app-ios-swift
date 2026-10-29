@@ -9,11 +9,15 @@ import Supabase
     @Published private(set) var isAdmin = false
     @Published private(set) var adminQuestions: [JSONValue] = []
     @Published private(set) var adminSets: [JSONValue] = []
+    @Published private(set) var solo: JSONValue = .null
+    @Published private(set) var soloResponses: [String: JSONValue] = [:]
     private let client: SupabaseClient?
+    private let soloRemote: SoloQuizRemote?
     private let dailyRemote: DailyQuizRemote?
     private let directory: URL
     private var generation = UUID()
-    init(client: SupabaseClient?, directory: URL? = nil, dailyRemote: DailyQuizRemote? = nil) {
+    init(client: SupabaseClient?, directory: URL? = nil, dailyRemote: DailyQuizRemote? = nil, soloRemote: SoloQuizRemote? = nil) {
+        self.soloRemote = soloRemote ?? client.map { QuizRepository(client: $0) }
         self.client = client
         self.dailyRemote = dailyRemote ?? client.map { QuizRepository(client: $0) }
         self.directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("CoranNative/Quiz")
@@ -27,7 +31,7 @@ import Supabase
     func select(_ owner: UUID?) {
         guard cache?.owner != owner else { return }
         generation = UUID(); loading = false; actionBusy = false; message = nil
-        isAdmin = false; adminQuestions = []; adminSets = []
+        isAdmin = false; adminQuestions = []; adminSets = []; solo = .null; soloResponses = [:]
         cache = owner.map { QuizCache(owner: $0) }
         if let owner, let bytes = try? Data(contentsOf: file(owner)), let stored = try? JSONDecoder().decode(QuizCache.self, from: bytes), stored.owner == owner { cache = stored }
     }
@@ -35,6 +39,40 @@ import Supabase
         guard var next = cache else { return }
         do { try next.answer(question, answerID: answerID, day: LocalCalendar.key(.now)); try save(next); message = nil }
         catch { message = "La réponse n’a pas pu être enregistrée." }
+    }
+    private struct ResponsesArgs: Encodable { let p_question: String?; let p_offset: Int }
+    func startSolo() async {
+        guard !actionBusy, let owner = cache?.owner, let soloRemote else { message = "Connexion nécessaire pour commencer une série."; return }
+        let token = generation; actionBusy = true
+        defer { if token == generation { actionBusy = false } }
+        do {
+            let result = try await soloRemote.startSolo(owner: owner)
+            guard token == generation else { return }
+            guard UUID(uuidString: result["id"].string ?? "") != nil, (1...10).contains(result["questions"].array.count),
+                  Set(result["questions"].array.compactMap { $0["id"].string }).count == result["questions"].array.count else { throw URLError(.cannotParseResponse) }
+            solo = result; soloResponses = [:]; message = nil
+        } catch { if token == generation { message = "Série indisponible. Vérifie la connexion et l’installation du SQL quiz-solo-admin." } }
+    }
+    func answerSolo(question: JSONValue, answerID: String) async {
+        guard !actionBusy, let owner = cache?.owner, let soloRemote, let run = solo["id"].string,
+              let id = question["id"].string, solo["questions"].array.contains(where: { $0["id"].string == id }),
+              question["answers"].array.contains(where: { $0["id"].string == answerID }), soloResponses[id] == nil else { return }
+        let token = generation; actionBusy = true
+        defer { if token == generation { actionBusy = false } }
+        do {
+            let response = try await soloRemote.answerSolo(owner: owner, run: run, question: id, answer: answerID)
+            guard token == generation, solo["id"].string == run else { return }
+            guard response["question"]["id"].string == id, response["selectedAnswerId"].string != nil, response["isCorrect"].bool != nil else { throw URLError(.cannotParseResponse) }
+            soloResponses[id] = response; message = nil
+        } catch { if token == generation { message = "Réponse non confirmée. Réessaie : le serveur conserve toujours ton premier choix." } }
+    }
+    func adminResponses(questionID: String?, offset: Int) async throws -> [JSONValue] {
+        guard isAdmin, let owner = cache?.owner, let client else { throw URLError(.userAuthenticationRequired) }
+        let token = generation
+        guard try await client.auth.session.user.id == owner, token == generation else { throw URLError(.userAuthenticationRequired) }
+        let result: JSONValue = try await client.rpc("quiz_admin_responses", params: ResponsesArgs(p_question: questionID, p_offset: max(0, offset))).execute().value
+        guard token == generation, isAdmin else { throw CancellationError() }
+        return result.array
     }
     private struct ChallengeArgs: Encodable { let p_opponent: String; let p_count: Int; let p_set: String? }
     private struct ChallengeAnswerArgs: Encodable { let p_challenge: String; let p_question: String; let p_answer: String }

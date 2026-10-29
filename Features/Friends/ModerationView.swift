@@ -24,6 +24,11 @@ struct ModerationView: View {
                             Text(section == .reports ? row["reason"].string ?? "Signalement" : row["deleted_at"] == .null ? row["body"].string ?? "Message" : "Message supprimé").lineLimit(3)
                             Text(section == .reports ? (row["status"].string == "reviewed" ? "Traité" : "À traiter") : row["group_id"] == .null ? "Conversation privée" : "Groupe").font(.caption).foregroundStyle(theme.muted)
                         }
+                        if section == .messages {
+                            if let group = row["group_name"].string { Text("Groupe : " + group).font(.caption).foregroundStyle(theme.muted) }
+                            else if let recipient = row["recipient_name"].string { Text("Destinataire : " + recipient).font(.caption).foregroundStyle(theme.muted) }
+                            else { Text("Destinataire non disponible").font(.caption).foregroundStyle(theme.muted) }
+                        }
                         Text(String((row["created_at"].string ?? "").prefix(10))).font(.caption2).foregroundStyle(theme.muted)
                     }.padding(.vertical, 4)
                 }

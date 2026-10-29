@@ -55,6 +55,7 @@ import Combine
     #if DEBUG
     private var testCapture = false
     #endif
+    private let focusID = UUID()
     func start() async {
         guard !recording, !requesting, draft == nil else { return }
         generation += 1; let token = generation
@@ -69,6 +70,7 @@ import Combine
         requesting = false
         guard allowed else { error = "Autorise le microphone dans les réglages de l’iPhone pour enregistrer ta récitation."; return }
         do {
+            NativeAudioFocus.shared.claim(focusID) { [weak self] in self?.interruptAudio() }
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let file = directory.appendingPathComponent("\(UUID().uuidString).m4a")
             captureURL = file
@@ -103,9 +105,11 @@ import Combine
         draft = captureURL; captureURL = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
+    private func interruptAudio() { stop(); preview?.stop(); previewing = false }
     func togglePreview() {
         if previewing { preview?.stop(); previewing = false; return }
         guard let draft else { return }
+        NativeAudioFocus.shared.claim(focusID) { [weak self] in self?.interruptAudio() }
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback)
             try AVAudioSession.sharedInstance().setActive(true)
