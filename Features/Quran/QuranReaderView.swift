@@ -78,6 +78,9 @@ struct QuranReaderView: View {
         .toolbarBackground(theme.surface, for: .navigationBar)
         .statusBarHidden(immersive)
         .onAppear {
+            if let preferred = QuranSource.available.first(where: { $0.id == store.snapshot.state["reader"]["mushaf"].string }), preferred != source {
+                Task { await changeSource(preferred) }
+            }
             if source == .tajweed { Task { await TajweedMushafResourceService.shared.refreshIfNeeded() } }
             guard !initialized else { return }; initialized = true
             audio.configure(AudioRepeatSettings.load(store.snapshot.state))
@@ -90,6 +93,10 @@ struct QuranReaderView: View {
                 if pending <= session.range.end { page = QuranSourceMapping.page(source: source, verseID: pending, catalog: store.catalog) }
             }
             record(.reading)
+        }
+        .onChange(of: store.snapshot.state["reader"]["mushaf"].string) { _, id in
+            guard let preferred = QuranSource.available.first(where: { $0.id == id }), preferred != source else { return }
+            Task { await changeSource(preferred) }
         }
         .onChange(of: page) { _, _ in if initialized { record(.reading) } }
         .onChange(of: audio.verseID) { _, current in

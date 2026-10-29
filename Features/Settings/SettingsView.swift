@@ -6,6 +6,7 @@ struct SettingsView: View {
     @EnvironmentObject var quiz: QuizLibrary
     @Environment(\.dismiss) var dismiss
     @State private var error: String?
+    @State private var confirmingReset = false
     @State private var signingOut = false
     var body: some View {
         NavigationStack {
@@ -34,6 +35,10 @@ struct SettingsView: View {
                     NavigationLink { RevisionSettingsView(state: store.snapshot.state) } label: {
                         Label("Modifier mes révisions", systemImage: "arrow.triangle.2.circlepath").frame(minHeight: 44)
                     }.accessibilityIdentifier("settings.revision.open")
+                    Button("Repartir à zéro", role: .destructive) { confirmingReset = true }
+                        .accessibilityIdentifier("settings.study.reset")
+                    Text("Le Coran choisi est conservé pour la lecture, l’apprentissage, les révisions et la consolidation.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Apparence") {
                     Picker("Mode d’affichage", selection: $theme.appearance) {
@@ -61,6 +66,15 @@ struct SettingsView: View {
                 if let error { Text(error).foregroundStyle(.red) }
                 Section { Button("Se déconnecter", role: .destructive) { Task { signingOut = true; defer { signingOut = false }; do { try await store.signOut(); dismiss() } catch { self.error = error.localizedDescription } } }.disabled(signingOut) }
             }.navigationTitle("Réglages").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() }.frame(minHeight: 44) } }
+        }.confirmationDialog("Repartir à zéro ?", isPresented: $confirmingReset, titleVisibility: .visible) {
+            Button("Réinitialiser mon apprentissage et mes révisions", role: .destructive) {
+                if store.readerChange(ReaderOperation(kind: .studyReset, verseID: 1, page: 1, source: "")) {
+                    Task { await store.refresh() }
+                }
+            }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("La progression active, les connaissances renseignées et les séances d’apprentissage, de révision et de consolidation seront remises à zéro. L’ancien suivi sera archivé. Ton compte, tes amis, tes conversations, tes marque-pages, tes versets difficiles et ton Coran préféré seront conservés. Tu pourras ensuite créer un nouveau programme.")
         }.presentationDragIndicator(.visible).task { await quiz.checkAdmin() }
     }
 }

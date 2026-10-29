@@ -1,7 +1,7 @@
 import Foundation
 
 struct ReaderOperation: Codable, Sendable, Identifiable {
-    enum Kind: String, Codable { case reading, bookmark, removeBookmark, source, reciter, consolidation, learning, revision, program, difficulty, reviewSchedule, audioRepeat, verseStudy, reminders, notifications }
+    enum Kind: String, Codable { case studyReset, reading, bookmark, removeBookmark, source, reciter, consolidation, learning, revision, program, difficulty, reviewSchedule, audioRepeat, verseStudy, reminders, notifications }
     let id: UUID
     let kind: Kind
     let verseID: Int
@@ -24,8 +24,13 @@ struct ReaderOperation: Codable, Sendable, Identifiable {
         at = formatter.string(from: date)
     }
     func applying(to state: JSONValue, catalog: QuranCatalog) -> JSONValue {
+        // A delayed offline validation must not resurrect the pre-reset programme.
+        if [.learning, .revision, .consolidation, .program, .reviewSchedule, .verseStudy].contains(kind),
+           let reset = state["nativeStudyResetAt"].string, at <= reset { return state }
         var result = state
         switch kind {
+        case .studyReset:
+            return StudyReset.applying(to: state, id: id, at: at)
         case .notifications:
             guard let notification else { return state }; return notification.applying(to: state, at: at)
         case .reminders:
