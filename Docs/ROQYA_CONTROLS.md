@@ -21,3 +21,15 @@ Horloge : [ContinuousClock](https://developer.apple.com/documentation/swift/cont
 ## Stabilité de l’interface
 
 Le sélecteur de minuterie est un panneau de confirmation iOS explicite. La progression temporelle réutilise `QuranAudioTimeline` dans une sous-vue dédiée : les ticks audio ne reconstruisent plus les commandes ni le panneau de minuterie. Les métadonnées système sont mises à jour aux changements utiles (lecture/pause, durée, déplacement, vitesse), iOS interpolant la position entre ces changements. Un test protège cette séparation. La longue fixture UI est technique, locale et copiée uniquement en Debug ; elle n’est pas incluse dans l’IPA Release.
+
+## Livraison et validation
+
+- Commit de l’IPA : `3d6824e3683305a3aa2bff92b30d048208dd8677`.
+- [Compilation et tests unitaires](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/40904099185) : 198 tests réussis, aucun échec.
+- [Parcours UI](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/40904105977) : minuterie, arrière-plan, retour et arrêt à la sortie validés sur simulateur iPhone 17 Pro Max ; capture inspectée.
+- L’ancien test a exposé une sélection de durée non trouvée pendant une écoute courte. Le panneau explicite, l’isolation de la timeline et une fixture technique plus longue ont été validés par le parcours complet.
+- Icône incluse : `CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName = AppIcon`. Source et prompt : [Brand/APP_ICON.md](Brand/APP_ICON.md).
+- IPA arm64 / ZIP valide, mode audio d’arrière-plan présent, fixtures Debug absentes de Release. Taille : 133 700 079 octets.
+- SHA-256 local et GitHub : `200c2deb2fd9e933160fba727fb96bde7b6619fd00a7347084ede62e28f8df44`.
+- [Release iPhone](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-roqya-icon-2026-10-29), IPA non signé.
+- Aucun changement backend. Contrôle du dépôt Expo : 3 279 fichiers suivis intacts, HEAD `f538ae37565abf70032e7e215fe57c8b96c2152f`.
