@@ -1,5 +1,14 @@
 import Foundation
 
+/// A process-local clock that includes device sleep and ignores wall-clock changes.
+enum PlaybackMonotonicClock {
+    private static let origin = ContinuousClock.now
+    static var now: TimeInterval {
+        let duration = origin.duration(to: ContinuousClock.now).components
+        return Double(duration.seconds) + Double(duration.attoseconds) / 1_000_000_000_000_000_000
+    }
+}
+
 struct PlaybackSleepTimer: Equatable {
     enum Option: Int, CaseIterable, Identifiable {
         case off = 0, five = 5, ten = 10, fifteen = 15, thirty = 30, sixty = 60, end = -1

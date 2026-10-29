@@ -26,8 +26,8 @@ import MediaPlayer
     enum RemoteAction: Sendable { case play, pause, toggle, stop, forward, backward, seek(Double) }
     func setSleepTimer(_ option: PlaybackSleepTimer.Option) {
         sleepTask?.cancel(); sleepTask = nil
-        guard stream != nil else { sleepTimer.set(.off, now: ProcessInfo.processInfo.systemUptime); return }
-        sleepTimer.set(option, now: ProcessInfo.processInfo.systemUptime)
+        guard stream != nil else { sleepTimer.set(.off, now: PlaybackMonotonicClock.now); return }
+        sleepTimer.set(option, now: PlaybackMonotonicClock.now)
         guard option.rawValue > 0 else { return }
         let token = remoteGeneration
         sleepTask = Task { [weak self] in
@@ -36,9 +36,9 @@ import MediaPlayer
             self.checkSleepTimer()
         }
     }
-    func checkSleepTimer(now: TimeInterval = ProcessInfo.processInfo.systemUptime) {
+    func checkSleepTimer(now: TimeInterval = PlaybackMonotonicClock.now) {
         guard sleepTimer.expired(now: now) else { return }
-        sleepTask?.cancel(); sleepTask = nil; sleepTimer.set(.off, now: ProcessInfo.processInfo.systemUptime)
+        sleepTask?.cancel(); sleepTask = nil; sleepTimer.set(.off, now: PlaybackMonotonicClock.now)
         setStreamPaused(true)
     }
     func setStreamPaused(_ pause: Bool) {
@@ -106,7 +106,7 @@ import MediaPlayer
     }
     private func clearRemoteControls() {
         remoteGeneration = UUID(); sleepTask?.cancel(); sleepTask = nil
-        sleepTimer.set(.off, now: ProcessInfo.processInfo.systemUptime)
+        sleepTimer.set(.off, now: PlaybackMonotonicClock.now)
         if !remoteTargets.isEmpty {
             for (command, target) in remoteTargets { command.removeTarget(target); command.isEnabled = false }
             remoteTargets = []; MPNowPlayingInfoCenter.default().nowPlayingInfo = nil

@@ -109,7 +109,7 @@ private struct RoqyaPlaybackControls: View {
                 }.accessibilityIdentifier("roqya.timer")
                 if player.sleepTimer.deadline != nil {
                     TimelineView(.periodic(from: .now, by: 1)) { _ in
-                        let remaining = player.sleepTimer.remaining(now: ProcessInfo.processInfo.systemUptime) ?? 0
+                        let remaining = player.sleepTimer.remaining(now: PlaybackMonotonicClock.now) ?? 0
                         Text("Arrêt dans \(remaining / 60):\(String(format: "%02d", remaining % 60))").font(.caption).foregroundStyle(.secondary)
                     }
                 }
