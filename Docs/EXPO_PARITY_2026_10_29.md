@@ -24,8 +24,50 @@ Scripts recopiés **à l’identique** de la branche Expo dans `Supabase/` : `qu
 - Tests Roqya : URLs sûres, filtrage des médias désactivés, isolation/persistance des favoris, détection d’un fichier incomplet ou d’une source modifiée, coordination audio, validation admin.
 - Test UI du parcours Solo → réponse → correction → résultat. Les fixtures techniques ne sont utilisées qu’en Debug.
 - 15 tests de référence de la branche Expo exécutés sur une copie isolée : quiz solo/RLS, Roqya/catalogue/uploads/RLS, activité et destinataires de messages : tous réussis.
-- Résultats Xcode et lien de livraison à compléter après exécution GitHub Actions. Essais réseau réels avec compte administrateur et tests physiques iPhone non encore attestés.
+- Xcode : 191 tests unitaires réussis sur `e184ea2` (run [40880001323](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/40880001323), deuxième tentative). Une première tentative a dépassé le délai WebKit du test Tajweed page 600 ; relance du même code réussie, aucun changement du Mushaf effectué.
+- Deux parcours UI réussis sur `e184ea2` : Solo jusqu’au résultat et ouverture Roqya, iPhone 17 Pro Max ; captures inspectées (run [40880006401](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/40880006401)).
+- Campagne complète sur l’étape `2f683b7` : 39 tests UI réussis, dont navigation, Corans, modes de séance, audio, profils et Quiz (run [40878560614](https://github.com/Msoumaya2019/quran-app-ios-swift/actions/runs/40878560614)). Les deux parcours ciblés ci-dessus vérifient la dernière révision.
+- IPA Release arm64 / ZIP intègre : 132 707 876 octets ; SHA-256 `20b518cef095fdfeda76423a8d2e968d4af0e3d4ee6f8b6c57ee84305909bdb2`. Binaire non signé, bundle `com.coranmemoire.native.ios`, commit compilé `e184ea28155107c409e2edf5f852a9108feec752`.
+- Livraison : [Release test-expo-parity-2026-10-29](https://github.com/Msoumaya2019/quran-app-ios-swift/releases/tag/test-expo-parity-2026-10-29). Taille et empreinte SHA-256 de l’asset reçu par GitHub identiques au fichier local vérifié.
+- Essais authentifiés réels avec compte administrateur et tests physiques iPhone non encore attestés.
 
 ## Limites de cette mise à jour
 
 Le catalogue et l’administration Roqya sont maintenant disponibles, mais la minuterie de sommeil et les commandes d’écran verrouillé de la branche Expo ne sont pas encore portées. Les importations administrateur indiquent l’état d’envoi sans pourcentage d’upload. Les téléchargements ont, eux, une vraie progression en octets. Les interfaces et les services sont testés avec des fixtures et le SQL dans une base isolée ; la publication de contenus avec un vrai compte et une écoute prolongée sur iPhone doivent encore être vérifiées.
+
+## Fichiers réellement modifiés ou ajoutés
+
+- `App/CoranNativeApp.swift`
+- `CoranNative.xcodeproj/project.pbxproj`
+- `Docs/EXPO_PARITY_2026_10_29.md`
+- `Features/Friends/ModerationView.swift`
+- `Features/Friends/SocialAccountsAdminView.swift`
+- `Features/Home/HomeView.swift`
+- `Features/Navigation/RootView.swift`
+- `Features/Quiz/QuizAdminView.swift`
+- `Features/Quiz/QuizSoloView.swift`
+- `Features/Quiz/QuizView.swift`
+- `Features/Roqya/RoqyaAdminView.swift`
+- `Features/Roqya/RoqyaView.swift`
+- `Features/Settings/SettingsView.swift`
+- `Repositories/ModerationRepository.swift`
+- `Repositories/QuizRepository.swift`
+- `Services/ModerationLibrary.swift`
+- `Services/NativeAudioFocus.swift`
+- `Services/QuizLibrary.swift`
+- `Services/QuranAudioService.swift`
+- `Services/RecitationPlaybackService.swift`
+- `Services/RoqyaLibrary.swift`
+- `Services/SoloQuizPreviewRemote.swift`
+- `Services/VoiceRecorderService.swift`
+- `Supabase/admin-message-recipients.sql`
+- `Supabase/quiz-solo-admin.sql`
+- `Supabase/roqya-admin.sql`
+- `Supabase/roqya.sql`
+- `Tests/QuizSoloTests.swift`
+- `Tests/RoqyaTests.swift`
+- `UITests/ExpoUpdatesUITests.swift`
+
+## Contrôles du backend en production, sans écriture
+
+Avec la seule clé publique anonyme de l’application : les signatures de `quiz_start_solo`, `quiz_answer_solo`, `quiz_admin_responses` et `admin_messages_with_recipients` sont reconnues et refusent l’exécution anonyme (401 / 42501). Le catalogue Roqya et ses relations répondent 200 ; une entrée et une version audio active ont été observées. Aucune réponse, série, session ou autre donnée créée par ces contrôles. Ces vérifications ne remplacent pas un test authentifié avec un utilisateur standard et un administrateur.
