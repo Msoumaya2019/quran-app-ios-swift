@@ -1,6 +1,24 @@
 import XCTest
 
 final class StudyEditorUITests: XCTestCase {
+    func testJuzSelectionIsSharedWithHizbAndSurahChecklists() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-test-authenticated"]; app.launch()
+        app.buttons["settings.open"].tap()
+        let edit = app.buttons["settings.study.edit"]
+        for _ in 0..<8 { if edit.exists && edit.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(edit.waitForExistence(timeout: 5)); edit.tap()
+        let juz = app.buttons["knowledge.juz.1"]
+        XCTAssertTrue(juz.waitForExistence(timeout: 5)); juz.tap()
+        XCTAssertEqual(juz.value as? String, "Connu")
+        app.buttons["Hizb"].tap()
+        let hizb = app.buttons["knowledge.hizb.1"]
+        XCTAssertTrue(hizb.waitForExistence(timeout: 5)); XCTAssertEqual(hizb.value as? String, "Connu")
+        app.buttons["Sourates"].tap()
+        let surah = app.buttons["knowledge.surah.1"]
+        XCTAssertTrue(surah.waitForExistence(timeout: 5)); XCTAssertEqual(surah.value as? String, "Connu")
+        let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = "Sélection rapide partagée Juz Hizb Sourates"; attachment.lifetime = .keepAlways; add(attachment)
+    }
+
     func testKnowledgeEditorSavesAndOffersRevisionHistory() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-test-authenticated"]
@@ -10,6 +28,8 @@ final class StudyEditorUITests: XCTestCase {
         let edit = app.buttons["settings.study.edit"]
         for _ in 0..<8 { if edit.exists && edit.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(edit.waitForExistence(timeout: 5)); edit.tap()
+        let partial = app.buttons["knowledge.partial.open"]
+        XCTAssertTrue(partial.waitForExistence(timeout: 5)); partial.tap()
         let history = app.buttons["Modifier mes révisions effectuées"]
         XCTAssertTrue(history.waitForExistence(timeout: 5))
         let save = app.buttons["study.editor.save"]

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct StudyEditorView: View {
+struct PassageKnowledgeEditorView: View {
     @EnvironmentObject private var store: AppStore
     @EnvironmentObject private var theme: ThemeManager
     @State private var surahNumber = 1

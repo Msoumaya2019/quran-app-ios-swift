@@ -11,9 +11,10 @@ struct StudyCorrection: Codable, Sendable {
     let today: String
     let at: String
     let original: JSONValue?
-    init(action: Action, start: Int, end: Int, date: Date, original: JSONValue? = nil, now: Date = .now) {
+    var preserveKnown: Bool? = nil
+    init(action: Action, start: Int, end: Int, date: Date, original: JSONValue? = nil, preserveKnown: Bool = false, now: Date = .now) {
         id = UUID(); self.action = action; self.start = start; self.end = end
-        day = LocalCalendar.key(date); today = LocalCalendar.key(now); self.original = original
+        day = LocalCalendar.key(date); today = LocalCalendar.key(now); self.original = original; self.preserveKnown = preserveKnown
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         at = formatter.string(from: now)
     }
@@ -23,7 +24,7 @@ struct StudyCorrection: Codable, Sendable {
               (state["nativeStudyResetAt"].string ?? "") < at,
               !state["nativeStudyCorrections"].array.contains(where: { $0["id"].string == id.uuidString }) else { return state }
         let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let timestamp = formatter.date(from: at) else { return state }
+        guard formatter.date(from: at) != nil else { return state }
         let selected = Set(start...end)
         var affected = selected
         if let original, let range = VerseRange(json: original) { affected.formUnion(range.start...range.end) }
@@ -72,23 +73,16 @@ struct StudyCorrection: Codable, Sendable {
                 result = result.setting("nativeManualReviewDue", due)
             }
         } else {
+            var changed = Set<Int>()
             for verse in start...end {
+                if preserveKnown == true, action == .learned, ["perfect", "review"].contains(state["knowledge"][String(verse)].string ?? "") { continue }
+                changed.insert(verse)
                 let key = String(verse)
                 if action == .unlearned {
                     for field in ["knowledge", "memorizedAt", "reviewConsolidations", "nativeManualReviewDue", "reviewPriorityDue"] {
                         var values = result[field].object; values.removeValue(forKey: key); result = result.setting(field, .object(values))
                     }
                 } else {
-                    // Reuse individual learning to initialise the existing revision/consolidation structures.
-                    let learned = VerseStudyChange(verseID: verse, action: .learned, now: timestamp)
-                    result = learned.applying(to: result)
-                    if let due = ProgramProjection.addingDays(1, to: day, timeZone: TimeZone(secondsFromGMT: 0)!) {
-                        let revisionID = "r-\(verse)-\(verse)"
-                        let revisions = result["revisions"].array.map { row in
-                            row["id"].string == revisionID && state["revisions"].array.contains(where: { $0["id"].string == revisionID }) == false ? row.setting("due", .string(due)) : row
-                        }
-                        result = result.setting("revisions", .array(revisions))
-                    }
                     if result["memorizedAt"][key].string != day {
                         var dates: [String: JSONValue] = [:]
                         for offset in [1, 3, 7] { if let due = ProgramProjection.addingDays(offset, to: day, timeZone: TimeZone(secondsFromGMT: 0)!) { dates[String(offset)] = .string(due) } }
@@ -100,23 +94,35 @@ struct StudyCorrection: Codable, Sendable {
                 }
             }
             var progress = result["studyProgress"].object
-            for row in state["sessions"].array where row["status"].string == "done" && Self.overlaps(row, selected) {
+            for row in state["sessions"].array where row["status"].string == "done" && Self.overlaps(row, changed) {
                 guard let sessionID = row["id"].string, progress["learning:\(sessionID)"] == nil else { continue }
                 let date = row["completedDate"].string ?? row["completedAt"].string.map { String($0.prefix(10)) } ?? row["date"].string ?? ""
                 progress["learning:\(sessionID)"] = row.setting("mode", .string("learning")).setting("validations", .array([row.setting("date", .string(date))]))
             }
             // Keep unaffected portions of old validations, replacing only the selected verses.
-            for (key, row) in progress where row["mode"].string == "learning" && Self.overlaps(row, selected) {
-                let validations = row["validations"].array.flatMap { Self.subtract(selected, from: $0) }
+            for (key, row) in progress where row["mode"].string == "learning" && Self.overlaps(row, changed) {
+                let validations = row["validations"].array.flatMap { Self.subtract(changed, from: $0) }
                 if validations.isEmpty && key.hasPrefix("learning:verse-") { progress.removeValue(forKey: key) }
                 else { progress[key] = row.setting("validations", .array(validations)) }
             }
             if action != .unlearned {
-                let event: JSONValue = .object(["start": .number(Double(start)), "end": .number(Double(end)), "date": .string(day), "validatedAt": .string(at)])
-                progress["learning:correction-\(id.uuidString)"] = .object(["id": .string("correction-\(id.uuidString)"), "mode": .string("learning"), "start": .number(Double(start)), "end": .number(Double(end)), "through": .number(Double(end)), "status": .string("completed"), "updatedAt": .string(at), "validations": .array([event])])
+                var spans: [(Int, Int)] = []
+                for verse in changed.sorted() {
+                    if let last = spans.last, last.1 + 1 == verse { spans[spans.count - 1].1 = verse } else { spans.append((verse, verse)) }
+                }
+                var revisions = result["revisions"].array
+                for (a, b) in spans {
+                    let event: JSONValue = .object(["start": .number(Double(a)), "end": .number(Double(b)), "date": .string(day), "validatedAt": .string(at)])
+                    let key = "correction-\(id.uuidString)-\(a)"
+                    progress["learning:\(key)"] = .object(["id": .string(key), "mode": .string("learning"), "start": .number(Double(a)), "end": .number(Double(b)), "through": .number(Double(b)), "status": .string("completed"), "updatedAt": .string(at), "validations": .array([event])])
+                    if let due = ProgramProjection.addingDays(1, to: day, timeZone: TimeZone(secondsFromGMT: 0)!) {
+                        revisions.append(.object(["id": .string("r-\(key)"), "start": .number(Double(a)), "end": .number(Double(b)), "due": .string(due), "interval": .number(1), "streak": .number(0), "completedCount": .number(0)]))
+                    }
+                }
+                result = result.setting("revisions", .array(revisions))
             }
             var sessions = result["sessions"].array
-            for index in sessions.indices where Self.overlaps(sessions[index], selected) {
+            for index in sessions.indices where Self.overlaps(sessions[index], changed) {
                 let row = sessions[index]
                 guard let range = VerseRange(json: row), let sessionID = row["id"].string else { continue }
                 var through = range.start - 1

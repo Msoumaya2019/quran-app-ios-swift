@@ -10,6 +10,25 @@ final class StudyCorrectionTests: XCTestCase {
                  "difficultyMarkers": .object(["2": .object(["user": .bool(true)])]),
                  "sessions": .array([.object(["id": .string("s"), "start": .number(1), "end": .number(3), "date": .string("2026-10-20"), "status": .string("done"), "completedDate": .string("2026-10-20")])])])
     }
+    func testWholeDivisionPreservesExistingKnowledgeDatesAndGroupsNewVerses() {
+        let input = state.setting("memorizedAt", .object(["1": .string("2026-01-01")]))
+            .setting("reviewConsolidations", .object(["1": .object(["learnedAt": .string("2026-01-01"), "completed": .object(["7": .string("2026-01-08")])])]))
+        let change = StudyCorrection(action: .learned, start: 1, end: 148, date: now, preserveKnown: true, now: now)
+        let result = change.applying(to: input)
+        XCTAssertEqual(ProgressProjection(state: result).known.count, 148)
+        XCTAssertEqual(result["memorizedAt"]["1"], input["memorizedAt"]["1"])
+        XCTAssertEqual(result["reviewConsolidations"]["1"], input["reviewConsolidations"]["1"])
+        XCTAssertEqual(result["revisions"].array.count, 1)
+        XCTAssertEqual(result["revisions"].array[0]["start"], .number(4))
+        XCTAssertEqual(result["revisions"].array[0]["end"], .number(148))
+        XCTAssertEqual(change.applying(to: result), result)
+    }
+    func testOverlappingDivisionsCanBeUncheckedWithoutLosingOtherKnowledge() {
+        let filled = StudyCorrection(action: .learned, start: 1, end: 148, date: now, preserveKnown: true, now: now).applying(to: state)
+        let result = StudyCorrection(action: .unlearned, start: 1, end: 81, date: now, now: now.addingTimeInterval(1)).applying(to: filled)
+        XCTAssertEqual(ProgressProjection(state: result).known, Set(82...148))
+        XCTAssertEqual(result["reader"], state["reader"])
+    }
     func testUnlearnOneVersePreservesNeighboursScheduledDateAndPrivatePreferences() {
         let change = StudyCorrection(action: .unlearned, start: 2, end: 2, date: now, now: now)
         let result = change.applying(to: state)
