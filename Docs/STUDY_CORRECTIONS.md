@@ -21,4 +21,6 @@ L’entrée Modifier mes connaissances ouvre désormais les cases à cocher Juz�
 
 L’écran de démarrage a été inspecté en lecture seule dans la référence Expo (src/App.tsx, étape 0) : listes de cases sourates / Juz’ / Hizb et passages partiels. Le code Expo n’a pas été modifié. La sélection Swift reprend ce fonctionnement dans une liste native avec un sélecteur de catégorie pour éviter de parcourir 114 sourates avant d’atteindre les Juz’.
 
-Validation de cette évolution en cours : suite métier et archive 41069565425 ; deux parcours d’interface 41069563862 (sélection partagée Juz’/Hizb/sourates et éditeur de passage).
+Validation réussie : 210 tests unitaires, compilation et archive 41069565425 ; deux parcours d’interface 41069563862 (sélection partagée Juz’/Hizb/sourates et éditeur de passage), captures contrôlées sur simulateur iPhone 17 Pro Max. Source f2e73be. Pas de vérification physique ni de synchronisation entre deux appareils réels pour cette évolution.
+
+Release test-knowledge-checklists-2026-10-30 : IPA non signé, 133774768 octets, SHA-256 2ec3f2f0eca5cac88b3322472f77a48150ee2d8c5b0d0df207201e1e46a97d61. Aucune migration Supabase.
