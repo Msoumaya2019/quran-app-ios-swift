@@ -16,6 +16,8 @@ final class StudyEditorUITests: XCTestCase {
         for _ in 0..<6 { if save.exists && save.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(save.waitForExistence(timeout: 5)); save.tap()
         let result = app.staticTexts["study.editor.result"]
+        // Form rows are lazy: the acknowledgement is below the save row on this device.
+        for _ in 0..<3 { if result.exists && result.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(result.waitForExistence(timeout: 5))
         XCTAssertTrue(result.label.contains("Modifications enregistrées"))
         let attachment = XCTAttachment(screenshot: app.screenshot()); attachment.name = "Correction des connaissances enregistrée"; attachment.lifetime = .keepAlways; add(attachment)
