@@ -2,7 +2,7 @@ import Foundation
 
 /// Explicit user corrections, merged into the existing user_state contract and offline queue.
 struct StudyCorrection: Codable, Sendable {
-    enum Action: String, Codable { case learned, review, unlearned, revised, removeRevision }
+    enum Action: String, Codable, Hashable { case learned, review, unlearned, revised, removeRevision }
     let id: UUID
     let action: Action
     let start: Int
@@ -82,6 +82,13 @@ struct StudyCorrection: Codable, Sendable {
                     // Reuse individual learning to initialise the existing revision/consolidation structures.
                     let learned = VerseStudyChange(verseID: verse, action: .learned, now: timestamp)
                     result = learned.applying(to: result)
+                    if let due = ProgramProjection.addingDays(1, to: day, timeZone: TimeZone(secondsFromGMT: 0)!) {
+                        let revisionID = "r-\(verse)-\(verse)"
+                        let revisions = result["revisions"].array.map { row in
+                            row["id"].string == revisionID && state["revisions"].array.contains(where: { $0["id"].string == revisionID }) == false ? row.setting("due", .string(due)) : row
+                        }
+                        result = result.setting("revisions", .array(revisions))
+                    }
                     if result["memorizedAt"][key].string != day {
                         var dates: [String: JSONValue] = [:]
                         for offset in [1, 3, 7] { if let due = ProgramProjection.addingDays(offset, to: day, timeZone: TimeZone(secondsFromGMT: 0)!) { dates[String(offset)] = .string(due) } }
