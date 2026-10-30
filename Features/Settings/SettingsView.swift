@@ -29,6 +29,8 @@ struct SettingsView: View {
                     NavigationLink("Téléchargements et sources") { QuranDownloadsView() }
                 }
                 Section("Mon programme") {
+                    NavigationLink("Modifier mes connaissances") { StudyEditorView() }.accessibilityIdentifier("settings.study.edit")
+                    NavigationLink("Modifier mes révisions effectuées") { ReviewHistoryEditorView() }.accessibilityIdentifier("settings.review.history")
                     NavigationLink { ProgramEditorView(state: store.snapshot.state) } label: {
                         Label("Modifier mon programme", systemImage: "calendar.badge.clock").frame(minHeight: 44)
                     }.accessibilityIdentifier("settings.program.open")

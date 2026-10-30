@@ -1,12 +1,13 @@
 import Foundation
 
 struct ReaderOperation: Codable, Sendable, Identifiable {
-    enum Kind: String, Codable { case studyReset, reading, bookmark, removeBookmark, source, reciter, consolidation, learning, revision, program, difficulty, reviewSchedule, audioRepeat, verseStudy, reminders, notifications }
+    enum Kind: String, Codable { case studyCorrection, studyReset, reading, bookmark, removeBookmark, source, reciter, consolidation, learning, revision, program, difficulty, reviewSchedule, audioRepeat, verseStudy, reminders, notifications }
     let id: UUID
     let kind: Kind
     let verseID: Int
     let page: Int
     let source: String
+    var studyCorrection: StudyCorrection? = nil
     var consolidation: ConsolidationValidation? = nil
     var learning: LearningValidation? = nil
     var revision: RevisionValidation? = nil
@@ -27,8 +28,17 @@ struct ReaderOperation: Codable, Sendable, Identifiable {
         // A delayed offline validation must not resurrect the pre-reset programme.
         if [.learning, .revision, .consolidation, .program, .reviewSchedule, .verseStudy].contains(kind),
            let reset = state["nativeStudyResetAt"].string, at <= reset { return state }
+        let range: ClosedRange<Int>?
+        if let learning, (1...6236).contains(learning.start), (learning.start...6236).contains(learning.through) { range = learning.start...learning.through }
+        else if let revision, (1...6236).contains(revision.start), (revision.start...6236).contains(revision.through) { range = revision.start...revision.through }
+        else if kind == .verseStudy, (1...6236).contains(verseID) { range = verseID...verseID }
+        else { range = nil }
+        if let range, range.contains(where: { (state["nativeStudyCorrectionAt"][String($0)].string ?? "") >= at }) { return state }
         var result = state
         switch kind {
+        case .studyCorrection:
+            guard let studyCorrection else { return state }
+            return studyCorrection.applying(to: state)
         case .studyReset:
             return StudyReset.applying(to: state, id: id, at: at)
         case .notifications:

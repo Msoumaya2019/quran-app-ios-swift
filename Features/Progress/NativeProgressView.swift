@@ -29,6 +29,8 @@ struct NativeProgressView: View {
                     stat("Passages révisés", value: store.snapshot.state["reviewHistory"].array.count, icon: "arrow.triangle.2.circlepath")
                     stat("Juz’ complétés", value: progress.completeJuzs(catalog: store.catalog), icon: "book.closed")
                 }
+                NavigationLink { StudyEditorView() } label: { Label("Modifier mes connaissances et révisions", systemImage: "square.and.pencil").frame(minHeight: 44) }
+                    .accessibilityIdentifier("progress.study.edit")
                 Text("Mon objectif").font(theme.title()).foregroundStyle(theme.accent)
                 AppCard { VStack(alignment: .leading, spacing: 10) { Text(store.snapshot.state["goal"]["label"].string ?? "Aucun objectif défini").font(theme.title()); HStack { ProgressView(value: progress.goalRatio).tint(theme.accent); Text("\(Int(progress.goalRatio * 100)) %").font(.caption) } } }
                 Text("Quiz").font(theme.title()).foregroundStyle(theme.accent)

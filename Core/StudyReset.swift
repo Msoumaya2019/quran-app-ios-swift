@@ -3,8 +3,8 @@ import Foundation
 /// A targeted reset replayed through the existing local queue and server compare-and-swap.
 /// Unrelated preferences and social data never enter the reset payload.
 enum StudyReset {
-    static let objectKeys = ["knowledge", "memorizedAt", "studyProgress", "reviewConsolidations", "nativeManualReviewDue", "reviewPriorityDue", "nativeVerseActionAt"]
-    static let arrayKeys = ["sessions", "revisions", "reviewHistory", "consolidationHistory", "reviewCycleHistory", "nativeProgramEdits"]
+    static let objectKeys = ["knowledge", "memorizedAt", "studyProgress", "reviewConsolidations", "nativeManualReviewDue", "reviewPriorityDue", "nativeVerseActionAt", "nativeStudyCorrectionAt"]
+    static let arrayKeys = ["sessions", "revisions", "reviewHistory", "consolidationHistory", "reviewCycleHistory", "nativeProgramEdits", "nativeStudyCorrections"]
     static let nullableKeys = ["goal", "reviewCycle", "reviewModelStartedAt", "nativeProgramSettingsUpdatedAt", "nativeReviewSettingsUpdatedAt"]
     static func applying(to state: JSONValue, id: UUID, at: String) -> JSONValue {
         guard (state["nativeStudyResetAt"].string ?? "") < at else { return state }
